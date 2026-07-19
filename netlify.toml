@@ -1,0 +1,38 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+
+[functions]
+  # esbuild bundla sorgenti e node_modules in un unico artefatto,
+  # così le dipendenze runtime (@google/genai, zod) sono disponibili alla Lambda.
+  node_bundler = "esbuild"
+
+# Nessun redirect SPA: l'app non usa client-side routing (react-router) — la navigazione
+# tra schermate è tutta a stato interno in App.tsx, un solo index.html basta. Un redirect
+# "/* -> /index.html" qui romperebbe le richieste interne di Vite durante `netlify dev`.
+
+# Headers per impedire il caching del service worker
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/registerSW.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@import "./fonts.css";
+@import "./tokens.css";
+
+/* Il nostro dark mode è guidato da [data-theme], non solo da prefers-color-scheme */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-carta: var(--carta);
+  --color-quadretto: var(--quadretto);
+  --color-inchiostro: var(--inchiostro);
+  --color-biro: var(--biro);
+  --color-biro-chiaro: var(--biro-chiaro);
+  --color-basilico: var(--basilico);
+  --color-pomodoro: var(--pomodoro);
+  --font-display: var(--font-display);
+  --font-text: var(--font-text);
+  --font-hand: var(--font-hand);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-page: var(--lavagna);
+    --surface-card: #1C2025;
+    --text-body: #E9EAE4;
+    --text-secondary: #9AA095;
+    --text-interactive: #7C96E8;
+    --border-quiet: #2A2F36;
+    --grid-line: rgba(255, 255, 255, .06);
+    --surface-selected: rgba(124, 150, 232, .16);
+    --border-interactive: #7C96E8;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-text);
+  font-size: var(--text-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.bg-quadretti {
+  background-image: var(--bg-quadretti);
+  background-size: var(--bg-quadretti-size);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
