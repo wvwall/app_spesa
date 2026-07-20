@@ -9,6 +9,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      // Registrazione fatta a mano in src/pwa.ts (con controllo periodico attivo di
+      // nuove versioni): niente script auto-iniettato, per non registrare due volte.
+      injectRegister: null,
       includeAssets: ["favicon.svg"],
       manifest: {
         name: "La spesa di casa",
