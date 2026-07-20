@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "../core/Button";
 
 interface ProposalCardProps {
@@ -14,7 +15,7 @@ interface ProposalCardProps {
 }
 
 export function ProposalCard({
-  eyebrow = "✨ Proposta",
+  eyebrow = "Proposta",
   title,
   meta,
   have,
@@ -35,8 +36,19 @@ export function ProposalCard({
         ...style,
       }}
     >
-      <div style={{ fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--biro)", marginBottom: 6 }}>
-        {eyebrow}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          fontSize: 11,
+          letterSpacing: ".12em",
+          textTransform: "uppercase",
+          color: "var(--biro)",
+          marginBottom: 6,
+        }}
+      >
+        <Sparkles size={12} strokeWidth={2} /> {eyebrow}
       </div>
       <h2
         style={{
@@ -56,7 +68,18 @@ export function ProposalCard({
         <div style={{ color: "var(--biro)", fontSize: 13.5, marginBottom: extra ? 4 : 12 }}>Da comprare: {buy}</div>
       )}
       {extra && <div style={{ color: "var(--inchiostro-70)", fontSize: 13, marginBottom: 12 }}>L'AI aggiunge: {extra}</div>}
-      <div style={{ fontSize: 12, color: "var(--basilico)", marginBottom: 12 }}>✓ verificato: senza noci</div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          fontSize: 12,
+          color: "var(--basilico)",
+          marginBottom: 12,
+        }}
+      >
+        <ShieldCheck size={14} strokeWidth={2} /> verificato: senza noci
+      </div>
       <div style={{ display: "flex", gap: 8 }}>
         <Button onClick={onAccept} style={{ flex: 1, borderRadius: 10, padding: 11, fontSize: 14 }}>
           Va bene

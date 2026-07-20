@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Sun, Moon, Sparkles, Plus } from "lucide-react";
 
 interface CardPiattoProps {
   when?: "Pranzo" | "Cena";
@@ -10,7 +11,7 @@ interface CardPiattoProps {
 }
 
 export function CardPiatto({ when = "Pranzo", dish, empty = false, ai = false, onClick, style }: CardPiattoProps) {
-  const icon = when.toLowerCase().startsWith("c") ? "☾" : "☀";
+  const Icona = when.toLowerCase().startsWith("c") ? Moon : Sun;
   return (
     <button
       type="button"
@@ -33,16 +34,39 @@ export function CardPiatto({ when = "Pranzo", dish, empty = false, ai = false, o
         ...style,
       }}
     >
-      <span style={{ fontSize: 12, color: "var(--inchiostro-70)", width: 52, flex: "none" }}>
-        {icon} {when}
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 3,
+          fontSize: 12,
+          color: "var(--inchiostro-70)",
+          width: 52,
+          flex: "none",
+        }}
+      >
+        <Icona size={13} strokeWidth={2} /> {when}
       </span>
-      <span style={{ fontWeight: 600, fontSize: 15.5, color: empty ? "var(--biro)" : "var(--text-body)" }}>
-        {empty ? dish || "+ aggiungi piatto" : dish}
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          fontWeight: 600,
+          fontSize: 15.5,
+          color: empty ? "var(--biro)" : "var(--text-body)",
+        }}
+      >
+        {empty && !dish && <Plus size={16} strokeWidth={2.25} />}
+        {empty ? dish || "aggiungi piatto" : dish}
       </span>
       {ai && (
         <span
           style={{
             marginLeft: "auto",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
             fontSize: 11,
             color: "var(--biro)",
             background: "var(--biro-chiaro)",
@@ -51,7 +75,7 @@ export function CardPiatto({ when = "Pranzo", dish, empty = false, ai = false, o
             flex: "none",
           }}
         >
-          ✨ AI
+          <Sparkles size={12} strokeWidth={2} /> AI
         </span>
       )}
     </button>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { X } from "lucide-react";
 import { db, getOrCreateProfilo } from "../lib/db";
 import { inizioCiclo, toIsoDate, etichettaCiclo } from "../lib/settimana";
 import { eliminaVoce, aggiornaQuantita, eliminaListaCompleta } from "../lib/lista";
@@ -105,9 +106,9 @@ function RigaListaRevisione({ voce }: { voce: VoceLista }) {
         type="button"
         aria-label={`Rimuovi ${voce.nome}`}
         onClick={() => void eliminaVoce(voce.id)}
-        style={{ color: "var(--pomodoro)", fontSize: 16, flex: "none" }}
+        style={{ color: "var(--pomodoro)", flex: "none", display: "flex" }}
       >
-        ✕
+        <X size={16} strokeWidth={2} />
       </button>
     </div>
   );

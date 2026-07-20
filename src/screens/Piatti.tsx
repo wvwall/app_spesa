@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { Sparkles, X, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, nowIso, nuovoId, REPARTI_DEFAULT } from "../lib/db";
 import { generaPiatto, type PiattoGenerato } from "../lib/ai";
 import { salvaPiattoGenerato } from "../lib/piatti";
@@ -140,7 +141,13 @@ export function Piatti() {
           </Etichetta>
           <div className="flex gap-2 mb-2">
             <Button onClick={() => void generaConAI()} disabled={caricamentoAI}>
-              {caricamentoAI ? "Sto pensando a un piatto…" : "✨ Genera con AI"}
+              {caricamentoAI ? (
+                "Sto pensando a un piatto…"
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <Sparkles size={15} strokeWidth={2} /> Genera con AI
+                </span>
+              )}
             </Button>
             <Button variant="ghost" onClick={() => setComponendo(true)} disabled={selezionati.length === 0}>
               Componi piatto
@@ -149,7 +156,6 @@ export function Piatti() {
           {erroreAI && <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreAI}</p>}
           {generato && (
             <ProposalCard
-              eyebrow="✨ Proposta"
               title={generato.nome}
               meta={`${generato.minuti ? generato.minuti + " min · " : ""}${generato.porzioni} porzioni`}
               have={nomiSelezionati.length > 0 ? nomiSelezionati.join(", ") : "nessuno"}
@@ -184,6 +190,7 @@ export function Piatti() {
                 <div className="flex items-center gap-2 flex-none">
                   {p.origine === "ai" && (
                     <span
+                      className="inline-flex items-center gap-1"
                       style={{
                         fontSize: 11,
                         color: "var(--biro)",
@@ -192,16 +199,16 @@ export function Piatti() {
                         padding: "3px 8px",
                       }}
                     >
-                      ✨ AI
+                      <Sparkles size={11} strokeWidth={2} /> AI
                     </span>
                   )}
                   <button
                     type="button"
                     aria-label={`Elimina ${p.nome}`}
                     onClick={() => void eliminaPiatto(p.id)}
-                    style={{ color: "var(--pomodoro)", fontSize: 16 }}
+                    style={{ color: "var(--pomodoro)", display: "flex" }}
                   >
-                    ✕
+                    <X size={16} strokeWidth={2} />
                   </button>
                 </div>
               </div>
@@ -239,7 +246,7 @@ function RepartoCollassabile({
         className="flex items-center gap-2 w-full text-left mb-2"
         style={{ letterSpacing: ".12em", textTransform: "uppercase", fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}
       >
-        <span>{espanso ? "▾" : "▸"}</span>
+        {espanso ? <ChevronDown size={15} strokeWidth={2.25} /> : <ChevronRight size={15} strokeWidth={2.25} />}
         <span>{nome}</span>
         <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
           ({ingredienti.length}{numSelezionati > 0 ? ` · ${numSelezionati} selezionati` : ""})
@@ -287,7 +294,11 @@ function AggiungiIngredienteInline({
           </Chip>
         ))}
       </div>
-      <Button onClick={() => onConferma(repartoScelto)}>+ Aggiungi “{query}”</Button>
+      <Button onClick={() => onConferma(repartoScelto)}>
+        <span className="inline-flex items-center gap-1.5">
+          <Plus size={15} strokeWidth={2.25} /> Aggiungi “{query}”
+        </span>
+      </Button>
     </div>
   );
 }

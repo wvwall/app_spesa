@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { Minus, Plus, GripVertical } from "lucide-react";
 import { db, getOrCreateProfilo } from "../lib/db";
 import { scaricaBackup, importaBackup } from "../lib/backup";
 import { Button, Chip, Badge } from "../components";
@@ -60,12 +61,12 @@ export function Altro() {
           >
             <span style={{ fontWeight: 600 }}>Porzioni predefinite</span>
             <div className="flex items-center gap-3">
-              <button onClick={() => void cambiaPorzioni(-1)} aria-label="Diminuisci">
-                −
+              <button onClick={() => void cambiaPorzioni(-1)} aria-label="Diminuisci" style={{ display: "flex" }}>
+                <Minus size={16} strokeWidth={2.25} />
               </button>
               <span style={{ fontWeight: 700, color: "var(--biro)" }}>{profilo.porzioniDefault} persone</span>
-              <button onClick={() => void cambiaPorzioni(1)} aria-label="Aumenta">
-                +
+              <button onClick={() => void cambiaPorzioni(1)} aria-label="Aumenta" style={{ display: "flex" }}>
+                <Plus size={16} strokeWidth={2.25} />
               </button>
             </div>
           </div>
@@ -238,8 +239,8 @@ function OrdineReparti({ ordine, onCambia }: { ordine: string[]; onCambia: (nuov
             transition: trascinato === reparto ? "none" : "transform 160ms ease, box-shadow 160ms ease",
           }}
         >
-          <span aria-hidden style={{ color: "var(--inchiostro-70)", fontSize: 17, letterSpacing: "-1.5px", cursor: "grab" }}>
-            ⋮⋮
+          <span aria-hidden style={{ display: "flex", color: "var(--inchiostro-70)", cursor: "grab" }}>
+            <GripVertical size={17} strokeWidth={2} />
           </span>
           <span style={{ flex: 1, fontWeight: 600, fontSize: 14.5 }}>{reparto}</span>
         </div>

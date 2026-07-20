@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { Sparkles, TriangleAlert, WifiOff, ShieldCheck } from "lucide-react";
 
 type BadgeKind = "ai" | "allergene" | "offline" | "verificato" | "sostituito";
 
@@ -10,12 +11,14 @@ interface BadgeProps {
 
 const KIND_STYLES: Record<BadgeKind, CSSProperties> = {
   ai: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
     fontSize: 11,
     color: "var(--biro)",
     background: "var(--biro-chiaro)",
     borderRadius: 99,
     padding: "3px 8px",
-    display: "inline-block",
   },
   allergene: {
     display: "inline-flex",
@@ -37,7 +40,9 @@ const KIND_STYLES: Record<BadgeKind, CSSProperties> = {
     fontSize: 12,
   },
   verificato: {
-    display: "inline-block",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
     fontSize: 12,
     color: "var(--basilico)",
   },
@@ -52,14 +57,27 @@ const KIND_STYLES: Record<BadgeKind, CSSProperties> = {
 };
 
 const KIND_CONTENT: Record<BadgeKind, ReactNode> = {
-  ai: "✨ AI",
-  allergene: "⚠ Niente noci — esclusione assoluta",
-  offline: (
+  ai: (
     <>
-      <i style={{ fontStyle: "normal", color: "var(--basilico)" }}>●</i> Offline — tutto salvato sul telefono
+      <Sparkles size={12} strokeWidth={2} /> AI
     </>
   ),
-  verificato: "✓ verificato: senza noci",
+  allergene: (
+    <>
+      <TriangleAlert size={16} strokeWidth={2} /> Niente noci — esclusione assoluta
+    </>
+  ),
+  offline: (
+    <>
+      <WifiOff size={13} strokeWidth={2} style={{ color: "var(--basilico)" }} /> Offline — tutto salvato sul
+      telefono
+    </>
+  ),
+  verificato: (
+    <>
+      <ShieldCheck size={14} strokeWidth={2} /> verificato: senza noci
+    </>
+  ),
   sostituito: "sostituito",
 };
 

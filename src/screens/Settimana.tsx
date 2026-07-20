@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronLeft, ChevronRight, Sparkles, X, RotateCcw, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, nowIso, nuovoId } from "../lib/db";
 import {
   getOrCreatePiano,
@@ -207,15 +208,13 @@ export function Settimana({ onListaGenerata }: Props) {
               onClick={() => setCicloOffset((w) => w - 1)}
               aria-label="Settimana precedente"
               style={{
-                fontSize: 22,
-                lineHeight: 1,
                 minWidth: 44,
                 minHeight: 44,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}>
-              ‹
+              <ChevronLeft size={22} strokeWidth={2} />
             </button>
             <button
               type="button"
@@ -233,15 +232,13 @@ export function Settimana({ onListaGenerata }: Props) {
               onClick={() => setCicloOffset((w) => w + 1)}
               aria-label="Settimana successiva"
               style={{
-                fontSize: 22,
-                lineHeight: 1,
                 minWidth: 44,
                 minHeight: 44,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}>
-              ›
+              <ChevronRight size={22} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -270,7 +267,13 @@ export function Settimana({ onListaGenerata }: Props) {
             {GENERA_SETTIMANA_ABILITATO && (
               <div className="w-full px-4">
                 <Button onClick={() => void generaInteraSettimana()} disabled={generandoSettimana}>
-                  {generandoSettimana ? "Sto pensando alla settimana…" : "✨ Genera l'intera settimana"}
+                  {generandoSettimana ? (
+                    "Sto pensando alla settimana…"
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Sparkles size={15} strokeWidth={2} /> Genera l'intera settimana
+                    </span>
+                  )}
                 </Button>
               </div>
             )}
@@ -366,13 +369,15 @@ export function Settimana({ onListaGenerata }: Props) {
                     aria-label={p.esclusa ? `Includi ${p.generato.nome}` : `Escludi ${p.generato.nome}`}
                     style={{
                       color: p.esclusa ? "var(--basilico)" : "var(--pomodoro)",
-                      fontSize: 18,
                       flex: "none",
                       minWidth: 44,
                       minHeight: 44,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    {p.esclusa ? "↺" : "✕"}
+                    {p.esclusa ? <RotateCcw size={18} strokeWidth={2} /> : <X size={18} strokeWidth={2} />}
                   </button>
                 </div>
               ))}
@@ -499,12 +504,18 @@ function SlotRiga({
         </div>
         <button
           type="button"
-          className="text-left px-2.5 py-2 rounded-lg text-sm"
+          className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
           style={{ color: "var(--biro)", fontWeight: 600 }}
           onClick={() => void generaConAI()}
           disabled={rigenerazione}
         >
-          {rigenerazione ? "Sto pensando a un piatto…" : piatto ? "✨ Rigenera con AI" : "✨ Genera con AI"}
+          {rigenerazione ? (
+            "Sto pensando a un piatto…"
+          ) : (
+            <>
+              <Sparkles size={15} strokeWidth={2} /> {piatto ? "Rigenera con AI" : "Genera con AI"}
+            </>
+          )}
         </button>
         {erroreRigenerazione && (
           <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreRigenerazione}</p>
@@ -533,19 +544,19 @@ function SlotRiga({
           {testoRicerca !== "" && !corrispondenzaEsatta && (
             <button
               type="button"
-              className="text-left px-2.5 py-2 rounded-lg text-sm"
+              className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
               style={{ color: "var(--biro)", fontWeight: 600 }}
               onClick={() => void creaLiberoEAssegna(testoRicerca)}>
-              + Usa “{testoRicerca}” così com'è
+              <Plus size={15} strokeWidth={2.25} /> Usa “{testoRicerca}” così com'è
             </button>
           )}
           {piatto && (
             <button
               type="button"
-              className="text-left px-2.5 py-2 rounded-lg text-sm"
+              className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
               style={{ color: "var(--pomodoro)", fontWeight: 600 }}
               onClick={() => void assegna(undefined)}>
-              ✕ Rimuovi piatto da questo pasto
+              <X size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
             </button>
           )}
         </div>
@@ -570,11 +581,11 @@ function SlotRiga({
           onClick={() => void assegna(undefined)}
           style={{
             color: "var(--pomodoro)",
-            fontSize: 17,
             padding: "6px 4px",
             flex: "none",
+            display: "flex",
           }}>
-          ✕
+          <X size={17} strokeWidth={2} />
         </button>
       </div>
     );

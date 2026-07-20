@@ -1,19 +1,19 @@
 :root {
   /* base — il quaderno */
-  --carta: #FAFAF6;
-  --quadretto: #E4E7DE;
-  --inchiostro: #23261E;
-  --inchiostro-70: #5A5E52;
-  --biro: #1D3EA5;
-  --biro-chiaro: #E8ECF9;
-  --basilico: #39724A;
-  --pomodoro: #BE3F27;
-  --pomodoro-chiaro: #F7E5E0;
-  --lavagna: #15181C;
+  --carta: #fafaf6;
+  --quadretto: #e4e7de;
+  --inchiostro: #23261e;
+  --inchiostro-70: #5a5e52;
+  --biro: #2f58d4;
+  --biro-chiaro: #e8ecf9;
+  --basilico: #39724a;
+  --pomodoro: #be3f27;
+  --pomodoro-chiaro: #f7e5e0;
+  --lavagna: #15181c;
 
   /* semantici */
   --surface-page: var(--carta);
-  --surface-card: #FFFFFF;
+  --surface-card: #ffffff;
   --surface-selected: var(--biro-chiaro);
   --text-body: var(--inchiostro);
   --text-secondary: var(--inchiostro-70);
@@ -26,7 +26,8 @@
 
   /* quadrettatura 20px, pattern CSS (mai immagine) */
   --grid-line: var(--quadretto);
-  --bg-quadretti: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+  --bg-quadretti:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   --bg-quadretti-size: 20px 20px;
 
@@ -42,7 +43,7 @@
   --text-display: 36px;
   --lh-base: 1.5;
   --tracking-display: -0.02em;
-  --tracking-label: .12em;
+  --tracking-label: 0.12em;
 
   /* spaziatura e forma */
   --sp-1: 4px;
@@ -55,13 +56,13 @@
   --radius-chip: 8px;
   --radius-card: 14px;
   --radius-sheet: 20px 20px 0 0;
-  --shadow-float: 0 -8px 30px rgba(0, 0, 0, .18);
-  --shadow-fab: 0 6px 20px rgba(0, 0, 0, .16);
+  --shadow-float: 0 -8px 30px rgba(0, 0, 0, 0.18);
+  --shadow-fab: 0 6px 20px rgba(0, 0, 0, 0.16);
   --touch-min: 44px;
   --riga-corsia: 56px;
 
   /* motion: un solo momento firma (tratto di biro ~200ms) */
-  --ease-pennata: cubic-bezier(.6, 0, .3, 1);
+  --ease-pennata: cubic-bezier(0.6, 0, 0.3, 1);
   --dur-check: 220ms;
   --dur-stroke: 240ms;
   --dur-ui: 150ms;
@@ -71,12 +72,12 @@
 /* dark mode — SOLO tempo 1 (pianificazione); la corsia resta sempre chiara */
 [data-theme="dark"] {
   --surface-page: var(--lavagna);
-  --surface-card: #1C2025;
-  --text-body: #E9EAE4;
-  --text-secondary: #9AA095;
-  --text-interactive: #7C96E8;
-  --border-quiet: #2A2F36;
-  --grid-line: rgba(255, 255, 255, .06);
-  --surface-selected: rgba(124, 150, 232, .16);
-  --border-interactive: #7C96E8;
+  --surface-card: #1c2025;
+  --text-body: #e9eae4;
+  --text-secondary: #9aa095;
+  --text-interactive: #7c96e8;
+  --border-quiet: #2a2f36;
+  --grid-line: rgba(255, 255, 255, 0.06);
+  --surface-selected: rgba(124, 150, 232, 0.16);
+  --border-interactive: #7c96e8;
 }

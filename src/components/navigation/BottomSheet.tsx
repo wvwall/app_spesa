@@ -4,7 +4,7 @@ interface BottomSheetProps {
   open?: boolean;
   title?: string;
   intro?: string;
-  footer?: string;
+  footer?: ReactNode;
   onClose?: () => void;
   children?: ReactNode;
   /** true = si posiziona dentro un contenitore relative (es. la cornice telefono di anteprima) invece che a schermo intero */
@@ -56,7 +56,11 @@ export function BottomSheet({ open = false, title, intro, footer, onClose, child
         )}
         {intro && <p style={{ margin: "0 0 14px", fontSize: 13.5, color: "var(--inchiostro-70)" }}>{intro}</p>}
         {children}
-        {footer && <p style={{ fontSize: 12, color: "var(--basilico)", margin: "10px 0 0" }}>{footer}</p>}
+        {footer && (
+          <p style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--basilico)", margin: "10px 0 0" }}>
+            {footer}
+          </p>
+        )}
       </div>
     </>
   );

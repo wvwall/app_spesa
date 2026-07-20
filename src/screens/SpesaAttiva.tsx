@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { X, TriangleAlert, ShieldCheck } from "lucide-react";
 import { db, getOrCreateProfilo } from "../lib/db";
 import { toggleVoce, sostituisciVoce } from "../lib/lista";
 import { RigaLista, ProgressSpesa, Badge, BottomSheet, AltOption } from "../components";
@@ -36,8 +37,8 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
       <div className="px-5 pt-4 pb-2 flex-none">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <button onClick={onChiudi} aria-label="Chiudi" style={{ fontSize: 18 }}>
-              ✕
+            <button onClick={onChiudi} aria-label="Chiudi" style={{ display: "flex" }}>
+              <X size={18} strokeWidth={2} />
             </button>
             <span style={{ fontWeight: 700, fontSize: 15 }}>Esselunga</span>
           </div>
@@ -75,7 +76,6 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
                     onClick={() => setVoceMancante(v)}
                     style={{
                       color: "var(--pomodoro)",
-                      fontSize: 19,
                       flex: "none",
                       minWidth: 44,
                       minHeight: 44,
@@ -84,7 +84,7 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
                       justifyContent: "center",
                     }}
                   >
-                    ⚠
+                    <TriangleAlert size={19} strokeWidth={2} />
                   </button>
                 )}
               </div>
@@ -106,7 +106,13 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
             ? "Vanno bene anche:"
             : "Nessuna alternativa pre-generata per questo articolo."
         }
-        footer={voceMancante && voceMancante.alternative.length > 0 ? "✓ verificate: senza noci" : undefined}
+        footer={
+          voceMancante && voceMancante.alternative.length > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <ShieldCheck size={13} strokeWidth={2} /> verificate: senza noci
+            </span>
+          ) : undefined
+        }
       >
         {voceMancante?.alternative.map((alt) => (
           <AltOption
