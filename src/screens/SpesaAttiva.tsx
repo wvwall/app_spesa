@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getOrCreateProfilo } from "../lib/db";
 import { toggleVoce, sostituisciVoce } from "../lib/lista";
-import { RigaLista, ProgressSpesa, Badge, Button, BottomSheet, AltOption } from "../components";
+import { RigaLista, ProgressSpesa, Badge, BottomSheet, AltOption } from "../components";
 import type { VoceLista } from "../lib/types";
 
 interface Props {
@@ -57,31 +57,44 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
               {reparto}
             </div>
             {(perReparto.get(reparto) ?? []).map((v) => (
-              <RigaLista
-                key={v.id}
-                name={v.sostituitoCon ?? v.nome}
-                qty={v.quantita}
-                note={v.nota}
-                checked={v.checked}
-                substituted={Boolean(v.sostituitoCon)}
-                onToggle={() => void toggleVoce(v.id, !v.checked)}
-              />
+              <div key={v.id} className="flex items-center">
+                <div className="flex-1 min-w-0">
+                  <RigaLista
+                    name={v.sostituitoCon ?? v.nome}
+                    qty={v.quantita}
+                    note={v.nota}
+                    checked={v.checked}
+                    substituted={Boolean(v.sostituitoCon)}
+                    onToggle={() => void toggleVoce(v.id, !v.checked)}
+                  />
+                </div>
+                {!v.checked && (
+                  <button
+                    type="button"
+                    aria-label={`Manca ${v.nome}?`}
+                    onClick={() => setVoceMancante(v)}
+                    style={{
+                      color: "var(--pomodoro)",
+                      fontSize: 19,
+                      flex: "none",
+                      minWidth: 44,
+                      minHeight: 44,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ⚠
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         ))}
       </div>
 
-      <div className="text-center pt-2 pb-0.5 flex-none">
+      <div className="text-center pt-2 pb-5 flex-none">
         <Badge kind="offline" />
-      </div>
-      <div className="px-5 pt-2 pb-5 flex-none">
-        <Button
-          variant="warn"
-          onClick={() => setVoceMancante(voci.find((v) => !v.checked) ?? null)}
-          disabled={totale === 0 || fatti === totale}
-        >
-          ⚠ Manca qualcosa?
-        </Button>
       </div>
 
       <BottomSheet
