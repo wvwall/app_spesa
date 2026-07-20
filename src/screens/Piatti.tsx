@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getOrCreateProfilo, nowIso, nuovoId, REPARTI_DEFAULT } from "../lib/db";
 import { generaPiatto, type PiattoGenerato } from "../lib/ai";
+import { salvaPiattoGenerato } from "../lib/piatti";
 import { Button, Chip, SearchInput, ProposalCard } from "../components";
 import type { Ingrediente, Piatto } from "../lib/types";
 
@@ -91,49 +92,7 @@ export function Piatti() {
 
   async function salvaGenerato() {
     if (!generato) return;
-    const piattoId = nuovoId();
-    const nuovo: Piatto = {
-      id: piattoId,
-      nome: generato.nome,
-      procedimento: generato.procedimento.join("\n"),
-      preferito: false,
-      origine: "ai",
-      porzioni: generato.porzioni,
-      updatedAt: nowIso(),
-    };
-    await db.piatti.add(nuovo);
-    // Gli ingredienti già disponibili (selezionati dall'utente) e quelli da comprare (dall'AI)
-    // fanno entrambi parte della ricetta: se la si rifà in futuro potrebbe non averli più tutti.
-    // Nome e reparto vengono salvati subito (snapshot): un ingrediente non deve mai sparire
-    // dalla lista della spesa, anche se in futuro il catalogo cambia o quella voce viene tolta.
-    for (const ing of ingredienti.filter((i) => selezionati.includes(i.id))) {
-      // eslint-disable-next-line no-await-in-loop
-      await db.piattoIngredienti.add({
-        id: nuovoId(),
-        piattoId,
-        ingredienteId: ing.id,
-        nome: ing.nome,
-        reparto: ing.reparto,
-        quantita: 1,
-        unita: ing.unitaDefault,
-      });
-    }
-    for (const voce of generato.ingredientiDaComprare) {
-      const nomeVoce = voce.nome.trim() || "Ingrediente da comprare";
-      // Se il nome corrisponde a un ingrediente già a catalogo, eredita reparto e collegamento;
-      // altrimenti va comunque in lista, solo senza reparto noto (finisce in Dispensa).
-      const corrispondenza = ingredienti.find((i) => i.nome.toLowerCase() === nomeVoce.toLowerCase());
-      // eslint-disable-next-line no-await-in-loop
-      await db.piattoIngredienti.add({
-        id: nuovoId(),
-        piattoId,
-        ingredienteId: corrispondenza?.id,
-        nome: corrispondenza?.nome ?? nomeVoce,
-        reparto: corrispondenza?.reparto ?? "Dispensa",
-        quantita: 1,
-        unita: voce.quantita,
-      });
-    }
+    await salvaPiattoGenerato(generato, ingredienti.filter((i) => selezionati.includes(i.id)), ingredienti);
     setGenerato(null);
     setSelezionati([]);
   }

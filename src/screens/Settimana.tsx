@@ -7,6 +7,8 @@ import {
   assegnaPiattoASlot,
 } from "../lib/piano";
 import { generaListaDaPiano } from "../lib/lista";
+import { generaPiatto, generaSettimana, type PiattoGenerato } from "../lib/ai";
+import { salvaPiattoGenerato } from "../lib/piatti";
 import {
   inizioCiclo,
   cicloSuccessivo,
@@ -17,7 +19,33 @@ import {
   isOggi,
 } from "../lib/settimana";
 import { CardPiatto, Button, SearchInput } from "../components";
-import type { Piatto, Slot } from "../lib/types";
+import type { Ingrediente, Piatto, Slot } from "../lib/types";
+
+// Pasti per chiamata AI: generare tutta la settimana (fino a ~14 piatti completi) in
+// un'unica risposta supera facilmente il timeout della function. Blocchi più piccoli,
+// lanciati in parallelo, restano veloci e il modello continua a vedere più pasti insieme
+// (quindi a variarli) invece di ricevere sempre lo stesso prompt generico per uno alla volta.
+const DIMENSIONE_BLOCCO_SETTIMANA = 4;
+
+function suddividiInBlocchi<T>(elementi: T[], dimensione: number): T[][] {
+  const blocchi: T[][] = [];
+  for (let i = 0; i < elementi.length; i += dimensione) {
+    blocchi.push(elementi.slice(i, i + dimensione));
+  }
+  return blocchi;
+}
+
+// Disabilitato per ora: anche a blocchi, generare tutta la settimana in un colpo solo non
+// convince (tempi/qualità). Resta la generazione per singolo pasto, che tiene conto dei
+// piatti già scelti nella settimana per evitare doppioni.
+const GENERA_SETTIMANA_ABILITATO = false;
+
+interface PropostaSettimana {
+  slotId: string;
+  giornoEPasto: string;
+  generato: PiattoGenerato;
+  esclusa: boolean;
+}
 
 interface Props {
   onListaGenerata: () => void;
@@ -56,15 +84,95 @@ export function Settimana({ onListaGenerata }: Props) {
       [pianoId],
     ) ?? [];
   const piatti = useLiveQuery(() => db.piatti.toArray(), []) ?? [];
+  const ingredientiCatalogo = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
   const piattoDiId = (id?: string) => piatti.find((p) => p.id === id);
+  const piattiAssegnatiSettimana = slots
+    .filter((s) => s.piattoId)
+    .map((s) => ({ slotId: s.id, nome: piattoDiId(s.piattoId)?.nome }))
+    .filter((p): p is { slotId: string; nome: string } => !!p.nome);
 
   const tuttiVuoti = slots.length > 0 && slots.every((s) => !s.piattoId);
   const slotsAssegnati = slots.filter((s) => s.piattoId).length;
+
+  const [generandoSettimana, setGenerandoSettimana] = useState(false);
+  const [propostaSettimana, setPropostaSettimana] = useState<PropostaSettimana[] | null>(null);
+  const [erroreSettimana, setErroreSettimana] = useState<string | null>(null);
 
   async function generaLista() {
     if (!pianoId) return;
     await generaListaDaPiano(pianoId);
     onListaGenerata();
+  }
+
+  async function generaInteraSettimana() {
+    const slotVuoti = slots.filter((s) => !s.piattoId);
+    if (slotVuoti.length === 0) return;
+    const giornoPerData = new Map(giorni.map((g) => [toIsoDate(g), g]));
+    const slotPerId = new Map(slotVuoti.map((s) => [s.id, s]));
+    const blocchi = suddividiInBlocchi(slotVuoti, DIMENSIONE_BLOCCO_SETTIMANA);
+
+    setGenerandoSettimana(true);
+    setErroreSettimana(null);
+    try {
+      const risultatiPerBlocco = await Promise.allSettled(
+        blocchi.map((blocco) =>
+          generaSettimana({
+            pasti: blocco.map((s) => ({ id: s.id, pasto: s.pasto })),
+            vincoli: profilo?.vincoliAlimentari ?? ["noci"],
+            porzioni: profilo?.porzioniDefault ?? 4,
+          })
+        )
+      );
+
+      const proposte: PropostaSettimana[] = [];
+      for (const risultatoBlocco of risultatiPerBlocco) {
+        if (risultatoBlocco.status !== "fulfilled") continue;
+        for (const { id, generato } of risultatoBlocco.value) {
+          const slot = slotPerId.get(id);
+          if (!slot) continue;
+          const giorno = giornoPerData.get(slot.data);
+          const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
+          proposte.push({
+            slotId: slot.id,
+            giornoEPasto: giorno ? `${etichettaGiorno(giorno)} · ${etichettaPasto}` : etichettaPasto,
+            generato,
+            esclusa: false,
+          });
+        }
+      }
+
+      if (proposte.length === 0) {
+        setErroreSettimana("Non sono riuscito a generare nessun piatto. Riprova.");
+        return;
+      }
+      const mancanti = slotVuoti.length - proposte.length;
+      if (mancanti > 0) {
+        setErroreSettimana(`${mancanti} piatti non sono arrivati, riprova più tardi solo per quei giorni.`);
+      }
+      setPropostaSettimana(proposte);
+    } catch (e) {
+      setErroreSettimana(e instanceof Error ? e.message : "Non sono riuscito a generare la settimana. Riprova.");
+    } finally {
+      setGenerandoSettimana(false);
+    }
+  }
+
+  function toggleEsclusioneProposta(slotId: string) {
+    setPropostaSettimana((proposte) =>
+      proposte ? proposte.map((p) => (p.slotId === slotId ? { ...p, esclusa: !p.esclusa } : p)) : proposte
+    );
+  }
+
+  async function confermaPropostaSettimana() {
+    if (!propostaSettimana) return;
+    for (const p of propostaSettimana.filter((p) => !p.esclusa)) {
+      // eslint-disable-next-line no-await-in-loop
+      const piattoId = await salvaPiattoGenerato(p.generato, [], ingredientiCatalogo);
+      // eslint-disable-next-line no-await-in-loop
+      await assegnaPiattoASlot(p.slotId, piattoId);
+    }
+    setPropostaSettimana(null);
+    setErroreSettimana(null);
   }
 
   return (
@@ -141,7 +249,7 @@ export function Settimana({ onListaGenerata }: Props) {
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
         {tuttiVuoti && (
-          <div className="text-center flex flex-col items-center gap-2 py-6">
+          <div className="text-center flex flex-col items-center gap-3 py-6">
             <div
               style={{
                 fontFamily: "var(--font-display)",
@@ -157,9 +265,18 @@ export function Settimana({ onListaGenerata }: Props) {
                 fontSize: 15,
                 lineHeight: 1.5,
               }}>
-              Scegli un piatto per un giorno qui sotto, o vai su Piatti per
-              generarne uno con l'AI.
+              Scegli un piatto per un giorno qui sotto, o fatti proporre l'intera settimana.
             </p>
+            {GENERA_SETTIMANA_ABILITATO && (
+              <div className="w-full px-4">
+                <Button onClick={() => void generaInteraSettimana()} disabled={generandoSettimana}>
+                  {generandoSettimana ? "Sto pensando alla settimana…" : "✨ Genera l'intera settimana"}
+                </Button>
+              </div>
+            )}
+            {erroreSettimana && !propostaSettimana && (
+              <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreSettimana}</p>
+            )}
           </div>
         )}
         {giorni.map((giorno) => {
@@ -192,6 +309,9 @@ export function Settimana({ onListaGenerata }: Props) {
                     piatto={piattoDiId(slot.piattoId)}
                     piattiDisponibili={piatti}
                     porzioniDefault={profilo?.porzioniDefault ?? 4}
+                    vincoliAlimentari={profilo?.vincoliAlimentari ?? ["noci"]}
+                    ingredientiCatalogo={ingredientiCatalogo}
+                    piattiAssegnatiSettimana={piattiAssegnatiSettimana}
                   />
                 ))}
               </div>
@@ -207,6 +327,71 @@ export function Settimana({ onListaGenerata }: Props) {
           </Button>
         </div>
       )}
+
+      {propostaSettimana && (
+        <div
+          className="fixed inset-0 flex flex-col justify-end"
+          style={{ background: "rgba(35,38,30,.35)", zIndex: 20 }}
+        >
+          <div
+            className="flex flex-col gap-3 p-4"
+            style={{
+              background: "var(--surface-card)",
+              borderRadius: "20px 20px 0 0",
+              maxHeight: "80vh",
+            }}
+          >
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>
+              Proposta per la settimana
+            </div>
+            {erroreSettimana && <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreSettimana}</p>}
+            <div className="flex flex-col gap-1.5 overflow-y-auto">
+              {propostaSettimana.map((p) => (
+                <div
+                  key={p.slotId}
+                  className="flex items-center justify-between gap-2 px-3 py-2.5 border rounded-xl"
+                  style={{ borderColor: "var(--quadretto)", opacity: p.esclusa ? 0.5 : 1 }}
+                >
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: ".08em", textTransform: "uppercase" }}>
+                      {p.giornoEPasto}
+                    </div>
+                    <div style={{ fontWeight: 600, textDecoration: p.esclusa ? "line-through" : "none" }}>
+                      {p.generato.nome}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleEsclusioneProposta(p.slotId)}
+                    aria-label={p.esclusa ? `Includi ${p.generato.nome}` : `Escludi ${p.generato.nome}`}
+                    style={{
+                      color: p.esclusa ? "var(--basilico)" : "var(--pomodoro)",
+                      fontSize: 18,
+                      flex: "none",
+                      minWidth: 44,
+                      minHeight: 44,
+                    }}
+                  >
+                    {p.esclusa ? "↺" : "✕"}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Button onClick={() => void confermaPropostaSettimana()}>
+              Conferma {propostaSettimana.filter((p) => !p.esclusa).length} piatti
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPropostaSettimana(null);
+                setErroreSettimana(null);
+              }}
+            >
+              Annulla tutto
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -216,14 +401,22 @@ function SlotRiga({
   piatto,
   piattiDisponibili,
   porzioniDefault,
+  vincoliAlimentari,
+  ingredientiCatalogo,
+  piattiAssegnatiSettimana,
 }: {
   slot: Slot;
   piatto?: Piatto;
   piattiDisponibili: Piatto[];
   porzioniDefault: number;
+  vincoliAlimentari: string[];
+  ingredientiCatalogo: Ingrediente[];
+  piattiAssegnatiSettimana: { slotId: string; nome: string }[];
 }) {
   const [ricerca, setRicerca] = useState(false);
   const [query, setQuery] = useState("");
+  const [rigenerazione, setRigenerazione] = useState(false);
+  const [erroreRigenerazione, setErroreRigenerazione] = useState<string | null>(null);
   const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
 
   async function assegna(piattoId: string | undefined) {
@@ -244,6 +437,29 @@ function SlotRiga({
     };
     await db.piatti.add(nuovo);
     await assegna(piattoId);
+  }
+
+  async function generaConAI() {
+    setRigenerazione(true);
+    setErroreRigenerazione(null);
+    try {
+      const evitaPiatti = piattiAssegnatiSettimana
+        .filter((p) => p.slotId !== slot.id)
+        .map((p) => p.nome);
+      const generato = await generaPiatto({
+        ingredienti: [],
+        vincoli: vincoliAlimentari,
+        porzioni: porzioniDefault,
+        pasto: slot.pasto,
+        evitaPiatti,
+      });
+      const nuovoPiattoId = await salvaPiattoGenerato(generato, [], ingredientiCatalogo);
+      await assegna(nuovoPiattoId);
+    } catch (e) {
+      setErroreRigenerazione(e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova.");
+    } finally {
+      setRigenerazione(false);
+    }
   }
 
   if (ricerca) {
@@ -281,6 +497,18 @@ function SlotRiga({
             annulla
           </button>
         </div>
+        <button
+          type="button"
+          className="text-left px-2.5 py-2 rounded-lg text-sm"
+          style={{ color: "var(--biro)", fontWeight: 600 }}
+          onClick={() => void generaConAI()}
+          disabled={rigenerazione}
+        >
+          {rigenerazione ? "Sto pensando a un piatto…" : piatto ? "✨ Rigenera con AI" : "✨ Genera con AI"}
+        </button>
+        {erroreRigenerazione && (
+          <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreRigenerazione}</p>
+        )}
         <div className="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
           {risultati.map((p) => (
             <button

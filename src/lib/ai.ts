@@ -12,6 +12,9 @@ const PiattoGeneratoSchema = z.object({
 });
 export type PiattoGenerato = z.infer<typeof PiattoGeneratoSchema>;
 
+const PiattoGeneratoConIdSchema = PiattoGeneratoSchema.extend({ id: z.string() });
+const RispostaSettimanaSchema = z.object({ piatti: z.array(PiattoGeneratoConIdSchema) });
+
 const NETLIFY_FUNCTIONS_BASE = "/.netlify/functions";
 
 async function chiamaProxy(corpo: Record<string, unknown>): Promise<unknown> {
@@ -32,7 +35,18 @@ export async function generaPiatto(input: {
   vincoli: string[];
   porzioni: number;
   pasto: "pranzo" | "cena";
+  evitaPiatti?: string[];
 }): Promise<PiattoGenerato> {
   const dati = await chiamaProxy({ azione: "generaPiatto", ...input });
   return PiattoGeneratoSchema.parse(dati);
+}
+
+export async function generaSettimana(input: {
+  pasti: { id: string; pasto: "pranzo" | "cena" }[];
+  vincoli: string[];
+  porzioni: number;
+}): Promise<{ id: string; generato: PiattoGenerato }[]> {
+  const dati = await chiamaProxy({ azione: "generaSettimana", ...input });
+  const risposta = RispostaSettimanaSchema.parse(dati);
+  return risposta.piatti.map(({ id, ...generato }) => ({ id, generato }));
 }
