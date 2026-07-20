@@ -104,22 +104,32 @@ export function Piatti() {
     await db.piatti.add(nuovo);
     // Gli ingredienti già disponibili (selezionati dall'utente) e quelli da comprare (dall'AI)
     // fanno entrambi parte della ricetta: se la si rifà in futuro potrebbe non averli più tutti.
+    // Nome e reparto vengono salvati subito (snapshot): un ingrediente non deve mai sparire
+    // dalla lista della spesa, anche se in futuro il catalogo cambia o quella voce viene tolta.
     for (const ing of ingredienti.filter((i) => selezionati.includes(i.id))) {
       // eslint-disable-next-line no-await-in-loop
       await db.piattoIngredienti.add({
         id: nuovoId(),
         piattoId,
         ingredienteId: ing.id,
+        nome: ing.nome,
+        reparto: ing.reparto,
         quantita: 1,
         unita: ing.unitaDefault,
       });
     }
     for (const voce of generato.ingredientiDaComprare) {
+      const nomeVoce = voce.nome.trim() || "Ingrediente da comprare";
+      // Se il nome corrisponde a un ingrediente già a catalogo, eredita reparto e collegamento;
+      // altrimenti va comunque in lista, solo senza reparto noto (finisce in Dispensa).
+      const corrispondenza = ingredienti.find((i) => i.nome.toLowerCase() === nomeVoce.toLowerCase());
       // eslint-disable-next-line no-await-in-loop
       await db.piattoIngredienti.add({
         id: nuovoId(),
         piattoId,
-        testoLibero: voce.nome,
+        ingredienteId: corrispondenza?.id,
+        nome: corrispondenza?.nome ?? nomeVoce,
+        reparto: corrispondenza?.reparto ?? "Dispensa",
         quantita: 1,
         unita: voce.quantita,
       });
@@ -359,6 +369,8 @@ function FormComposizioneManuale({
         id: nuovoId(),
         piattoId,
         ingredienteId: ing.id,
+        nome: ing.nome,
+        reparto: ing.reparto,
         quantita: q.valore,
         unita: q.unita,
       });

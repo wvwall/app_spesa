@@ -36,13 +36,3 @@ export async function generaPiatto(input: {
   const dati = await chiamaProxy({ azione: "generaPiatto", ...input });
   return PiattoGeneratoSchema.parse(dati);
 }
-
-export async function suggerisciAlternative(input: {
-  nomeIngrediente: string;
-  contestoPiatto: string;
-  vincoli: string[];
-}): Promise<string[]> {
-  const dati = await chiamaProxy({ azione: "suggerisciAlternative", ...input });
-  const parsed = z.object({ alternative: z.array(z.string()) }).parse(dati);
-  return parsed.alternative;
-}

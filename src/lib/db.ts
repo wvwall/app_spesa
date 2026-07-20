@@ -56,6 +56,7 @@ export async function getOrCreateProfilo(): Promise<Profilo> {
     giornoSpesa: 5, // venerdì
     tema: "sistema",
     seedVersion: 0,
+    seedVersionPiatti: 0,
     updatedAt: new Date().toISOString(),
   };
   try {

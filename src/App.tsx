@@ -7,6 +7,7 @@ import { Piatti } from "./screens/Piatti";
 import { Altro } from "./screens/Altro";
 import { getOrCreateProfilo } from "./lib/db";
 import { applicaSeedIngredienti } from "./seed/applica";
+import { applicaSeedPiatti } from "./seed/applicaPiatti";
 
 type Tab = "settimana" | "lista" | "piatti" | "altro";
 
@@ -20,7 +21,9 @@ export function App() {
       if (profilo.tema === "sistema") root.removeAttribute("data-theme");
       else root.setAttribute("data-theme", profilo.tema === "scuro" ? "dark" : "light");
     });
-    void applicaSeedIngredienti();
+    // Il seed dei piatti cerca gli ingredienti per nome nel catalogo: deve partire solo
+    // dopo che quello degli ingredienti è completo.
+    void applicaSeedIngredienti().then(() => applicaSeedPiatti());
   }, []);
 
   if (listaSpesaAttivaId) {

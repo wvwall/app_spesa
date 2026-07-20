@@ -4,7 +4,6 @@ import { db, getOrCreateProfilo } from "../lib/db";
 import { inizioCiclo, toIsoDate, etichettaCiclo } from "../lib/settimana";
 import { eliminaVoce, aggiornaQuantita, eliminaListaCompleta } from "../lib/lista";
 import { costruisciTestoLista, condividiOScaricaTesto } from "../lib/exportText";
-import { suggerisciAlternative } from "../lib/ai";
 import { Button } from "../components";
 import type { VoceLista } from "../lib/types";
 
@@ -21,32 +20,11 @@ export function Lista({ onIniziaSpesa }: Props) {
   const lista = useLiveQuery(() => (piano ? db.liste.where("pianoId").equals(piano.id).last() : undefined), [piano?.id]);
   const voci = useLiveQuery(() => (lista ? db.voci.where("listaId").equals(lista.id).toArray() : []), [lista?.id]) ?? [];
 
-  const [preparazione, setPreparazione] = useState(false);
-
+  // Le alternative (RF7) sono già pronte da una mappa locale (src/lib/sostituzioni.ts), niente
+  // AI né rete: non serve nessuna preparazione asincrona prima di entrare in spesa attiva.
   async function chiudiEIniziaSpesa() {
     if (!lista) return;
-    setPreparazione(true);
-    // Pre-genera le alternative per ogni voce, così funzionano offline in negozio (RF7).
-    // Se l'AI non è disponibile (nessuna rete/chiave), si prosegue comunque: le alternative
-    // restano vuote e la spesa attiva mostra che non ce ne sono per quell'articolo.
-    for (const voce of voci) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        const alternative = await suggerisciAlternative({
-          nomeIngrediente: voce.nome,
-          contestoPiatto: "",
-          vincoli: profilo?.vincoliAlimentari ?? [],
-        });
-        if (alternative.length > 0) {
-          // eslint-disable-next-line no-await-in-loop
-          await db.voci.update(voce.id, { alternative });
-        }
-      } catch {
-        // offline o AI non configurata: si prosegue senza alternative pre-generate
-      }
-    }
     await db.liste.update(lista.id, { chiusa: true });
-    setPreparazione(false);
     onIniziaSpesa(lista.id);
   }
 
@@ -91,9 +69,7 @@ export function Lista({ onIniziaSpesa }: Props) {
         <Button variant="ghost" onClick={esportaTesto}>
           Esporta testo
         </Button>
-        <Button onClick={chiudiEIniziaSpesa} disabled={preparazione}>
-          {preparazione ? "Preparo la spesa…" : "Inizia la spesa"}
-        </Button>
+        <Button onClick={() => void chiudiEIniziaSpesa()}>Inizia la spesa</Button>
         <button
           type="button"
           onClick={() => void svuotaLista()}

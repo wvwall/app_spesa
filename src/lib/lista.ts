@@ -1,10 +1,13 @@
 import { db, nowIso, nuovoId } from "./db";
 import type { ListaSpesa, VoceLista } from "./types";
+import { trovaAlternative } from "./sostituzioni";
 
 /** Aggrega gli ingredienti dei piatti pianificati in una nuova lista della spesa (RF8).
  * Ogni ingrediente compare una sola volta anche se richiesto da più piatti: niente somma
  * numerica delle quantità (le fonti — AI, catalogo, testo libero — non sono confrontabili
- * in modo affidabile). La quantità di ogni voce parte vuota: la scrive l'utente, se vuole. */
+ * in modo affidabile). La quantità di ogni voce parte vuota: la scrive l'utente, se vuole.
+ * Nome e reparto vengono letti dallo snapshot su PiattoIngrediente (mai da un ri-lookup nel
+ * catalogo): così un ingrediente non può mai sparire dalla lista, anche se non più catalogato. */
 export async function generaListaDaPiano(pianoId: string): Promise<ListaSpesa> {
   const slots = await db.slot.where("pianoId").equals(pianoId).toArray();
   const piattoIds = [...new Set(slots.map((s) => s.piattoId).filter((id): id is string => Boolean(id)))];
@@ -19,13 +22,20 @@ export async function generaListaDaPiano(pianoId: string): Promise<ListaSpesa> {
   for (const piattoId of piattoIds) {
     const ingredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
     for (const pi of ingredienti) {
-      let nome = pi.testoLibero ?? "";
-      let reparto = "Dispensa";
-      if (pi.ingredienteId) {
-        const ing = await db.ingredienti.get(pi.ingredienteId);
-        if (ing) {
-          nome = ing.nome;
-          reparto = ing.reparto;
+      // Dato legacy: righe create prima dello snapshot nome/reparto permanente potrebbero
+      // non averli affatto. Non deve mai far saltare la generazione della lista né far
+      // sparire l'ingrediente: si recupera come si può, con un ultimo fallback visibile.
+      let nome = pi.nome;
+      let reparto = pi.reparto;
+      if (!nome) {
+        if (pi.ingredienteId) {
+          // eslint-disable-next-line no-await-in-loop
+          const ing = await db.ingredienti.get(pi.ingredienteId);
+          nome = ing?.nome ?? "Ingrediente da verificare";
+          reparto = ing?.reparto ?? "Dispensa";
+        } else {
+          nome = "Ingrediente da verificare";
+          reparto = reparto ?? "Dispensa";
         }
       }
       const chiave = pi.ingredienteId ?? nome.toLowerCase();
@@ -46,7 +56,7 @@ export async function generaListaDaPiano(pianoId: string): Promise<ListaSpesa> {
     quantita: "",
     reparto: r.reparto,
     checked: false,
-    alternative: [],
+    alternative: trovaAlternative(r.nome),
   }));
   if (voci.length > 0) {
     await db.voci.bulkAdd(voci);
@@ -63,7 +73,7 @@ export async function aggiungiVoceLibera(listaId: string, nome: string, quantita
     quantita,
     reparto,
     checked: false,
-    alternative: [],
+    alternative: trovaAlternative(nome),
   };
   await db.voci.add(voce);
 }

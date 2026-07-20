@@ -42,6 +42,8 @@ const SISTEMA_BASE =
   "in famiglia c'è un'allergia. Se un ingrediente selezionato dall'utente contiene frutta a guscio, ignoralo. " +
   "Rispondi SOLO con il JSON richiesto.";
 
+// Union a un solo membro per ora (in vista di F2/RF3b "genera piano intero"): mantiene invariato
+// il formato { azione, ... } lato client anche se oggi c'è una sola azione disponibile.
 const RichiestaSchema = z.discriminatedUnion("azione", [
   z.object({
     azione: z.literal("generaPiatto"),
@@ -49,12 +51,6 @@ const RichiestaSchema = z.discriminatedUnion("azione", [
     vincoli: z.array(z.string()).default([]),
     porzioni: z.number().int().positive().default(4),
     pasto: z.enum(["pranzo", "cena"]).default("cena"),
-  }),
-  z.object({
-    azione: z.literal("suggerisciAlternative"),
-    nomeIngrediente: z.string(),
-    contestoPiatto: z.string().default(""),
-    vincoli: z.array(z.string()).default([]),
   }),
 ]);
 type Richiesta = z.infer<typeof RichiestaSchema>;
@@ -129,25 +125,6 @@ async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }
   throw new Error("Non sono riuscito a generare un piatto che rispetti il vincolo senza noci. Componilo a mano.");
 }
 
-async function suggerisciAlternative(input: Extract<Richiesta, { azione: "suggerisciAlternative" }>) {
-  const prompt =
-    `L'ingrediente "${input.nomeIngrediente}" non è disponibile al banco. ` +
-    `Contesto: ${input.contestoPiatto || "nessuno"}. Vincoli: ${input.vincoli.join(", ") || "nessuno"}.\n` +
-    "Suggerisci 3 alternative equivalenti in cucina italiana, brevi (2-4 parole ciascuna).";
-
-  const responseSchema = {
-    type: Type.OBJECT,
-    properties: {
-      alternative: { type: Type.ARRAY, items: { type: Type.STRING }, maxItems: "3" },
-    },
-    required: ["alternative"],
-  };
-
-  const grezzo = await chiamaGemini(prompt, responseSchema);
-  const parsed = z.object({ alternative: z.array(z.string()) }).parse(grezzo);
-  return { alternative: parsed.alternative.filter((a) => !contieneFruttaAGuscio(a)) };
-}
-
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ errore: "Metodo non consentito." }) };
@@ -169,10 +146,7 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const risultato =
-      parsed.data.azione === "generaPiatto"
-        ? await generaPiatto(parsed.data)
-        : await suggerisciAlternative(parsed.data);
+    const risultato = await generaPiatto(parsed.data);
     return { statusCode: 200, body: JSON.stringify(risultato) };
   } catch (errore) {
     console.error("ai function error:", errore);

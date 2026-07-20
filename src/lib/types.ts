@@ -15,6 +15,9 @@ export interface Profilo {
   giornoSpesa: number;
   tema: Tema;
   seedVersion: number;
+  /** Versione del seed di piatti d'esempio (src/seed/piatti.ts), separata da seedVersion
+   * (catalogo ingredienti) perché dipende da quello ed evolve in modo indipendente. */
+  seedVersionPiatti: number;
   updatedAt: string;
 }
 
@@ -44,8 +47,12 @@ export interface Piatto {
 export interface PiattoIngrediente {
   id: string;
   piattoId: string;
+  /** Riferimento al catalogo, se l'ingrediente esisteva lì al momento della creazione.
+   * Non usato per risolvere nome/reparto: nome e reparto sono uno snapshot permanente
+   * (vedi sotto), così un ingrediente non sparisce mai dalla lista se il catalogo cambia. */
   ingredienteId?: string;
-  testoLibero?: string;
+  nome: string;
+  reparto: string;
   quantita: number;
   unita: string;
 }
