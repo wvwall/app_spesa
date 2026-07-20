@@ -85,28 +85,54 @@ export function Settimana({ onListaGenerata }: Props) {
             style={{
               fontFamily: "var(--font-hand)",
               fontWeight: 800,
-              fontSize: 32,
+              fontSize: 26,
               letterSpacing: "-0.02em",
               color: "var(--biro)",
             }}>
             {etichettaCiclo(inizio)}
           </h1>
           <div
-            className="flex items-center gap-2.5 text-sm"
+            className="flex items-center text-sm"
             style={{ color: "var(--text-secondary)" }}>
             <button
+              type="button"
               onClick={() => setCicloOffset((w) => w - 1)}
-              aria-label="Ciclo precedente">
+              aria-label="Settimana precedente"
+              style={{
+                fontSize: 22,
+                lineHeight: 1,
+                minWidth: 44,
+                minHeight: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
               ‹
             </button>
             <button
+              type="button"
               onClick={() => setCicloOffset(0)}
-              style={{ color: "var(--biro)", fontWeight: 600 }}>
+              style={{
+                color: "var(--biro)",
+                fontWeight: 600,
+                minHeight: 44,
+                padding: "0 8px",
+              }}>
               oggi
             </button>
             <button
+              type="button"
               onClick={() => setCicloOffset((w) => w + 1)}
-              aria-label="Ciclo successivo">
+              aria-label="Settimana successiva"
+              style={{
+                fontSize: 22,
+                lineHeight: 1,
+                minWidth: 44,
+                minHeight: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
               ›
             </button>
           </div>

@@ -54,7 +54,7 @@ export async function getOrCreateProfilo(): Promise<Profilo> {
     vincoliAlimentari: ["noci"],
     ordineReparti: REPARTI_DEFAULT,
     giornoSpesa: 5, // venerdì
-    tema: "sistema",
+    tema: "chiaro",
     seedVersion: 0,
     seedVersionPiatti: 0,
     updatedAt: new Date().toISOString(),

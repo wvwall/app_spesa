@@ -17,9 +17,7 @@ export function App() {
 
   useEffect(() => {
     void getOrCreateProfilo().then((profilo) => {
-      const root = document.documentElement;
-      if (profilo.tema === "sistema") root.removeAttribute("data-theme");
-      else root.setAttribute("data-theme", profilo.tema === "scuro" ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", profilo.tema === "scuro" ? "dark" : "light");
     });
     // Il seed dei piatti cerca gli ingredienti per nome nel catalogo: deve partire solo
     // dopo che quello degli ingredienti è completo.

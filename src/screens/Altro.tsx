@@ -41,9 +41,7 @@ export function Altro() {
 
   async function cambiaTema(tema: Tema) {
     await db.profilo.update(profilo!.id, { tema });
-    const root = document.documentElement;
-    if (tema === "sistema") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", tema === "scuro" ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", tema === "scuro" ? "dark" : "light");
   }
 
   async function gestisciImport(file: File) {
@@ -163,9 +161,6 @@ export function Altro() {
             </Chip>
             <Chip state={profilo.tema === "scuro" ? "selected" : "default"} onClick={() => void cambiaTema("scuro")}>
               Scuro
-            </Chip>
-            <Chip state={profilo.tema === "sistema" ? "selected" : "default"} onClick={() => void cambiaTema("sistema")}>
-              Sistema
             </Chip>
           </div>
         </section>

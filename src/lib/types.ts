@@ -1,7 +1,7 @@
 export type Pasto = "pranzo" | "cena";
 export type OrigineIngrediente = "seed" | "utente";
 export type OrigineRicetta = "manuale" | "ai";
-export type Tema = "chiaro" | "scuro" | "sistema";
+export type Tema = "chiaro" | "scuro";
 
 /** Vincolo di sicurezza non negoziabile: "noci" è sempre presente e non va mai rimosso
  * senza una conferma esplicita dell'utente (vedi DESIGN.md §8.6 e ANALISI.md RF13). */
