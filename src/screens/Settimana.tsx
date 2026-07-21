@@ -82,9 +82,28 @@ export function Settimana({ onListaGenerata }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cicloIso]);
 
+  // Porta il giorno corrente in cima all'area scrollabile appena il suo elemento è nel DOM.
+  // Scrolliamo direttamente il container noto (niente ambiguità su quale antenato scrolla) e
+  // in modo istantaneo: un'animazione "smooth" verrebbe interrotta dai re-render mentre i
+  // piatti/ingredienti finiscono di caricarsi, lasciando lo scroll a metà. Il doppio rAF
+  // aspetta che il layout sia definitivo prima di calcolare la posizione.
   useEffect(() => {
-    if (!todayEl) return;
-    todayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    const container = scrollContainerRef.current;
+    if (!todayEl || !container) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        const top =
+          todayEl.getBoundingClientRect().top -
+          container.getBoundingClientRect().top +
+          container.scrollTop;
+        container.scrollTop = top;
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, [todayEl]);
 
   const slots =
