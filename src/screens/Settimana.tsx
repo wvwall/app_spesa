@@ -82,20 +82,22 @@ export function Settimana({ onListaGenerata }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cicloIso]);
 
-  // Porta il giorno corrente in cima all'area scrollabile, con un'animazione morbida che fa
-  // capire all'utente cosa sta succedendo: la pagina parte dall'alto e scorre dolcemente
-  // verso oggi. Il piccolo delay iniziale serve a due cose: dà tempo ai useLiveQuery di
-  // piatti/ingredienti di finire e al layout di stabilizzarsi (un'animazione smooth avviata
-  // prima verrebbe interrotta dai re-render, lasciando lo scroll a metà), e rende il
-  // movimento percepibile invece che istantaneo. Scrolliamo direttamente il container noto,
-  // così non c'è ambiguità su quale antenato scrollabile si muove.
+  // Porta il giorno corrente vicino alla cima dell'area scrollabile, con un'animazione morbida
+  // che fa capire all'utente cosa sta succedendo: la pagina parte dall'alto e scorre dolcemente
+  // verso oggi. Lasciamo però il giorno precedente visibile sopra (se c'è) come spazio di
+  // contesto, invece di incollare oggi al bordo: come target dello scroll usiamo il blocco
+  // giorno precedente. Il piccolo delay iniziale dà tempo ai useLiveQuery di piatti/ingredienti
+  // di finire e al layout di stabilizzarsi (un'animazione smooth avviata prima verrebbe
+  // interrotta dai re-render, lasciando lo scroll a metà) e rende il movimento percepibile.
+  // Scrolliamo direttamente il container noto, così non c'è ambiguità su quale antenato si muove.
   const DELAY_SCROLL_MS = 350;
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!todayEl || !container) return;
     const timer = setTimeout(() => {
+      const target = todayEl.previousElementSibling ?? todayEl;
       const top =
-        todayEl.getBoundingClientRect().top -
+        target.getBoundingClientRect().top -
         container.getBoundingClientRect().top +
         container.scrollTop;
       container.scrollTo({ top, behavior: "smooth" });
