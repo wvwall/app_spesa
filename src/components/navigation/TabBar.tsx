@@ -1,5 +1,11 @@
 import type { CSSProperties } from "react";
-import { CalendarDays, ListChecks, UtensilsCrossed, Settings2, type LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  ListChecks,
+  UtensilsCrossed,
+  Settings2,
+  type LucideIcon,
+} from "lucide-react";
 
 interface TabItem {
   id: string;
@@ -21,7 +27,12 @@ const DEFAULT_TABS: TabItem[] = [
   { id: "altro", icon: Settings2, label: "Altro" },
 ];
 
-export function TabBar({ tabs = DEFAULT_TABS, active = "settimana", onChange, style }: TabBarProps) {
+export function TabBar({
+  tabs = DEFAULT_TABS,
+  active = "settimana",
+  onChange,
+  style,
+}: TabBarProps) {
   return (
     <nav
       aria-label="Navigazione"
@@ -32,8 +43,7 @@ export function TabBar({ tabs = DEFAULT_TABS, active = "settimana", onChange, st
         padding: "6px 6px 12px",
         fontFamily: "var(--font-text)",
         ...style,
-      }}
-    >
+      }}>
       {tabs.map((t) => {
         const on = t.id === active;
         const Icona = t.icon;
@@ -54,9 +64,12 @@ export function TabBar({ tabs = DEFAULT_TABS, active = "settimana", onChange, st
               borderRadius: 10,
               cursor: "pointer",
               textAlign: "center",
-            }}
-          >
-            <Icona size={19} strokeWidth={on ? 2.25 : 1.75} style={{ display: "block", margin: "0 auto 2px" }} />
+            }}>
+            <Icona
+              size={19}
+              strokeWidth={on ? 2.25 : 1.75}
+              style={{ display: "block", margin: "0 auto 2px" }}
+            />
             {t.label}
           </button>
         );
