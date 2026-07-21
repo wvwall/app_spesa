@@ -52,6 +52,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* atmosfera notturna del tema Stitch: due bagliori (lavanda/rosa e blu) sopra il fondo notte */
+[data-theme="stitch"] body {
+  background:
+    radial-gradient(ellipse 70% 40% at 12% -8%, rgba(220, 155, 196, 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 45% at 100% 12%, rgba(26, 107, 176, 0.28), transparent 60%),
+    var(--surface-page);
+}
+
 button,
 input {
   font: inherit;
