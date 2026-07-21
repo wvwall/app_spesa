@@ -162,7 +162,7 @@ function IllustrazioneStitch() {
   if (!visibile) return null;
   return (
     <img
-      src="/stitch/stitch-mascot.png"
+      src="/stitch/stitch2.webp"
       alt="Stitch"
       onError={() => setVisibile(false)}
       style={{
