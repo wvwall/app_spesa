@@ -54,7 +54,7 @@ interface Props {
 
 export function Settimana({ onListaGenerata }: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const currentDayRef = useRef<HTMLDivElement>(null);
+  const [todayEl, setTodayEl] = useState<HTMLDivElement | null>(null);
 
   const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
   const giornoSpesa = profilo?.giornoSpesa ?? 5;
@@ -83,14 +83,9 @@ export function Settimana({ onListaGenerata }: Props) {
   }, [cicloIso]);
 
   useEffect(() => {
-    if (cicloOffset === 0 && currentDayRef.current && scrollContainerRef.current) {
-      setTimeout(() => {
-        if (currentDayRef.current && scrollContainerRef.current) {
-          currentDayRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 0);
-    }
-  }, [cicloOffset]);
+    if (!todayEl) return;
+    todayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [todayEl]);
 
   const slots =
     useLiveQuery(
@@ -308,7 +303,7 @@ export function Settimana({ onListaGenerata }: Props) {
             <div
               key={dataIso}
               className="mb-3"
-              ref={isOggi(giorno) ? currentDayRef : undefined}
+              ref={isOggi(giorno) ? setTodayEl : undefined}
             >
               <div
                 className="text-xs font-bold mb-2"
