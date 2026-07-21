@@ -52,12 +52,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* atmosfera notturna del tema Stitch: due bagliori (lavanda/rosa e blu) sopra il fondo notte */
+/* atmosfera notturna del tema Stitch: Stitch stesso in filigrana in basso a destra,
+   sotto due bagliori (lavanda/rosa e blu) sopra il fondo notte */
 [data-theme="stitch"] body {
   background:
+    url("/stitch/stitch-bg.png") no-repeat bottom -10px right -20px / 340px auto,
     radial-gradient(ellipse 70% 40% at 12% -8%, rgba(220, 155, 196, 0.16), transparent 60%),
     radial-gradient(ellipse 60% 45% at 100% 12%, rgba(26, 107, 176, 0.28), transparent 60%),
     var(--surface-page);
+  background-attachment: fixed, scroll, scroll, scroll;
 }
 
 button,
