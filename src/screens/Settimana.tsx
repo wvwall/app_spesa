@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight, Sparkles, X, RotateCcw, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, nowIso, nuovoId } from "../lib/db";
@@ -53,6 +53,9 @@ interface Props {
 }
 
 export function Settimana({ onListaGenerata }: Props) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [todayEl, setTodayEl] = useState<HTMLDivElement | null>(null);
+
   const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
   const giornoSpesa = profilo?.giornoSpesa ?? 5;
 
@@ -78,6 +81,29 @@ export function Settimana({ onListaGenerata }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cicloIso]);
+
+  // Porta il giorno corrente vicino alla cima dell'area scrollabile, con un'animazione morbida
+  // che fa capire all'utente cosa sta succedendo: la pagina parte dall'alto e scorre dolcemente
+  // verso oggi. Lasciamo però il giorno precedente visibile sopra (se c'è) come spazio di
+  // contesto, invece di incollare oggi al bordo: come target dello scroll usiamo il blocco
+  // giorno precedente. Il piccolo delay iniziale dà tempo ai useLiveQuery di piatti/ingredienti
+  // di finire e al layout di stabilizzarsi (un'animazione smooth avviata prima verrebbe
+  // interrotta dai re-render, lasciando lo scroll a metà) e rende il movimento percepibile.
+  // Scrolliamo direttamente il container noto, così non c'è ambiguità su quale antenato si muove.
+  const DELAY_SCROLL_MS = 350;
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!todayEl || !container) return;
+    const timer = setTimeout(() => {
+      const target = todayEl.previousElementSibling ?? todayEl;
+      const top =
+        target.getBoundingClientRect().top -
+        container.getBoundingClientRect().top +
+        container.scrollTop;
+      container.scrollTo({ top, behavior: "smooth" });
+    }, DELAY_SCROLL_MS);
+    return () => clearTimeout(timer);
+  }, [todayEl]);
 
   const slots =
     useLiveQuery(
@@ -244,7 +270,7 @@ export function Settimana({ onListaGenerata }: Props) {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
         {tuttiVuoti && (
           <div className="text-center flex flex-col items-center gap-3 py-6">
             <div
@@ -292,7 +318,11 @@ export function Settimana({ onListaGenerata }: Props) {
             );
           if (slotGiorno.length === 0) return null;
           return (
-            <div key={dataIso} className="mb-3">
+            <div
+              key={dataIso}
+              className="mb-3"
+              ref={isOggi(giorno) ? setTodayEl : undefined}
+            >
               <div
                 className="text-xs font-bold mb-2"
                 style={{
