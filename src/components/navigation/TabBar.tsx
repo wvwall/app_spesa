@@ -6,7 +6,6 @@ import {
   Settings2,
   type LucideIcon,
 } from "lucide-react";
-import { hapticTap } from "../../lib/haptics";
 
 interface TabItem {
   id: string;
@@ -52,10 +51,7 @@ export function TabBar({
           <button
             key={t.id}
             type="button"
-            onClick={() => {
-              hapticTap();
-              onChange?.(t.id);
-            }}
+            onClick={() => onChange?.(t.id)}
             style={{
               flex: 1,
               border: 0,
