@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight, Sparkles, X, RotateCcw, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, nowIso, nuovoId } from "../lib/db";
@@ -53,6 +53,9 @@ interface Props {
 }
 
 export function Settimana({ onListaGenerata }: Props) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const currentDayRef = useRef<HTMLDivElement>(null);
+
   const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
   const giornoSpesa = profilo?.giornoSpesa ?? 5;
 
@@ -78,6 +81,16 @@ export function Settimana({ onListaGenerata }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cicloIso]);
+
+  useEffect(() => {
+    if (cicloOffset === 0 && currentDayRef.current && scrollContainerRef.current) {
+      setTimeout(() => {
+        if (currentDayRef.current && scrollContainerRef.current) {
+          currentDayRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 0);
+    }
+  }, [cicloOffset]);
 
   const slots =
     useLiveQuery(
@@ -244,7 +257,7 @@ export function Settimana({ onListaGenerata }: Props) {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
         {tuttiVuoti && (
           <div className="text-center flex flex-col items-center gap-3 py-6">
             <div
@@ -292,7 +305,11 @@ export function Settimana({ onListaGenerata }: Props) {
             );
           if (slotGiorno.length === 0) return null;
           return (
-            <div key={dataIso} className="mb-3">
+            <div
+              key={dataIso}
+              className="mb-3"
+              ref={isOggi(giorno) ? currentDayRef : undefined}
+            >
               <div
                 className="text-xs font-bold mb-2"
                 style={{
