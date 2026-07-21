@@ -124,11 +124,23 @@ export function Settimana({ onListaGenerata }: Props) {
   const [generandoSettimana, setGenerandoSettimana] = useState(false);
   const [propostaSettimana, setPropostaSettimana] = useState<PropostaSettimana[] | null>(null);
   const [erroreSettimana, setErroreSettimana] = useState<string | null>(null);
+  const [generandoLista, setGenerandoLista] = useState(false);
+  const [erroreLista, setErroreLista] = useState<string | null>(null);
 
   async function generaLista() {
     if (!pianoId) return;
-    await generaListaDaPiano(pianoId);
-    onListaGenerata();
+    setGenerandoLista(true);
+    setErroreLista(null);
+    try {
+      await generaListaDaPiano(pianoId);
+      onListaGenerata();
+    } catch (e) {
+      // Senza questo try/catch un errore qui finiva ignorato in silenzio: il tasto sembrava
+      // "non fare nulla" perché non si passava mai alla schermata Lista né si vedeva perché.
+      setErroreLista(e instanceof Error ? e.message : "Non sono riuscito a generare la lista. Riprova.");
+    } finally {
+      setGenerandoLista(false);
+    }
   }
 
   async function generaInteraSettimana() {
@@ -369,9 +381,10 @@ export function Settimana({ onListaGenerata }: Props) {
 
       {!tuttiVuoti && cicloOffset === 0 && (
         <div className="px-5 pb-3 flex-none">
-          <Button onClick={generaLista} disabled={slotsAssegnati === 0}>
-            Genera lista spesa · {slotsAssegnati} piatti
+          <Button onClick={() => void generaLista()} disabled={slotsAssegnati === 0 || generandoLista}>
+            {generandoLista ? "Preparo la lista…" : `Genera lista spesa · ${slotsAssegnati} piatti`}
           </Button>
+          {erroreLista && <p style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 6 }}>{erroreLista}</p>}
         </div>
       )}
 
