@@ -82,28 +82,25 @@ export function Settimana({ onListaGenerata }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cicloIso]);
 
-  // Porta il giorno corrente in cima all'area scrollabile appena il suo elemento è nel DOM.
-  // Scrolliamo direttamente il container noto (niente ambiguità su quale antenato scrolla) e
-  // in modo istantaneo: un'animazione "smooth" verrebbe interrotta dai re-render mentre i
-  // piatti/ingredienti finiscono di caricarsi, lasciando lo scroll a metà. Il doppio rAF
-  // aspetta che il layout sia definitivo prima di calcolare la posizione.
+  // Porta il giorno corrente in cima all'area scrollabile, con un'animazione morbida che fa
+  // capire all'utente cosa sta succedendo: la pagina parte dall'alto e scorre dolcemente
+  // verso oggi. Il piccolo delay iniziale serve a due cose: dà tempo ai useLiveQuery di
+  // piatti/ingredienti di finire e al layout di stabilizzarsi (un'animazione smooth avviata
+  // prima verrebbe interrotta dai re-render, lasciando lo scroll a metà), e rende il
+  // movimento percepibile invece che istantaneo. Scrolliamo direttamente il container noto,
+  // così non c'è ambiguità su quale antenato scrollabile si muove.
+  const DELAY_SCROLL_MS = 350;
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!todayEl || !container) return;
-    let raf2 = 0;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        const top =
-          todayEl.getBoundingClientRect().top -
-          container.getBoundingClientRect().top +
-          container.scrollTop;
-        container.scrollTop = top;
-      });
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
+    const timer = setTimeout(() => {
+      const top =
+        todayEl.getBoundingClientRect().top -
+        container.getBoundingClientRect().top +
+        container.scrollTop;
+      container.scrollTo({ top, behavior: "smooth" });
+    }, DELAY_SCROLL_MS);
+    return () => clearTimeout(timer);
   }, [todayEl]);
 
   const slots =
