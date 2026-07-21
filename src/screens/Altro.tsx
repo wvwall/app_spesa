@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Minus, Plus, GripVertical } from "lucide-react";
-import { db, getOrCreateProfilo } from "../lib/db";
+import { db, getOrCreateProfilo, applicaTema } from "../lib/db";
 import { scaricaBackup, importaBackup } from "../lib/backup";
 import { Button, Chip, Badge } from "../components";
 import type { Tema } from "../lib/types";
@@ -35,7 +35,7 @@ export function Altro() {
 
   async function cambiaTema(tema: Tema) {
     await db.profilo.update(profilo!.id, { tema });
-    document.documentElement.setAttribute("data-theme", tema === "scuro" ? "dark" : "light");
+    applicaTema(tema);
   }
 
   async function gestisciImport(file: File) {
@@ -135,12 +135,16 @@ export function Altro() {
 
         <section>
           <Etichetta>Tema</Etichetta>
+          {profilo.tema === "stitch" && <IllustrazioneStitch />}
           <div className="flex gap-2">
             <Chip state={profilo.tema === "chiaro" ? "selected" : "default"} onClick={() => void cambiaTema("chiaro")}>
               Chiaro
             </Chip>
             <Chip state={profilo.tema === "scuro" ? "selected" : "default"} onClick={() => void cambiaTema("scuro")}>
               Scuro
+            </Chip>
+            <Chip state={profilo.tema === "stitch" ? "selected" : "default"} onClick={() => void cambiaTema("stitch")}>
+              Stitch
             </Chip>
           </div>
         </section>
@@ -150,6 +154,26 @@ export function Altro() {
         </p>
       </div>
     </div>
+  );
+}
+
+function IllustrazioneStitch() {
+  const [visibile, setVisibile] = useState(true);
+  if (!visibile) return null;
+  return (
+    <img
+      src="/stitch/stitch-mascot.png"
+      alt="Stitch"
+      onError={() => setVisibile(false)}
+      style={{
+        display: "block",
+        margin: "0 auto 12px",
+        maxWidth: 140,
+        height: "auto",
+        boxShadow: "0 0 0 2px #ff9ec4, 0 8px 20px rgba(0, 0, 0, 0.25)",
+        borderRadius: "var(--radius-card)",
+      }}
+    />
   );
 }
 

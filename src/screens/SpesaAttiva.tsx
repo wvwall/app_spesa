@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { X, TriangleAlert, ShieldCheck } from "lucide-react";
 import { db, getOrCreateProfilo } from "../lib/db";
@@ -33,7 +33,19 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
   });
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "var(--carta)", color: "var(--inchiostro)" }}>
+    <div
+      className="flex flex-col h-full"
+      style={
+        {
+          background: "var(--carta)",
+          color: "var(--inchiostro)",
+          // Pin esplicito: la corsia resta sempre uguale a prescindere dal tema attivo
+          // (anche per l'accento, non solo lo sfondo) — vedi DESIGN.md §4.1.
+          "--biro": "#2f58d4",
+          "--biro-chiaro": "#e8ecf9",
+        } as CSSProperties
+      }
+    >
       <div className="px-5 pt-4 pb-2 flex-none">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">

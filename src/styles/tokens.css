@@ -81,3 +81,18 @@
   --surface-selected: rgba(124, 150, 232, 0.16);
   --border-interactive: #7c96e8;
 }
+
+/* stitch — tema opzionale, notte galattica con accento blu/lavanda; la corsia resta sempre chiara */
+[data-theme="stitch"] {
+  --biro: #2e5fd1;
+  --biro-chiaro: #e3dbff;
+  --surface-page: #101b3d;
+  --surface-card: #1c2b57;
+  --text-body: #eef1ff;
+  --text-secondary: #9faad9;
+  --text-interactive: #8fb4ff;
+  --border-quiet: #2a3b6e;
+  --grid-line: rgba(180, 200, 255, 0.08);
+  --surface-selected: rgba(196, 168, 255, 0.18);
+  --border-interactive: #8fb4ff;
+}

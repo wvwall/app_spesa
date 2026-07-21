@@ -5,7 +5,7 @@ import { Lista } from "./screens/Lista";
 import { SpesaAttiva } from "./screens/SpesaAttiva";
 import { Piatti } from "./screens/Piatti";
 import { Altro } from "./screens/Altro";
-import { getOrCreateProfilo } from "./lib/db";
+import { getOrCreateProfilo, applicaTema } from "./lib/db";
 import { applicaSeedIngredienti } from "./seed/applica";
 import { applicaSeedPiatti } from "./seed/applicaPiatti";
 
@@ -17,7 +17,7 @@ export function App() {
 
   useEffect(() => {
     void getOrCreateProfilo().then((profilo) => {
-      document.documentElement.setAttribute("data-theme", profilo.tema === "scuro" ? "dark" : "light");
+      applicaTema(profilo.tema);
     });
     // Il seed dei piatti cerca gli ingredienti per nome nel catalogo: deve partire solo
     // dopo che quello degli ingredienti è completo.
