@@ -8,6 +8,7 @@ import type {
   Slot,
   ListaSpesa,
   VoceLista,
+  Tema,
 } from "./types";
 
 export const db = new Dexie("LaSpesaDiCasa") as Dexie & {
@@ -69,6 +70,16 @@ export async function getOrCreateProfilo(): Promise<Profilo> {
     if (giaCreato) return giaCreato;
     throw new Error("Impossibile creare il profilo.");
   }
+}
+
+const DATA_THEME_PER_TEMA: Record<Tema, string> = {
+  chiaro: "light",
+  scuro: "dark",
+  stitch: "stitch",
+};
+
+export function applicaTema(tema: Tema): void {
+  document.documentElement.setAttribute("data-theme", DATA_THEME_PER_TEMA[tema]);
 }
 
 export function nowIso(): string {

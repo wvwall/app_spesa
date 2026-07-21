@@ -5,7 +5,7 @@ import { Lista } from "./screens/Lista";
 import { SpesaAttiva } from "./screens/SpesaAttiva";
 import { Piatti } from "./screens/Piatti";
 import { Altro } from "./screens/Altro";
-import { getOrCreateProfilo } from "./lib/db";
+import { getOrCreateProfilo, applicaTema } from "./lib/db";
 import { applicaSeedIngredienti } from "./seed/applica";
 import { applicaSeedPiatti } from "./seed/applicaPiatti";
 
@@ -17,7 +17,7 @@ export function App() {
 
   useEffect(() => {
     void getOrCreateProfilo().then((profilo) => {
-      document.documentElement.setAttribute("data-theme", profilo.tema === "scuro" ? "dark" : "light");
+      applicaTema(profilo.tema);
     });
     // Il seed dei piatti cerca gli ingredienti per nome nel catalogo: deve partire solo
     // dopo che quello degli ingredienti è completo.
@@ -30,7 +30,7 @@ export function App() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto bg-quadretti">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-quadretti" data-tab={tab}>
         {tab === "settimana" && <Settimana onListaGenerata={() => setTab("lista")} />}
         {tab === "lista" && <Lista onIniziaSpesa={setListaSpesaAttivaId} />}
         {tab === "piatti" && <Piatti />}

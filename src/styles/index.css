@@ -19,7 +19,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --surface-page: var(--lavagna);
     --surface-card: #1C2025;
     --text-body: #E9EAE4;
@@ -50,6 +50,37 @@ body {
   font-size: var(--text-base);
   line-height: var(--lh-base);
   -webkit-font-smoothing: antialiased;
+}
+
+/* atmosfera hawaiana del tema Stitch: bagliore di tramonto in alto e di oceano in basso,
+   sopra la sabbia calda */
+[data-theme="stitch"] body {
+  background:
+    radial-gradient(ellipse 65% 35% at 100% -5%, rgba(255, 138, 101, 0.28), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(15, 110, 145, 0.16), transparent 60%),
+    var(--surface-page);
+}
+
+/* le prime tre schede hanno ciascuna un disegno diverso di Stitch in filigrana,
+   sotto la quadrettatura, ancorato in basso a destra. --bg-quadretti espande a DUE
+   gradienti: le liste size/position/repeat devono avere 3 voci (grid, grid, immagine),
+   altrimenti l'ultimo valore ricicla su tutti e tre i layer e l'immagine eredita le
+   dimensioni minuscole della quadrettatura. */
+[data-theme="stitch"] [data-tab="settimana"].bg-quadretti,
+[data-theme="stitch"] [data-tab="lista"].bg-quadretti,
+[data-theme="stitch"] [data-tab="piatti"].bg-quadretti {
+  background-size: var(--bg-quadretti-size), var(--bg-quadretti-size), 320px auto;
+  background-position: 0 0, 0 0, bottom -10px right -16px;
+  background-repeat: repeat, repeat, no-repeat;
+}
+[data-theme="stitch"] [data-tab="settimana"].bg-quadretti {
+  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-1.png"); /* Stitch seduto */
+}
+[data-theme="stitch"] [data-tab="lista"].bg-quadretti {
+  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-3.png"); /* Stitch che salta */
+}
+[data-theme="stitch"] [data-tab="piatti"].bg-quadretti {
+  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-2.png"); /* Stitch che sfonda il foglio */
 }
 
 button,

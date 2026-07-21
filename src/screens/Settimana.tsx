@@ -19,7 +19,7 @@ import {
   etichettaCiclo,
   isOggi,
 } from "../lib/settimana";
-import { CardPiatto, Button, SearchInput } from "../components";
+import { CardPiatto, Button, SearchInput, Badge } from "../components";
 import type { Ingrediente, Piatto, Slot } from "../lib/types";
 
 // Pasti per chiamata AI: generare tutta la settimana (fino a ~14 piatti completi) in
@@ -322,9 +322,18 @@ export function Settimana({ onListaGenerata }: Props) {
               key={dataIso}
               className="mb-3"
               ref={isOggi(giorno) ? setTodayEl : undefined}
+              style={
+                isOggi(giorno)
+                  ? {
+                      border: "2px solid var(--biro)",
+                      borderRadius: "var(--radius-card)",
+                      padding: "var(--sp-4)",
+                    }
+                  : undefined
+              }
             >
               <div
-                className="text-xs font-bold mb-2"
+                className="text-xs font-bold mb-2 flex items-center gap-2"
                 style={{
                   letterSpacing: ".12em",
                   textTransform: "uppercase",
@@ -332,7 +341,12 @@ export function Settimana({ onListaGenerata }: Props) {
                     ? "var(--biro)"
                     : "var(--text-secondary)",
                 }}>
-                {etichettaGiorno(giorno)} {isOggi(giorno) && "· oggi"}
+                {etichettaGiorno(giorno)}
+                {isOggi(giorno) && (
+                  <Badge kind="sostituito" style={{ fontWeight: 700, letterSpacing: ".04em" }}>
+                    Oggi
+                  </Badge>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 {slotGiorno.map((slot) => (

@@ -1,11 +1,11 @@
 :root {
   /* base — il quaderno */
-  --carta: #fafaf6;
+  --carta: #f3eedf;
   --quadretto: #e4e7de;
   --inchiostro: #23261e;
   --inchiostro-70: #5a5e52;
-  --biro: #2f58d4;
-  --biro-chiaro: #e8ecf9;
+  --biro: #098fae;
+  --biro-chiaro: #e8f6f9;
   --basilico: #39724a;
   --pomodoro: #be3f27;
   --pomodoro-chiaro: #f7e5e0;
@@ -80,4 +80,21 @@
   --grid-line: rgba(255, 255, 255, 0.06);
   --surface-selected: rgba(124, 150, 232, 0.16);
   --border-interactive: #7c96e8;
+}
+
+/* stitch — tema opzionale, l'Hawaii di Lilo & Stitch: sabbia calda, oceano, tramonto.
+   Palette campionata dal disegno ufficiale (blu corpo, lavanda orecchie), non più una
+   notte scura ma un pomeriggio chiaro sulla spiaggia. La corsia resta sempre chiara. */
+[data-theme="stitch"] {
+  --biro: #0f6e91;
+  --biro-chiaro: #ffe3d1;
+  --surface-page: #f5ecd9;
+  --surface-card: #d3ece7;
+  --text-body: #1b3b3a;
+  --text-secondary: #43615a;
+  --text-interactive: #0f6e91;
+  --border-quiet: #cddbd2;
+  --grid-line: rgba(27, 59, 58, 0.08);
+  --surface-selected: rgba(255, 138, 101, 0.22);
+  --border-interactive: #0f6e91;
 }
