@@ -30,7 +30,7 @@ export function App() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto bg-quadretti">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-quadretti" data-tab={tab}>
         {tab === "settimana" && <Settimana onListaGenerata={() => setTab("lista")} />}
         {tab === "lista" && <Lista onIniziaSpesa={setListaSpesaAttivaId} />}
         {tab === "piatti" && <Piatti />}

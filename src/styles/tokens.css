@@ -82,22 +82,19 @@
   --border-interactive: #7c96e8;
 }
 
-/* stitch — tema opzionale, notte galattica; palette campionata dal disegno ufficiale
-   (blu corpo, azzurro muso, lavanda/rosa interno orecchie). La corsia resta sempre chiara. */
+/* stitch — tema opzionale, l'Hawaii di Lilo & Stitch: sabbia calda, oceano, tramonto.
+   Palette campionata dal disegno ufficiale (blu corpo, lavanda orecchie), non più una
+   notte scura ma un pomeriggio chiaro sulla spiaggia. La corsia resta sempre chiara. */
 [data-theme="stitch"] {
-  --biro: #1a6bb0;
-  --biro-chiaro: #f1e3f5;
-  --surface-page: #0e1a3a;
-  --surface-card: #202f5e;
-  --text-body: #f3f0fa;
-  --text-secondary: #a8b3dd;
-  --text-interactive: #6fc4ea;
-  --border-quiet: #30447f;
-  --grid-line: rgba(180, 200, 255, 0.1);
-  --surface-selected: rgba(220, 155, 196, 0.22);
-  --border-interactive: #6fc4ea;
-
-  /* quadrettatura sostituita da un pulviscolo di stelle: Stitch è un alieno, non un ragioniere */
-  --bg-quadretti: radial-gradient(circle, rgba(255, 255, 255, 0.4) 1px, transparent 1.6px);
-  --bg-quadretti-size: 22px 22px;
+  --biro: #0f6e91;
+  --biro-chiaro: #ffe3d1;
+  --surface-page: #f5ecd9;
+  --surface-card: #d3ece7;
+  --text-body: #1b3b3a;
+  --text-secondary: #43615a;
+  --text-interactive: #0f6e91;
+  --border-quiet: #cddbd2;
+  --grid-line: rgba(27, 59, 58, 0.08);
+  --surface-selected: rgba(255, 138, 101, 0.22);
+  --border-interactive: #0f6e91;
 }
