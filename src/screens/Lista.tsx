@@ -82,16 +82,17 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
       </header>
 
       {haVoci ? (
-        <>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {voci.map((v) => (
-              <RigaListaRevisione key={v.id} voce={v} />
-            ))}
-            <div className="px-5 py-3">
-              <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
-            </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {voci.map((v) => (
+            <RigaListaRevisione key={v.id} voce={v} />
+          ))}
+          <div className="px-5 py-3">
+            <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
           </div>
-          <div className="px-5 py-4 flex flex-col gap-2 flex-none border-t" style={{ borderColor: "var(--quadretto)" }}>
+          {/* Le CTA scorrono insieme all'elenco invece di stare in un footer fisso: così non
+              si sovrappongono al form "Aggiungi articolo" (soprattutto con la tastiera aperta)
+              né rischi di toccare "Inizia la spesa" mentre inserisci un articolo. */}
+          <div className="px-5 pt-3 pb-6 flex flex-col gap-2 border-t" style={{ borderColor: "var(--quadretto)" }}>
             <Button variant="ghost" onClick={esportaTesto}>
               Esporta testo
             </Button>
@@ -104,7 +105,7 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
               Svuota lista
             </button>
           </div>
-        </>
+        </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center text-center gap-4 px-8">
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>Nessuna lista ancora</div>
