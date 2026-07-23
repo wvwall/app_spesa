@@ -15,6 +15,10 @@ export type PiattoGenerato = z.infer<typeof PiattoGeneratoSchema>;
 const PiattoGeneratoConIdSchema = PiattoGeneratoSchema.extend({ id: z.string() });
 const RispostaSettimanaSchema = z.object({ piatti: z.array(PiattoGeneratoConIdSchema) });
 
+const RispostaClassificaSchema = z.object({
+  assegnazioni: z.array(z.object({ nome: z.string(), reparto: z.string() })),
+});
+
 const NETLIFY_FUNCTIONS_BASE = "/.netlify/functions";
 
 async function chiamaProxy(corpo: Record<string, unknown>): Promise<unknown> {
@@ -49,4 +53,14 @@ export async function generaSettimana(input: {
   const dati = await chiamaProxy({ azione: "generaSettimana", ...input });
   const risposta = RispostaSettimanaSchema.parse(dati);
   return risposta.piatti.map(({ id, ...generato }) => ({ id, generato }));
+}
+
+/** Classifica ogni ingrediente in uno dei `reparti` gestiti dall'app. Usato come fallback per
+ * gli articoli che il catalogo locale non riconosce (vedi ordinaListaPerReparto in lista.ts). */
+export async function classificaReparti(input: {
+  ingredienti: string[];
+  reparti: string[];
+}): Promise<{ nome: string; reparto: string }[]> {
+  const dati = await chiamaProxy({ azione: "classificaReparti", ...input });
+  return RispostaClassificaSchema.parse(dati).assegnazioni;
 }

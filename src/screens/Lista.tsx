@@ -10,7 +10,9 @@ import {
   eliminaListaCompleta,
   getOrCreaListaAperta,
   aggiungiVoceLibera,
+  ordinaListaPerReparto,
 } from "../lib/lista";
+import { raggruppaPerReparto } from "../lib/reparti";
 import { costruisciTestoLista, condividiOScaricaTesto } from "../lib/exportText";
 import { Button, Chip, NavigatoreCiclo } from "../components";
 import type { VoceLista } from "../lib/types";
@@ -60,9 +62,40 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
     await aggiungiVoceLibera(listaAperta.id, nome, quantita, reparto);
   }
 
+  const [ordinando, setOrdinando] = useState(false);
+  const [esitoOrdina, setEsitoOrdina] = useState<string | null>(null);
+
+  async function ordinaPerReparto() {
+    if (!lista) return;
+    setOrdinando(true);
+    setEsitoOrdina(null);
+    try {
+      const esito = await ordinaListaPerReparto(lista.id, ordineReparti);
+      if (esito.sistemati === 0 && esito.irrisolti === 0) {
+        setEsitoOrdina("Erano già tutti a posto.");
+      } else {
+        let msg =
+          esito.sistemati > 0
+            ? `Sistemati ${esito.sistemati} articoli${esito.viaAI ? ` (${esito.viaAI} con l'AI)` : ""}.`
+            : "Nessun articolo spostato.";
+        if (esito.irrisolti > 0) {
+          msg += esito.aiSaltata
+            ? ` ${esito.irrisolti} non riconosciuti (AI non disponibile), restano in Dispensa.`
+            : ` ${esito.irrisolti} restano in Dispensa.`;
+        }
+        setEsitoOrdina(msg);
+      }
+    } catch (e) {
+      setEsitoOrdina(e instanceof Error ? e.message : "Non sono riuscito a ordinare la lista. Riprova.");
+    } finally {
+      setOrdinando(false);
+    }
+  }
+
   // Header e navigatore restano sempre visibili (anche a lista vuota) così da poter scorrere le
   // settimane e iniziare una lista a mano da qualsiasi settimana.
   const haVoci = !!lista && voci.length > 0;
+  const gruppiReparto = raggruppaPerReparto(voci, ordineReparti);
 
   return (
     <div className="flex flex-col h-full">
@@ -83,8 +116,20 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
 
       {haVoci ? (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {voci.map((v) => (
-            <RigaListaRevisione key={v.id} voce={v} />
+          {/* Voci raggruppate per reparto (nell'ordine impostato in Altro), come la spesa
+              attiva. Prima di "Ordina per reparto" molte voci sono sotto "Dispensa". */}
+          {gruppiReparto.map(({ reparto, voci: vociReparto }) => (
+            <div key={reparto}>
+              <div
+                className="text-xs font-bold px-5 pt-3.5 pb-1"
+                style={{ letterSpacing: ".14em", textTransform: "uppercase", color: "var(--text-secondary)" }}
+              >
+                {reparto}
+              </div>
+              {vociReparto.map((v) => (
+                <RigaListaRevisione key={v.id} voce={v} />
+              ))}
+            </div>
           ))}
           <div className="px-5 py-3">
             <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
@@ -93,6 +138,12 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
               si sovrappongono al form "Aggiungi articolo" (soprattutto con la tastiera aperta)
               né rischi di toccare "Inizia la spesa" mentre inserisci un articolo. */}
           <div className="px-5 pt-3 pb-6 flex flex-col gap-2 border-t" style={{ borderColor: "var(--quadretto)" }}>
+            <Button variant="ghost" onClick={() => void ordinaPerReparto()} disabled={ordinando}>
+              {ordinando ? "Ordino per reparto…" : "Ordina per reparto"}
+            </Button>
+            {esitoOrdina && (
+              <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>{esitoOrdina}</p>
+            )}
             <Button variant="ghost" onClick={esportaTesto}>
               Esporta testo
             </Button>

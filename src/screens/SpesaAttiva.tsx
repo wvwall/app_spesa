@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { X, TriangleAlert, ShieldCheck } from "lucide-react";
 import { db, getOrCreateProfilo } from "../lib/db";
 import { toggleVoce, sostituisciVoce } from "../lib/lista";
+import { raggruppaPerReparto } from "../lib/reparti";
 import { RigaLista, ProgressSpesa, Badge, BottomSheet, AltOption } from "../components";
 import type { VoceLista } from "../lib/types";
 
@@ -20,17 +21,7 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
   const fatti = voci.filter((v) => v.checked).length;
 
   const ordine = profilo?.ordineReparti ?? [];
-  const perReparto = new Map<string, VoceLista[]>();
-  for (const v of voci) {
-    const arr = perReparto.get(v.reparto) ?? [];
-    arr.push(v);
-    perReparto.set(v.reparto, arr);
-  }
-  const reparti = [...perReparto.keys()].sort((a, b) => {
-    const ia = ordine.indexOf(a);
-    const ib = ordine.indexOf(b);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-  });
+  const gruppiReparto = raggruppaPerReparto(voci, ordine);
 
   return (
     <div
@@ -61,7 +52,7 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto border-t" style={{ borderColor: "var(--quadretto)" }}>
-        {reparti.map((reparto) => (
+        {gruppiReparto.map(({ reparto, voci: vociReparto }) => (
           <div key={reparto}>
             <div
               className="text-xs font-bold px-5 pt-3.5 pb-1"
@@ -69,7 +60,7 @@ export function SpesaAttiva({ listaId, onChiudi }: Props) {
             >
               {reparto}
             </div>
-            {(perReparto.get(reparto) ?? []).map((v) => (
+            {vociReparto.map((v) => (
               <div key={v.id} className="flex items-center">
                 <div className="flex-1 min-w-0">
                   <RigaLista
