@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { X, Plus } from "lucide-react";
+import { X, Plus, ChevronDown } from "lucide-react";
 import { db, getOrCreateProfilo, REPARTI_DEFAULT } from "../lib/db";
 import { getOrCreatePiano } from "../lib/piano";
 import { inizioCiclo, cicloSuccessivo, toIsoDate, etichettaCiclo } from "../lib/settimana";
@@ -131,10 +131,14 @@ function FormAggiungiArticolo({
   reparti: string[];
   onAggiungi: (nome: string, reparto: string, quantita: string) => Promise<void>;
 }) {
+  // Nessun reparto preselezionato: le chips restano nascoste finché non le apri, e se non
+  // scegli niente l'articolo finisce nel catch-all "Dispensa" (come gli altri fallback dell'app).
+  const REPARTO_RIPIEGO = "Dispensa";
   const [aperto, setAperto] = useState(false);
   const [nome, setNome] = useState("");
   const [quantita, setQuantita] = useState("");
-  const [reparto, setReparto] = useState(reparti[0] ?? "Dispensa");
+  const [reparto, setReparto] = useState<string | null>(null);
+  const [repartiAperti, setRepartiAperti] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   async function conferma() {
@@ -142,9 +146,11 @@ function FormAggiungiArticolo({
     if (!nomeTrim || salvando) return;
     setSalvando(true);
     try {
-      await onAggiungi(nomeTrim, reparto, quantita.trim());
+      await onAggiungi(nomeTrim, reparto ?? REPARTO_RIPIEGO, quantita.trim());
       setNome("");
       setQuantita("");
+      setReparto(null);
+      setRepartiAperti(false);
     } finally {
       setSalvando(false);
     }
@@ -188,13 +194,41 @@ function FormAggiungiArticolo({
           onChange={(e) => setQuantita(e.target.value)}
         />
       </div>
-      <div className="flex flex-wrap gap-2">
-        {reparti.map((r) => (
-          <Chip key={r} state={reparto === r ? "selected" : "default"} onClick={() => setReparto(r)}>
-            {r}
-          </Chip>
-        ))}
-      </div>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 self-start text-sm"
+        style={{ color: "var(--text-secondary)" }}
+        onClick={() => setRepartiAperti((v) => !v)}
+      >
+        Reparto:{" "}
+        {reparto ? (
+          <span style={{ color: "var(--biro)", fontWeight: 600 }}>{reparto}</span>
+        ) : (
+          <span style={{ fontStyle: "italic" }}>opzionale</span>
+        )}
+        <ChevronDown
+          size={15}
+          strokeWidth={2.25}
+          style={{ transform: repartiAperti ? "rotate(180deg)" : undefined, transition: "transform .15s" }}
+        />
+      </button>
+      {repartiAperti && (
+        <div className="flex flex-wrap gap-2">
+          {reparti.map((r) => (
+            <Chip
+              key={r}
+              state={reparto === r ? "selected" : "default"}
+              onClick={() => {
+                // Ritocca la stessa chip per deselezionarla e tornare a "opzionale".
+                setReparto((corrente) => (corrente === r ? null : r));
+                setRepartiAperti(false);
+              }}
+            >
+              {r}
+            </Chip>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Button onClick={() => void conferma()} disabled={!nome.trim() || salvando} style={{ flex: 1 }}>
           Aggiungi
