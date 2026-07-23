@@ -61,6 +61,13 @@ const RichiestaSchema = z.discriminatedUnion("azione", [
     vincoli: z.array(z.string()).default([]),
     porzioni: z.number().int().positive().default(4),
   }),
+  // Classifica ingredienti (già scelti dall'utente) nei reparti gestiti dall'app. Non genera
+  // cibo, quindi non serve il vincolo anti-noci: assegna solo un'etichetta di reparto a un nome.
+  z.object({
+    azione: z.literal("classificaReparti"),
+    ingredienti: z.array(z.string()).min(1).max(60),
+    reparti: z.array(z.string()).min(1).max(20),
+  }),
 ]);
 type Richiesta = z.infer<typeof RichiestaSchema>;
 
@@ -74,17 +81,32 @@ const PiattoGeneratoSchema = z.object({
 const PiattoGeneratoConIdSchema = PiattoGeneratoSchema.extend({ id: z.string() });
 const RispostaSettimanaSchema = z.object({ piatti: z.array(PiattoGeneratoConIdSchema) });
 
-async function chiamaGemini(prompt: string, responseSchema: object): Promise<unknown> {
+const RispostaClassificaSchema = z.object({
+  assegnazioni: z.array(z.object({ nome: z.string(), reparto: z.string() })),
+});
+
+const SISTEMA_CLASSIFICA =
+  "Sei un assistente che classifica ingredienti della spesa nei reparti di un supermercato " +
+  "italiano. Assegna a ciascun ingrediente uno solo dei reparti indicati, usando esattamente " +
+  "quelle etichette. Rispondi SOLO con il JSON richiesto.";
+
+async function chiamaGemini(
+  prompt: string,
+  responseSchema: object,
+  opzioni?: { temperature?: number; sistema?: string },
+): Promise<unknown> {
   const ai = new GoogleGenAI({ apiKey });
+  const sistema = opzioni?.sistema ?? SISTEMA_BASE;
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: { parts: [{ text: `${SISTEMA_BASE}\n\n${prompt}` }] },
+    contents: { parts: [{ text: `${sistema}\n\n${prompt}` }] },
     config: {
       responseMimeType: "application/json",
       responseSchema,
-      // Più alta del default: con lo stesso prompt ripetuto per più pasti (rigenerazione
-      // di un singolo slot) riduce la tendenza del modello a ripetere sempre gli stessi piatti.
-      temperature: 1.3,
+      // Default 1.3, più alta del solito: con lo stesso prompt ripetuto per più pasti
+      // (rigenerazione di un singolo slot) riduce la tendenza del modello a ripetere sempre
+      // gli stessi piatti. La classificazione dei reparti passa invece temperature 0.
+      temperature: opzioni?.temperature ?? 1.3,
     },
   });
   const testo = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
@@ -199,6 +221,45 @@ async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettim
   throw new Error("Non sono riuscito a generare la settimana rispettando il vincolo senza noci. Riprova.");
 }
 
+async function classificaReparti(input: Extract<Richiesta, { azione: "classificaReparti" }>) {
+  const reparti = input.reparti;
+  // Ripiego coerente col resto dell'app: "Dispensa" è il reparto catch-all (vedi lista.ts/piatti.ts).
+  const repartoRipiego = reparti.includes("Dispensa") ? "Dispensa" : reparti[reparti.length - 1];
+  const prompt =
+    `Assegna ogni ingrediente a UNO SOLO di questi reparti (usa esattamente queste etichette, ` +
+    `senza inventarne altre): ${reparti.join(", ")}.\n` +
+    `Se un ingrediente non rientra chiaramente in nessuno, usa "${repartoRipiego}".\n` +
+    `Ingredienti:\n${input.ingredienti.map((n) => `- ${n}`).join("\n")}`;
+
+  const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      assegnazioni: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            nome: { type: Type.STRING },
+            reparto: { type: Type.STRING, enum: reparti },
+          },
+          required: ["nome", "reparto"],
+        },
+      },
+    },
+    required: ["assegnazioni"],
+  };
+
+  const grezzo = await chiamaGemini(prompt, responseSchema, { temperature: 0, sistema: SISTEMA_CLASSIFICA });
+  const parsed = RispostaClassificaSchema.parse(grezzo);
+  // Clamp difensivo: un reparto fuori dalla lista consentita torna al ripiego.
+  const consentiti = new Set(reparti);
+  const assegnazioni = parsed.assegnazioni.map((a) => ({
+    nome: a.nome,
+    reparto: consentiti.has(a.reparto) ? a.reparto : repartoRipiego,
+  }));
+  return { assegnazioni };
+}
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ errore: "Metodo non consentito." }) };
@@ -223,6 +284,10 @@ export const handler: Handler = async (event) => {
     if (parsed.data.azione === "generaSettimana") {
       const piatti = await generaSettimana(parsed.data);
       return { statusCode: 200, body: JSON.stringify({ piatti }) };
+    }
+    if (parsed.data.azione === "classificaReparti") {
+      const risultato = await classificaReparti(parsed.data);
+      return { statusCode: 200, body: JSON.stringify(risultato) };
     }
     const risultato = await generaPiatto(parsed.data);
     return { statusCode: 200, body: JSON.stringify(risultato) };

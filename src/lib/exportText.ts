@@ -1,23 +1,11 @@
 import type { VoceLista } from "./types";
+import { raggruppaPerReparto } from "./reparti";
 
 export function costruisciTestoLista(voci: VoceLista[], ordineReparti: string[], titolo: string): string {
-  const gruppi = new Map<string, VoceLista[]>();
-  for (const v of voci) {
-    const arr = gruppi.get(v.reparto) ?? [];
-    arr.push(v);
-    gruppi.set(v.reparto, arr);
-  }
-
-  const reparti = [...gruppi.keys()].sort((a, b) => {
-    const ia = ordineReparti.indexOf(a);
-    const ib = ordineReparti.indexOf(b);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-  });
-
   let testo = `${titolo}\n`;
-  for (const reparto of reparti) {
+  for (const { reparto, voci: vociReparto } of raggruppaPerReparto(voci, ordineReparti)) {
     testo += `\n── ${reparto} ──\n`;
-    for (const v of gruppi.get(reparto) ?? []) {
+    for (const v of vociReparto) {
       const simbolo = v.checked ? "☑" : "☐";
       const nome = v.sostituitoCon ? `${v.sostituitoCon} (al posto di ${v.nome})` : v.nome;
       const nota = v.nota ? ` — “${v.nota}”` : "";

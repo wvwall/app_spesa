@@ -1,6 +1,11 @@
 import { db, nowIso, nuovoId } from "./db";
 import type { ListaSpesa, VoceLista } from "./types";
 import { trovaAlternative } from "./sostituzioni";
+import { costruisciIndiceReparti, deduciRepartoLocale } from "./reparti";
+import { classificaReparti } from "./ai";
+
+/** Reparto catch-all: le voci senza un reparto riconosciuto finiscono qui (vedi piatti.ts). */
+const REPARTO_NON_CATEGORIZZATO = "Dispensa";
 
 /** Aggrega gli ingredienti dei piatti pianificati nella lista aperta del piano (RF8).
  * Riusa la lista già in corso (vedi getOrCreaListaAperta) invece di crearne una nuova a ogni
@@ -140,4 +145,87 @@ export async function eliminaListaCompleta(listaId: string): Promise<void> {
     await db.voci.bulkDelete(voci.map((v) => v.id));
     await db.liste.delete(listaId);
   });
+}
+
+export interface EsitoOrdinaReparti {
+  /** Voci a cui è stato assegnato un reparto nuovo (diverso da quello di partenza). */
+  sistemati: number;
+  /** Di quelle sistemate, quante grazie all'AI (le altre dal catalogo locale). */
+  viaAI: number;
+  /** Voci non categorizzate rimaste in "Dispensa" (non riconosciute). */
+  irrisolti: number;
+  /** true se c'erano voci da mandare all'AI ma non è stato possibile (offline o errore). */
+  aiSaltata: boolean;
+}
+
+/** Assegna il reparto corretto alle voci non categorizzate della lista (in "Dispensa" o senza
+ * reparto), così da poterle raggruppare/ordinare per reparto. Strategia: prima il catalogo
+ * locale (nome + alias, offline e gratis), poi — solo per ciò che resta irriconosciuto — l'AI,
+ * vincolata ai reparti gestiti dall'app (`ordineReparti`). Le voci già categorizzate (reparto
+ * da catalogo o scelto a mano) NON vengono toccate. Il reparto viene salvato sulla voce, quindi
+ * diventa coerente ovunque (revisione, export, spesa attiva). */
+export async function ordinaListaPerReparto(
+  listaId: string,
+  ordineReparti: string[],
+): Promise<EsitoOrdinaReparti> {
+  const voci = await db.voci.where("listaId").equals(listaId).toArray();
+  const daSistemare = voci.filter((v) => !v.reparto || v.reparto === REPARTO_NON_CATEGORIZZATO);
+  if (daSistemare.length === 0) {
+    return { sistemati: 0, viaAI: 0, irrisolti: 0, aiSaltata: false };
+  }
+
+  const catalogo = await db.ingredienti.toArray();
+  const indice = costruisciIndiceReparti(catalogo);
+
+  const nuovoReparto = new Map<string, string>(); // voceId → reparto
+  const irrisolte: VoceLista[] = [];
+  for (const v of daSistemare) {
+    const locale = deduciRepartoLocale(v.nome, indice);
+    if (locale) {
+      if (locale !== v.reparto) nuovoReparto.set(v.id, locale);
+    } else {
+      irrisolte.push(v);
+    }
+  }
+
+  let viaAI = 0;
+  let aiSaltata = false;
+  if (irrisolte.length > 0) {
+    const online = typeof navigator === "undefined" || navigator.onLine;
+    if (!online) {
+      aiSaltata = true;
+    } else {
+      try {
+        const nomiUnici = [...new Set(irrisolte.map((v) => v.nome))];
+        const assegnazioni = await classificaReparti({ ingredienti: nomiUnici, reparti: ordineReparti });
+        const perNome = new Map(assegnazioni.map((a) => [a.nome.trim().toLowerCase(), a.reparto]));
+        for (const v of irrisolte) {
+          const rep = perNome.get(v.nome.trim().toLowerCase());
+          if (rep && rep !== v.reparto) {
+            nuovoReparto.set(v.id, rep);
+            viaAI++;
+          }
+        }
+      } catch {
+        // AI non disponibile: le voci irrisolte restano in "Dispensa" (degrado morbido).
+        aiSaltata = true;
+      }
+    }
+  }
+
+  if (nuovoReparto.size > 0) {
+    await db.transaction("rw", db.voci, async () => {
+      for (const [id, reparto] of nuovoReparto) {
+        // eslint-disable-next-line no-await-in-loop
+        await db.voci.update(id, { reparto });
+      }
+    });
+  }
+
+  return {
+    sistemati: nuovoReparto.size,
+    viaAI,
+    irrisolti: daSistemare.length - nuovoReparto.size,
+    aiSaltata,
+  };
 }
