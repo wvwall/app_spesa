@@ -6,6 +6,7 @@ export { Toast } from "./feedback/Toast";
 export { ProgressSpesa } from "./lista/ProgressSpesa";
 export { RigaLista } from "./lista/RigaLista";
 export { BottomSheet, AltOption } from "./navigation/BottomSheet";
+export { NavigatoreCiclo } from "./navigation/NavigatoreCiclo";
 export { TabBar } from "./navigation/TabBar";
 export { CardPiatto } from "./piatti/CardPiatto";
 export { ProposalCard } from "./piatti/ProposalCard";
