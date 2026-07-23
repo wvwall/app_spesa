@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { X, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, REPARTI_DEFAULT } from "../lib/db";
 import { getOrCreatePiano } from "../lib/piano";
-import { inizioCiclo, toIsoDate, etichettaCiclo } from "../lib/settimana";
+import { inizioCiclo, cicloSuccessivo, toIsoDate, etichettaCiclo } from "../lib/settimana";
 import {
   eliminaVoce,
   aggiornaQuantita,
@@ -12,16 +12,20 @@ import {
   aggiungiVoceLibera,
 } from "../lib/lista";
 import { costruisciTestoLista, condividiOScaricaTesto } from "../lib/exportText";
-import { Button, Chip } from "../components";
+import { Button, Chip, NavigatoreCiclo } from "../components";
 import type { VoceLista } from "../lib/types";
 
 interface Props {
+  cicloOffset: number;
+  onCicloOffsetChange: (offset: number) => void;
   onIniziaSpesa: (listaId: string) => void;
 }
 
-export function Lista({ onIniziaSpesa }: Props) {
+export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props) {
   const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
-  const inizio = inizioCiclo(new Date(), profilo?.giornoSpesa ?? 5);
+  // La settimana mostrata deriva dall'offset scelto qui in Lista (navigatore ‹ oggi ›), non più
+  // fissa su "oggi": così si può creare/rivedere la lista di una settimana specifica.
+  const inizio = cicloSuccessivo(inizioCiclo(new Date(), profilo?.giornoSpesa ?? 5), cicloOffset);
   const cicloIso = toIsoDate(inizio);
 
   const piano = useLiveQuery(() => db.piani.where("settimanaIso").equals(cicloIso).first(), [cicloIso]);
@@ -56,49 +60,62 @@ export function Lista({ onIniziaSpesa }: Props) {
     await aggiungiVoceLibera(listaAperta.id, nome, quantita, reparto);
   }
 
-  if (!lista || voci.length === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-center gap-4 px-8">
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>Nessuna lista ancora</div>
-        <p style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>
-          Pianifica qualche pasto in Settimana e genera la lista da lì, oppure aggiungi articoli a mano.
-        </p>
-        <div className="w-full">
-          <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
-        </div>
-      </div>
-    );
-  }
+  // Header e navigatore restano sempre visibili (anche a lista vuota) così da poter scorrere le
+  // settimane e iniziare una lista a mano da qualsiasi settimana.
+  const haVoci = !!lista && voci.length > 0;
 
   return (
     <div className="flex flex-col h-full">
       <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--quadretto)" }}>
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>Lista della spesa</div>
+        <div className="flex items-center justify-between gap-2">
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>Lista della spesa</div>
+          <NavigatoreCiclo
+            onPrecedente={() => onCicloOffsetChange(cicloOffset - 1)}
+            onOggi={() => onCicloOffsetChange(0)}
+            onSuccessivo={() => onCicloOffsetChange(cicloOffset + 1)}
+          />
+        </div>
         <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 2 }}>
-          {etichettaCiclo(inizio)} · {voci.length} articoli
+          {etichettaCiclo(inizio)}
+          {haVoci && ` · ${voci.length} articoli`}
         </div>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {voci.map((v) => (
-          <RigaListaRevisione key={v.id} voce={v} />
-        ))}
-        <div className="px-5 py-3">
-          <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
+
+      {haVoci ? (
+        <>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {voci.map((v) => (
+              <RigaListaRevisione key={v.id} voce={v} />
+            ))}
+            <div className="px-5 py-3">
+              <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
+            </div>
+          </div>
+          <div className="px-5 py-4 flex flex-col gap-2 flex-none border-t" style={{ borderColor: "var(--quadretto)" }}>
+            <Button variant="ghost" onClick={esportaTesto}>
+              Esporta testo
+            </Button>
+            <Button onClick={() => void chiudiEIniziaSpesa()}>Inizia la spesa</Button>
+            <button
+              type="button"
+              onClick={() => void svuotaLista()}
+              style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 4 }}
+            >
+              Svuota lista
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center text-center gap-4 px-8">
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>Nessuna lista ancora</div>
+          <p style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>
+            Pianifica qualche pasto in Settimana e genera la lista da lì, oppure aggiungi articoli a mano.
+          </p>
+          <div className="w-full">
+            <FormAggiungiArticolo reparti={ordineReparti} onAggiungi={aggiungiArticolo} />
+          </div>
         </div>
-      </div>
-      <div className="px-5 py-4 flex flex-col gap-2 flex-none border-t" style={{ borderColor: "var(--quadretto)" }}>
-        <Button variant="ghost" onClick={esportaTesto}>
-          Esporta testo
-        </Button>
-        <Button onClick={() => void chiudiEIniziaSpesa()}>Inizia la spesa</Button>
-        <button
-          type="button"
-          onClick={() => void svuotaLista()}
-          style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 4 }}
-        >
-          Svuota lista
-        </button>
-      </div>
+      )}
     </div>
   );
 }

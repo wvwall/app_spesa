@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight, Sparkles, X, RotateCcw, Plus } from "lucide-react";
+import { Sparkles, X, RotateCcw, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, nowIso, nuovoId } from "../lib/db";
 import {
   getOrCreatePiano,
@@ -19,7 +19,7 @@ import {
   etichettaCiclo,
   isOggi,
 } from "../lib/settimana";
-import { CardPiatto, Button, SearchInput, Badge } from "../components";
+import { CardPiatto, Button, SearchInput, Badge, NavigatoreCiclo } from "../components";
 import type { Ingrediente, Piatto, Slot } from "../lib/types";
 
 // Pasti per chiamata AI: generare tutta la settimana (fino a ~14 piatti completi) in
@@ -49,17 +49,18 @@ interface PropostaSettimana {
 }
 
 interface Props {
-  onListaGenerata: () => void;
+  cicloOffset: number;
+  onCicloOffsetChange: (offset: number) => void;
+  onListaGenerata: (cicloOffset: number) => void;
 }
 
-export function Settimana({ onListaGenerata }: Props) {
+export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [todayEl, setTodayEl] = useState<HTMLDivElement | null>(null);
 
   const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
   const giornoSpesa = profilo?.giornoSpesa ?? 5;
 
-  const [cicloOffset, setCicloOffset] = useState(0);
   const inizio = cicloSuccessivo(
     inizioCiclo(new Date(), giornoSpesa),
     cicloOffset,
@@ -133,7 +134,7 @@ export function Settimana({ onListaGenerata }: Props) {
     setErroreLista(null);
     try {
       await generaListaDaPiano(pianoId);
-      onListaGenerata();
+      onListaGenerata(cicloOffset);
     } catch (e) {
       // Senza questo try/catch un errore qui finiva ignorato in silenzio: il tasto sembrava
       // "non fare nulla" perché non si passava mai alla schermata Lista né si vedeva perché.
@@ -238,47 +239,11 @@ export function Settimana({ onListaGenerata }: Props) {
             }}>
             {etichettaCiclo(inizio)}
           </h1>
-          <div
-            className="flex items-center text-sm"
-            style={{ color: "var(--text-secondary)" }}>
-            <button
-              type="button"
-              onClick={() => setCicloOffset((w) => w - 1)}
-              aria-label="Settimana precedente"
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-              <ChevronLeft size={22} strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setCicloOffset(0)}
-              style={{
-                color: "var(--biro)",
-                fontWeight: 600,
-                minHeight: 44,
-                padding: "0 8px",
-              }}>
-              oggi
-            </button>
-            <button
-              type="button"
-              onClick={() => setCicloOffset((w) => w + 1)}
-              aria-label="Settimana successiva"
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-              <ChevronRight size={22} strokeWidth={2} />
-            </button>
-          </div>
+          <NavigatoreCiclo
+            onPrecedente={() => onCicloOffsetChange(cicloOffset - 1)}
+            onOggi={() => onCicloOffsetChange(0)}
+            onSuccessivo={() => onCicloOffsetChange(cicloOffset + 1)}
+          />
         </div>
       </header>
 
@@ -379,7 +344,7 @@ export function Settimana({ onListaGenerata }: Props) {
         })}
       </div>
 
-      {!tuttiVuoti && cicloOffset === 0 && (
+      {!tuttiVuoti && (
         <div className="px-5 pb-3 flex-none">
           <Button onClick={() => void generaLista()} disabled={slotsAssegnati === 0 || generandoLista}>
             {generandoLista ? "Preparo la lista…" : `Genera lista spesa · ${slotsAssegnati} piatti`}
