@@ -8,7 +8,7 @@ import {
   eliminaVoce,
   aggiornaQuantita,
   eliminaListaCompleta,
-  getListaAperta,
+  getListaDelPiano,
   getOrCreaListaAperta,
   aggiungiVoceLibera,
   ordinaListaPerReparto,
@@ -32,10 +32,10 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
   const cicloIso = toIsoDate(inizio);
 
   const piano = useLiveQuery(() => db.piani.where("settimanaIso").equals(cicloIso).first(), [cicloIso]);
-  // Mostra la lista APERTA del piano (la stessa in cui scrivono aggiunta manuale e generazione),
-  // non una a caso: vedi getListaAperta. Chiusa la lista con "Inizia la spesa", qui non c'è più
-  // lista aperta → stato vuoto, pronto per una nuova.
-  const lista = useLiveQuery(() => (piano ? getListaAperta(piano.id) : undefined), [piano?.id]);
+  // Mostra la lista della settimana (la stessa in cui scrivono aggiunta manuale e generazione),
+  // non una a caso: vedi getListaDelPiano. La include anche dopo "Inizia la spesa" (chiusa), così
+  // la lista non "sparisce" tornando qui.
+  const lista = useLiveQuery(() => (piano ? getListaDelPiano(piano.id) : undefined), [piano?.id]);
   const voci = useLiveQuery(() => (lista ? db.voci.where("listaId").equals(lista.id).toArray() : []), [lista?.id]) ?? [];
   const ordineReparti = profilo?.ordineReparti ?? REPARTI_DEFAULT;
 

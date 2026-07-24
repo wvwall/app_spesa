@@ -93,26 +93,25 @@ export async function generaListaDaPiano(pianoId: string): Promise<ListaSpesa> {
   return lista;
 }
 
-/** La lista aperta (non chiusa) del piano, o undefined se non ce n'è una in corso.
- * Sostituisce il vecchio `.last()`: quello ordinava per chiave primaria, cioè per id casuale
- * (crypto.randomUUID), e quindi restituiva una lista *a caso* tra quelle del piano — non l'aperta
- * né la più recente. Con più liste (tipico dopo "Inizia la spesa", che ne chiude una) la lista
- * mostrata e quella scritta divergevano e gli articoli aggiunti finivano fuori vista. Qui si
- * filtrano le sole aperte; se per dati già sporcati ce ne fosse più d'una, si sceglie in modo
- * deterministico la più recente (updatedAt). */
-export async function getListaAperta(pianoId: string): Promise<ListaSpesa | undefined> {
-  const aperte = await db.liste.where("pianoId").equals(pianoId).filter((l) => !l.chiusa).toArray();
-  if (aperte.length === 0) return undefined;
-  return aperte.reduce((piuRecente, l) => (l.updatedAt > piuRecente.updatedAt ? l : piuRecente));
+/** La lista della settimana (piano): ce n'è una sola per piano. Sostituisce il vecchio `.last()`,
+ * che ordinava per chiave primaria — cioè per id casuale (crypto.randomUUID) — e restituiva una
+ * lista *a caso* tra quelle del piano, facendo divergere la lista mostrata da quella scritta
+ * (gli articoli aggiunti finivano fuori vista). Include anche la lista già "chiusa" (spesa
+ * iniziata): la tab Lista deve continuare a mostrarla, non svuotarsi dopo "Inizia la spesa".
+ * Deterministica anche se dati pregressi ne hanno lasciata più d'una: sceglie la più recente. */
+export async function getListaDelPiano(pianoId: string): Promise<ListaSpesa | undefined> {
+  const liste = await db.liste.where("pianoId").equals(pianoId).toArray();
+  if (liste.length === 0) return undefined;
+  return liste.reduce((piuRecente, l) => (l.updatedAt > piuRecente.updatedAt ? l : piuRecente));
 }
 
-/** Lista aperta del piano corrente, per aggiungere articoli a mano senza passare dai piatti
- * pianificati: riusa quella eventualmente già in corso invece di crearne una nuova a ogni
- * articolo aggiunto. */
+/** Lista del piano corrente, per aggiungere articoli a mano senza passare dai piatti pianificati:
+ * riusa quella della settimana (anche se già "chiusa") invece di crearne una nuova a ogni
+ * articolo aggiunto — così ce n'è sempre una sola per settimana e non nascono duplicati. */
 export async function getOrCreaListaAperta(pianoId: string): Promise<ListaSpesa> {
   return db.transaction("rw", db.liste, async () => {
-    const aperta = await getListaAperta(pianoId);
-    if (aperta) return aperta;
+    const esistente = await getListaDelPiano(pianoId);
+    if (esistente) return esistente;
     const lista: ListaSpesa = { id: nuovoId(), pianoId, chiusa: false, updatedAt: nowIso() };
     await db.liste.add(lista);
     return lista;
