@@ -93,13 +93,25 @@ export async function generaListaDaPiano(pianoId: string): Promise<ListaSpesa> {
   return lista;
 }
 
-/** Lista aperta (non chiusa) del piano corrente, per aggiungere articoli a mano senza
- * passare dai piatti pianificati: riusa quella eventualmente già in corso invece di
- * crearne una nuova a ogni articolo aggiunto. */
+/** La lista della settimana (piano): ce n'è una sola per piano. Sostituisce il vecchio `.last()`,
+ * che ordinava per chiave primaria — cioè per id casuale (crypto.randomUUID) — e restituiva una
+ * lista *a caso* tra quelle del piano, facendo divergere la lista mostrata da quella scritta
+ * (gli articoli aggiunti finivano fuori vista). Include anche la lista già "chiusa" (spesa
+ * iniziata): la tab Lista deve continuare a mostrarla, non svuotarsi dopo "Inizia la spesa".
+ * Deterministica anche se dati pregressi ne hanno lasciata più d'una: sceglie la più recente. */
+export async function getListaDelPiano(pianoId: string): Promise<ListaSpesa | undefined> {
+  const liste = await db.liste.where("pianoId").equals(pianoId).toArray();
+  if (liste.length === 0) return undefined;
+  return liste.reduce((piuRecente, l) => (l.updatedAt > piuRecente.updatedAt ? l : piuRecente));
+}
+
+/** Lista del piano corrente, per aggiungere articoli a mano senza passare dai piatti pianificati:
+ * riusa quella della settimana (anche se già "chiusa") invece di crearne una nuova a ogni
+ * articolo aggiunto — così ce n'è sempre una sola per settimana e non nascono duplicati. */
 export async function getOrCreaListaAperta(pianoId: string): Promise<ListaSpesa> {
   return db.transaction("rw", db.liste, async () => {
-    const esistente = await db.liste.where("pianoId").equals(pianoId).last();
-    if (esistente && !esistente.chiusa) return esistente;
+    const esistente = await getListaDelPiano(pianoId);
+    if (esistente) return esistente;
     const lista: ListaSpesa = { id: nuovoId(), pianoId, chiusa: false, updatedAt: nowIso() };
     await db.liste.add(lista);
     return lista;
