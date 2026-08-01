@@ -2,6 +2,7 @@ export { Button } from "./core/Button";
 export { Chip } from "./core/Chip";
 export { SearchInput } from "./core/SearchInput";
 export { Badge } from "./feedback/Badge";
+export { Skeleton } from "./feedback/Skeleton";
 export { Toast } from "./feedback/Toast";
 export { ProgressSpesa } from "./lista/ProgressSpesa";
 export { RigaLista } from "./lista/RigaLista";

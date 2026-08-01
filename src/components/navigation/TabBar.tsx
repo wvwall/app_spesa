@@ -38,9 +38,13 @@ export function TabBar({
       aria-label="Navigazione"
       style={{
         display: "flex",
-        borderTop: "1px solid var(--quadretto)",
-        background: "var(--surface-page,var(--carta))",
-        padding: "6px 6px 12px",
+        flex: "none",
+        margin: "0 14px max(14px, env(safe-area-inset-bottom))",
+        border: "1px solid var(--quadretto)",
+        background: "var(--surface-card,#fff)",
+        borderRadius: 999,
+        boxShadow: "var(--shadow-fab)",
+        padding: 6,
         fontFamily: "var(--font-text)",
         ...style,
       }}>
@@ -61,7 +65,7 @@ export function TabBar({
               color: on ? "var(--biro)" : "var(--inchiostro-70)",
               fontWeight: on ? 700 : 400,
               padding: "7px 2px",
-              borderRadius: 10,
+              borderRadius: 999,
               cursor: "pointer",
               textAlign: "center",
             }}>
