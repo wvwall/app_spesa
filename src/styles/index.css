@@ -99,6 +99,23 @@ input {
   background-size: var(--bg-quadretti-size);
 }
 
+/* skeleton di primo caricamento: shimmer che scorre sui toni della quadrettatura, coerente
+   sia con carta chiara che con lavagna scura */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--quadretto) 25%, var(--surface-card, #fff) 37%, var(--quadretto) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

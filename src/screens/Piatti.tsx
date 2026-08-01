@@ -4,13 +4,18 @@ import { Sparkles, X, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { db, getOrCreateProfilo, nowIso, nuovoId, REPARTI_DEFAULT } from "../lib/db";
 import { generaPiatto, type PiattoGenerato } from "../lib/ai";
 import { salvaPiattoGenerato } from "../lib/piatti";
-import { Button, Chip, SearchInput, ProposalCard } from "../components";
+import { Button, Chip, SearchInput, ProposalCard, Skeleton } from "../components";
 import type { Ingrediente, Piatto } from "../lib/types";
 
 export function Piatti() {
-  const ingredienti = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
-  const piatti = useLiveQuery(() => db.piatti.toArray(), []) ?? [];
+  const ingredientiRaw = useLiveQuery(() => db.ingredienti.toArray(), []);
+  const piattiRaw = useLiveQuery(() => db.piatti.toArray(), []);
   const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
+  const ingredienti = ingredientiRaw ?? [];
+  const piatti = piattiRaw ?? [];
+  // Al primo giro Dexie non ha ancora risposto: distinguiamo "sto caricando" da "catalogo
+  // vuoto" per non mostrare mai a torto lo stato "Nessun piatto salvato".
+  const caricamento = ingredientiRaw === undefined || piattiRaw === undefined;
 
   const [query, setQuery] = useState("");
   const [selezionati, setSelezionati] = useState<string[]>([]);
@@ -119,7 +124,9 @@ export function Piatti() {
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
         <SearchInput placeholder="Cerca o aggiungi un ingrediente…" value={query} onChange={(e) => setQuery(e.target.value)} />
 
-        {reparti.map((reparto) => (
+        {caricamento && <PiattiSkeleton />}
+
+        {!caricamento && reparti.map((reparto) => (
           <RepartoCollassabile
             key={reparto}
             nome={reparto}
@@ -180,7 +187,13 @@ export function Piatti() {
         <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
           <Etichetta>I tuoi piatti</Etichetta>
           <div className="flex flex-col gap-2">
-            {piatti.map((p) => (
+            {caricamento && (
+              <>
+                <Skeleton height={48} radius={16} />
+                <Skeleton height={48} radius={16} />
+              </>
+            )}
+            {!caricamento && piatti.map((p) => (
               <div
                 key={p.id}
                 className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
@@ -213,10 +226,29 @@ export function Piatti() {
                 </div>
               </div>
             ))}
-            {piatti.length === 0 && <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>Nessun piatto salvato.</p>}
+            {!caricamento && piatti.length === 0 && (
+              <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>Nessun piatto salvato.</p>
+            )}
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function PiattiSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-hidden="true">
+      {[1, 2, 3].map((riga) => (
+        <div key={riga} className="flex flex-col gap-2">
+          <Skeleton width={120} height={12} />
+          <div className="flex flex-wrap gap-2">
+            <Skeleton width={72} height={30} radius={99} />
+            <Skeleton width={96} height={30} radius={99} />
+            <Skeleton width={64} height={30} radius={99} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

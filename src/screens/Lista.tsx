@@ -15,7 +15,7 @@ import {
 } from "../lib/lista";
 import { raggruppaPerReparto } from "../lib/reparti";
 import { costruisciTestoLista, condividiOScaricaTesto } from "../lib/exportText";
-import { Button, Chip, NavigatoreCiclo } from "../components";
+import { Button, Chip, NavigatoreCiclo, Skeleton } from "../components";
 import type { VoceLista } from "../lib/types";
 
 interface Props {
@@ -118,7 +118,13 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
         </div>
       </header>
 
-      {haVoci ? (
+      {profilo === undefined ? (
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3.5 flex flex-col gap-2" aria-hidden="true">
+          <Skeleton height={44} radius={14} />
+          <Skeleton height={44} radius={14} />
+          <Skeleton height={44} radius={14} />
+        </div>
+      ) : haVoci ? (
         <div className="flex-1 min-h-0 overflow-y-auto">
           {/* Voci raggruppate per reparto (nell'ordine impostato in Altro), come la spesa
               attiva. Prima di "Ordina per reparto" molte voci sono sotto "Dispensa". */}

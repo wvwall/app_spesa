@@ -19,7 +19,7 @@ import {
   etichettaCiclo,
   isOggi,
 } from "../lib/settimana";
-import { CardPiatto, Button, SearchInput, Badge, NavigatoreCiclo } from "../components";
+import { CardPiatto, Button, SearchInput, Badge, NavigatoreCiclo, Skeleton } from "../components";
 import type { Ingrediente, Piatto, Slot } from "../lib/types";
 
 // Pasti per chiamata AI: generare tutta la settimana (fino a ~14 piatti completi) in
@@ -248,7 +248,10 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
-        {tuttiVuoti && (
+        {/* pianoId è null solo nell'istante prima che getOrCreatePiano/getOrCreateSlots
+            finiscano: uno skeleton dei giorni evita il flash del messaggio "menù in bianco". */}
+        {!pianoId && <SettimanaSkeleton />}
+        {pianoId && tuttiVuoti && (
           <div className="text-center flex flex-col items-center gap-3 py-6">
             <div
               style={{
@@ -285,7 +288,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
             )}
           </div>
         )}
-        {giorni.map((giorno) => {
+        {pianoId && giorni.map((giorno) => {
           const dataIso = toIsoDate(giorno);
           const slotGiorno = slots
             .filter((s) => s.data === dataIso)
@@ -615,5 +618,21 @@ function SlotRiga({
 
   return (
     <CardPiatto when={etichettaPasto} empty onClick={() => setRicerca(true)} />
+  );
+}
+
+function SettimanaSkeleton() {
+  return (
+    <div className="flex flex-col gap-3" aria-hidden="true">
+      {[1, 2, 3].map((giorno) => (
+        <div key={giorno} className="mb-3">
+          <Skeleton width={90} height={11} style={{ marginBottom: 8 }} />
+          <div className="flex flex-col gap-2">
+            <Skeleton height={48} radius={14} />
+            <Skeleton height={48} radius={14} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
