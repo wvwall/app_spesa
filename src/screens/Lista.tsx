@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { X, Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { db, getOrCreateProfilo, REPARTI_DEFAULT } from "../lib/db";
 import { getOrCreatePiano } from "../lib/piano";
 import { inizioCiclo, cicloSuccessivo, toIsoDate, etichettaCiclo } from "../lib/settimana";
@@ -11,6 +11,7 @@ import {
   getListaDelPiano,
   getOrCreaListaAperta,
   aggiungiVoceLibera,
+  aggiornaVoce,
   ordinaListaPerReparto,
 } from "../lib/lista";
 import { raggruppaPerReparto } from "../lib/reparti";
@@ -68,6 +69,7 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
 
   const [ordinando, setOrdinando] = useState(false);
   const [esitoOrdina, setEsitoOrdina] = useState<string | null>(null);
+  const [voceInModifica, setVoceInModifica] = useState<VoceLista | null>(null);
 
   async function ordinaPerReparto() {
     if (!lista) return;
@@ -136,9 +138,27 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
               >
                 {reparto}
               </div>
-              {vociReparto.map((v) => (
-                <RigaListaRevisione key={v.id} voce={v} />
-              ))}
+              {vociReparto.map((v) =>
+                voceInModifica?.id === v.id ? (
+                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--quadretto)" }}>
+                    <FormAggiungiArticolo
+                      apertoInizialmente
+                      nomeIniziale={v.nome}
+                      quantitaIniziale={v.quantita}
+                      repartoIniziale={v.reparto}
+                      testoConferma="Salva"
+                      onAggiungi={async (nome, reparto, quantita) => {
+                        await aggiornaVoce(v, { nome, reparto, quantita });
+                        setVoceInModifica(null);
+                      }}
+                      onAnnulla={() => setVoceInModifica(null)}
+                      reparti={ordineReparti}
+                    />
+                  </div>
+                ) : (
+                  <RigaListaRevisione key={v.id} voce={v} onModifica={() => setVoceInModifica(v)} />
+                ),
+              )}
             </div>
           ))}
           <div className="px-5 py-3">
@@ -188,17 +208,29 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
 function FormAggiungiArticolo({
   reparti,
   onAggiungi,
+  apertoInizialmente = false,
+  nomeIniziale = "",
+  quantitaIniziale = "1",
+  repartoIniziale = null,
+  testoConferma = "Aggiungi",
+  onAnnulla,
 }: {
   reparti: string[];
   onAggiungi: (nome: string, reparto: string, quantita: string) => Promise<void>;
+  apertoInizialmente?: boolean;
+  nomeIniziale?: string;
+  quantitaIniziale?: string;
+  repartoIniziale?: string | null;
+  testoConferma?: string;
+  onAnnulla?: () => void;
 }) {
   // Nessun reparto preselezionato: le chips restano nascoste finché non le apri, e se non
   // scegli niente l'articolo finisce nel catch-all "Dispensa" (come gli altri fallback dell'app).
   const REPARTO_RIPIEGO = "Dispensa";
-  const [aperto, setAperto] = useState(false);
-  const [nome, setNome] = useState("");
-  const [quantita, setQuantita] = useState("");
-  const [reparto, setReparto] = useState<string | null>(null);
+  const [aperto, setAperto] = useState(apertoInizialmente);
+  const [nome, setNome] = useState(nomeIniziale);
+  const [quantita, setQuantita] = useState(quantitaIniziale);
+  const [reparto, setReparto] = useState<string | null>(repartoIniziale);
   const [repartiAperti, setRepartiAperti] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -209,7 +241,7 @@ function FormAggiungiArticolo({
     try {
       await onAggiungi(nomeTrim, reparto ?? REPARTO_RIPIEGO, quantita.trim());
       setNome("");
-      setQuantita("");
+      setQuantita("1");
       setReparto(null);
       setRepartiAperti(false);
     } finally {
@@ -249,7 +281,7 @@ function FormAggiungiArticolo({
         />
         <input
           className="border rounded-lg px-2.5 py-1.5 text-sm text-right"
-          style={{ borderColor: "var(--quadretto)", width: 88 }}
+          style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)", width: 88 }}
           placeholder="quantità"
           value={quantita}
           onChange={(e) => setQuantita(e.target.value)}
@@ -292,13 +324,16 @@ function FormAggiungiArticolo({
       )}
       <div className="flex items-center gap-2">
         <Button onClick={() => void conferma()} disabled={!nome.trim() || salvando} style={{ flex: 1 }}>
-          Aggiungi
+           {testoConferma}
         </Button>
         <button
           type="button"
           className="text-xs px-1"
           style={{ color: "var(--text-secondary)" }}
-          onClick={() => setAperto(false)}
+           onClick={() => {
+             if (onAnnulla) onAnnulla();
+             else setAperto(false);
+           }}
         >
           chiudi
         </button>
@@ -307,7 +342,7 @@ function FormAggiungiArticolo({
   );
 }
 
-function RigaListaRevisione({ voce }: { voce: VoceLista }) {
+function RigaListaRevisione({ voce, onModifica }: { voce: VoceLista; onModifica: () => void }) {
   const [quantita, setQuantita] = useState(voce.quantita);
 
   return (
@@ -320,7 +355,12 @@ function RigaListaRevisione({ voce }: { voce: VoceLista }) {
       </div>
       <input
         className="border rounded-lg px-2 py-1.5 text-sm text-right"
-        style={{ borderColor: "var(--quadretto)", width: 96 }}
+        style={{
+          borderColor: "var(--quadretto)",
+          background: "var(--surface-card)",
+          width: 96,
+          marginRight: 6,
+        }}
         placeholder="quantità"
         value={quantita}
         onChange={(e) => setQuantita(e.target.value)}
@@ -328,11 +368,19 @@ function RigaListaRevisione({ voce }: { voce: VoceLista }) {
       />
       <button
         type="button"
+        aria-label={`Modifica ${voce.nome}`}
+        onClick={onModifica}
+        style={{ color: "var(--biro)", flex: "none", display: "flex", marginRight: 10 }}
+      >
+        <Pencil size={16} strokeWidth={2} />
+      </button>
+      <button
+        type="button"
         aria-label={`Rimuovi ${voce.nome}`}
         onClick={() => void eliminaVoce(voce.id)}
         style={{ color: "var(--pomodoro)", flex: "none", display: "flex" }}
       >
-        <X size={16} strokeWidth={2} />
+        <Trash2 size={16} strokeWidth={2} />
       </button>
     </div>
   );

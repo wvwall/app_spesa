@@ -146,6 +146,19 @@ export async function aggiornaQuantita(voceId: string, quantita: string): Promis
   await db.voci.update(voceId, { quantita });
 }
 
+export async function aggiornaVoce(
+  voce: VoceLista,
+  dati: { nome: string; quantita: string; reparto: string },
+): Promise<void> {
+  await db.voci.update(voce.id, {
+    nome: dati.nome,
+    quantita: dati.quantita,
+    reparto: dati.reparto,
+    alternative: trovaAlternative(dati.nome),
+    ...(voce.testoLibero ? { testoLibero: dati.nome } : {}),
+  });
+}
+
 export async function sostituisciVoce(voceId: string, sostitutoNome: string): Promise<void> {
   await db.voci.update(voceId, { sostituitoCon: sostitutoNome });
 }
