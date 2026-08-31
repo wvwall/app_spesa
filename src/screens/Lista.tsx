@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { X, Plus, ChevronDown, Pencil } from "lucide-react";
+import { Plus, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { db, getOrCreateProfilo, REPARTI_DEFAULT } from "../lib/db";
 import { getOrCreatePiano } from "../lib/piano";
 import { inizioCiclo, cicloSuccessivo, toIsoDate, etichettaCiclo } from "../lib/settimana";
@@ -16,7 +16,7 @@ import {
 } from "../lib/lista";
 import { raggruppaPerReparto } from "../lib/reparti";
 import { costruisciTestoLista, condividiOScaricaTesto } from "../lib/exportText";
-import { Button, Chip, NavigatoreCiclo, Skeleton, BottomSheet } from "../components";
+import { Button, Chip, NavigatoreCiclo, Skeleton } from "../components";
 import type { VoceLista } from "../lib/types";
 
 interface Props {
@@ -138,9 +138,27 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
               >
                 {reparto}
               </div>
-              {vociReparto.map((v) => (
-                <RigaListaRevisione key={v.id} voce={v} onModifica={() => setVoceInModifica(v)} />
-              ))}
+              {vociReparto.map((v) =>
+                voceInModifica?.id === v.id ? (
+                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--quadretto)" }}>
+                    <FormAggiungiArticolo
+                      apertoInizialmente
+                      nomeIniziale={v.nome}
+                      quantitaIniziale={v.quantita}
+                      repartoIniziale={v.reparto}
+                      testoConferma="Salva"
+                      onAggiungi={async (nome, reparto, quantita) => {
+                        await aggiornaVoce(v, { nome, reparto, quantita });
+                        setVoceInModifica(null);
+                      }}
+                      onAnnulla={() => setVoceInModifica(null)}
+                      reparti={ordineReparti}
+                    />
+                  </div>
+                ) : (
+                  <RigaListaRevisione key={v.id} voce={v} onModifica={() => setVoceInModifica(v)} />
+                ),
+              )}
             </div>
           ))}
           <div className="px-5 py-3">
@@ -180,21 +198,6 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
           </div>
         </div>
       )}
-      <BottomSheet
-        open={Boolean(voceInModifica)}
-        onClose={() => setVoceInModifica(null)}
-        title={voceInModifica ? `Modifica ${voceInModifica.nome}` : undefined}
-      >
-        {voceInModifica && (
-          <FormModificaVoce
-            key={voceInModifica.id}
-            voce={voceInModifica}
-            reparti={ordineReparti}
-            onAnnulla={() => setVoceInModifica(null)}
-            onSalvato={() => setVoceInModifica(null)}
-          />
-        )}
-      </BottomSheet>
     </div>
   );
 }
@@ -205,17 +208,29 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
 function FormAggiungiArticolo({
   reparti,
   onAggiungi,
+  apertoInizialmente = false,
+  nomeIniziale = "",
+  quantitaIniziale = "1",
+  repartoIniziale = null,
+  testoConferma = "Aggiungi",
+  onAnnulla,
 }: {
   reparti: string[];
   onAggiungi: (nome: string, reparto: string, quantita: string) => Promise<void>;
+  apertoInizialmente?: boolean;
+  nomeIniziale?: string;
+  quantitaIniziale?: string;
+  repartoIniziale?: string | null;
+  testoConferma?: string;
+  onAnnulla?: () => void;
 }) {
   // Nessun reparto preselezionato: le chips restano nascoste finché non le apri, e se non
   // scegli niente l'articolo finisce nel catch-all "Dispensa" (come gli altri fallback dell'app).
   const REPARTO_RIPIEGO = "Dispensa";
-  const [aperto, setAperto] = useState(false);
-  const [nome, setNome] = useState("");
-  const [quantita, setQuantita] = useState("1");
-  const [reparto, setReparto] = useState<string | null>(null);
+  const [aperto, setAperto] = useState(apertoInizialmente);
+  const [nome, setNome] = useState(nomeIniziale);
+  const [quantita, setQuantita] = useState(quantitaIniziale);
+  const [reparto, setReparto] = useState<string | null>(repartoIniziale);
   const [repartiAperti, setRepartiAperti] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -266,7 +281,7 @@ function FormAggiungiArticolo({
         />
         <input
           className="border rounded-lg px-2.5 py-1.5 text-sm text-right"
-          style={{ borderColor: "var(--quadretto)", width: 88 }}
+          style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)", width: 88 }}
           placeholder="quantità"
           value={quantita}
           onChange={(e) => setQuantita(e.target.value)}
@@ -309,13 +324,16 @@ function FormAggiungiArticolo({
       )}
       <div className="flex items-center gap-2">
         <Button onClick={() => void conferma()} disabled={!nome.trim() || salvando} style={{ flex: 1 }}>
-          Aggiungi
+           {testoConferma}
         </Button>
         <button
           type="button"
           className="text-xs px-1"
           style={{ color: "var(--text-secondary)" }}
-          onClick={() => setAperto(false)}
+           onClick={() => {
+             if (onAnnulla) onAnnulla();
+             else setAperto(false);
+           }}
         >
           chiudi
         </button>
@@ -337,7 +355,12 @@ function RigaListaRevisione({ voce, onModifica }: { voce: VoceLista; onModifica:
       </div>
       <input
         className="border rounded-lg px-2 py-1.5 text-sm text-right"
-        style={{ borderColor: "var(--quadretto)", width: 96 }}
+        style={{
+          borderColor: "var(--quadretto)",
+          background: "var(--surface-card)",
+          width: 96,
+          marginRight: 6,
+        }}
         placeholder="quantità"
         value={quantita}
         onChange={(e) => setQuantita(e.target.value)}
@@ -347,7 +370,7 @@ function RigaListaRevisione({ voce, onModifica }: { voce: VoceLista; onModifica:
         type="button"
         aria-label={`Modifica ${voce.nome}`}
         onClick={onModifica}
-        style={{ color: "var(--biro)", flex: "none", display: "flex" }}
+        style={{ color: "var(--biro)", flex: "none", display: "flex", marginRight: 10 }}
       >
         <Pencil size={16} strokeWidth={2} />
       </button>
@@ -357,83 +380,8 @@ function RigaListaRevisione({ voce, onModifica }: { voce: VoceLista; onModifica:
         onClick={() => void eliminaVoce(voce.id)}
         style={{ color: "var(--pomodoro)", flex: "none", display: "flex" }}
       >
-        <X size={16} strokeWidth={2} />
+        <Trash2 size={16} strokeWidth={2} />
       </button>
-    </div>
-  );
-}
-
-function FormModificaVoce({
-  voce,
-  reparti,
-  onAnnulla,
-  onSalvato,
-}: {
-  voce: VoceLista;
-  reparti: string[];
-  onAnnulla: () => void;
-  onSalvato: () => void;
-}) {
-  const [nome, setNome] = useState(voce.nome);
-  const [quantita, setQuantita] = useState(voce.quantita);
-  const [reparto, setReparto] = useState(voce.reparto);
-  const [salvando, setSalvando] = useState(false);
-
-  async function salva() {
-    const nomeTrim = nome.trim();
-    if (!nomeTrim || salvando) return;
-    setSalvando(true);
-    try {
-      await aggiornaVoce(voce, { nome: nomeTrim, quantita: quantita.trim(), reparto });
-      onSalvato();
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        <span style={{ color: "var(--text-secondary)" }}>Nome</span>
-        <input
-          autoFocus
-          className="border rounded-lg px-3 py-2 text-sm"
-          style={{ borderColor: "var(--quadretto)" }}
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void salva();
-          }}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span style={{ color: "var(--text-secondary)" }}>Quantità</span>
-        <input
-          type="text"
-          className="border rounded-lg px-3 py-2 text-sm"
-          style={{ borderColor: "var(--quadretto)" }}
-          value={quantita}
-          onChange={(e) => setQuantita(e.target.value)}
-        />
-      </label>
-      <div className="flex flex-col gap-1">
-        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Reparto</span>
-        <div className="flex flex-wrap gap-2">
-          {reparti.map((r) => (
-            <Chip key={r} state={reparto === r ? "selected" : "default"} onClick={() => setReparto(r)}>
-              {r}
-            </Chip>
-          ))}
-        </div>
-      </div>
-      <div className="flex gap-2 pt-1">
-        <Button onClick={() => void salva()} disabled={!nome.trim() || salvando}>
-          Salva
-        </Button>
-        <Button variant="ghost" onClick={onAnnulla}>
-          Annulla
-        </Button>
-      </div>
     </div>
   );
 }
