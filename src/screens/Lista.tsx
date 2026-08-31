@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { X, Plus, ChevronDown } from "lucide-react";
+import { X, Plus, ChevronDown, Pencil } from "lucide-react";
 import { db, getOrCreateProfilo, REPARTI_DEFAULT } from "../lib/db";
 import { getOrCreatePiano } from "../lib/piano";
 import { inizioCiclo, cicloSuccessivo, toIsoDate, etichettaCiclo } from "../lib/settimana";
@@ -11,11 +11,12 @@ import {
   getListaDelPiano,
   getOrCreaListaAperta,
   aggiungiVoceLibera,
+  aggiornaVoce,
   ordinaListaPerReparto,
 } from "../lib/lista";
 import { raggruppaPerReparto } from "../lib/reparti";
 import { costruisciTestoLista, condividiOScaricaTesto } from "../lib/exportText";
-import { Button, Chip, NavigatoreCiclo, Skeleton } from "../components";
+import { Button, Chip, NavigatoreCiclo, Skeleton, BottomSheet } from "../components";
 import type { VoceLista } from "../lib/types";
 
 interface Props {
@@ -68,6 +69,7 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
 
   const [ordinando, setOrdinando] = useState(false);
   const [esitoOrdina, setEsitoOrdina] = useState<string | null>(null);
+  const [voceInModifica, setVoceInModifica] = useState<VoceLista | null>(null);
 
   async function ordinaPerReparto() {
     if (!lista) return;
@@ -137,7 +139,7 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
                 {reparto}
               </div>
               {vociReparto.map((v) => (
-                <RigaListaRevisione key={v.id} voce={v} />
+                <RigaListaRevisione key={v.id} voce={v} onModifica={() => setVoceInModifica(v)} />
               ))}
             </div>
           ))}
@@ -178,6 +180,21 @@ export function Lista({ cicloOffset, onCicloOffsetChange, onIniziaSpesa }: Props
           </div>
         </div>
       )}
+      <BottomSheet
+        open={Boolean(voceInModifica)}
+        onClose={() => setVoceInModifica(null)}
+        title={voceInModifica ? `Modifica ${voceInModifica.nome}` : undefined}
+      >
+        {voceInModifica && (
+          <FormModificaVoce
+            key={voceInModifica.id}
+            voce={voceInModifica}
+            reparti={ordineReparti}
+            onAnnulla={() => setVoceInModifica(null)}
+            onSalvato={() => setVoceInModifica(null)}
+          />
+        )}
+      </BottomSheet>
     </div>
   );
 }
@@ -197,7 +214,7 @@ function FormAggiungiArticolo({
   const REPARTO_RIPIEGO = "Dispensa";
   const [aperto, setAperto] = useState(false);
   const [nome, setNome] = useState("");
-  const [quantita, setQuantita] = useState("");
+  const [quantita, setQuantita] = useState("1");
   const [reparto, setReparto] = useState<string | null>(null);
   const [repartiAperti, setRepartiAperti] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -209,7 +226,7 @@ function FormAggiungiArticolo({
     try {
       await onAggiungi(nomeTrim, reparto ?? REPARTO_RIPIEGO, quantita.trim());
       setNome("");
-      setQuantita("");
+      setQuantita("1");
       setReparto(null);
       setRepartiAperti(false);
     } finally {
@@ -307,7 +324,7 @@ function FormAggiungiArticolo({
   );
 }
 
-function RigaListaRevisione({ voce }: { voce: VoceLista }) {
+function RigaListaRevisione({ voce, onModifica }: { voce: VoceLista; onModifica: () => void }) {
   const [quantita, setQuantita] = useState(voce.quantita);
 
   return (
@@ -328,12 +345,95 @@ function RigaListaRevisione({ voce }: { voce: VoceLista }) {
       />
       <button
         type="button"
+        aria-label={`Modifica ${voce.nome}`}
+        onClick={onModifica}
+        style={{ color: "var(--biro)", flex: "none", display: "flex" }}
+      >
+        <Pencil size={16} strokeWidth={2} />
+      </button>
+      <button
+        type="button"
         aria-label={`Rimuovi ${voce.nome}`}
         onClick={() => void eliminaVoce(voce.id)}
         style={{ color: "var(--pomodoro)", flex: "none", display: "flex" }}
       >
         <X size={16} strokeWidth={2} />
       </button>
+    </div>
+  );
+}
+
+function FormModificaVoce({
+  voce,
+  reparti,
+  onAnnulla,
+  onSalvato,
+}: {
+  voce: VoceLista;
+  reparti: string[];
+  onAnnulla: () => void;
+  onSalvato: () => void;
+}) {
+  const [nome, setNome] = useState(voce.nome);
+  const [quantita, setQuantita] = useState(voce.quantita);
+  const [reparto, setReparto] = useState(voce.reparto);
+  const [salvando, setSalvando] = useState(false);
+
+  async function salva() {
+    const nomeTrim = nome.trim();
+    if (!nomeTrim || salvando) return;
+    setSalvando(true);
+    try {
+      await aggiornaVoce(voce, { nome: nomeTrim, quantita: quantita.trim(), reparto });
+      onSalvato();
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="flex flex-col gap-1 text-sm">
+        <span style={{ color: "var(--text-secondary)" }}>Nome</span>
+        <input
+          autoFocus
+          className="border rounded-lg px-3 py-2 text-sm"
+          style={{ borderColor: "var(--quadretto)" }}
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void salva();
+          }}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        <span style={{ color: "var(--text-secondary)" }}>Quantità</span>
+        <input
+          type="text"
+          className="border rounded-lg px-3 py-2 text-sm"
+          style={{ borderColor: "var(--quadretto)" }}
+          value={quantita}
+          onChange={(e) => setQuantita(e.target.value)}
+        />
+      </label>
+      <div className="flex flex-col gap-1">
+        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Reparto</span>
+        <div className="flex flex-wrap gap-2">
+          {reparti.map((r) => (
+            <Chip key={r} state={reparto === r ? "selected" : "default"} onClick={() => setReparto(r)}>
+              {r}
+            </Chip>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <Button onClick={() => void salva()} disabled={!nome.trim() || salvando}>
+          Salva
+        </Button>
+        <Button variant="ghost" onClick={onAnnulla}>
+          Annulla
+        </Button>
+      </div>
     </div>
   );
 }
