@@ -12,7 +12,14 @@ export default defineConfig({
       // Registrazione fatta a mano in src/pwa.ts (con controllo periodico attivo di
       // nuove versioni): niente script auto-iniettato, per non registrare due volte.
       injectRegister: null,
-      includeAssets: ["favicon.svg"],
+      includeAssets: [
+        "icons/favicon-16.png",
+        "icons/favicon-32.png",
+        "icons/favicon-dark-16.png",
+        "icons/favicon-dark-32.png",
+        "icons/apple-touch-icon.png",
+        "icons/apple-touch-icon-dark.png",
+      ],
       manifest: {
         name: "La spesa di casa",
         short_name: "La spesa",
@@ -23,9 +30,10 @@ export default defineConfig({
         background_color: "#FAFAF6",
         theme_color: "#1D3EA5",
         icons: [
-          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
-          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
-          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: "icons/icon-notebook-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "icons/icon-notebook-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "icons/icon-notebook-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "icons/icon-notebook-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
