@@ -1,17 +1,17 @@
-export interface SeedIngrediente {
+export interface SeedIngredient {
   nome: string;
   reparto: string;
   unitaDefault: string;
   alias?: string[];
 }
 
-/** Seed v1 — ~180 ingredienti di cucina italiana, reparti in stile Esselunga.
- * Nessuna noce/frutta a guscio per scelta (allergia in famiglia, RF13 di ANALISI.md):
- * se un giorno servisse aggiungerne una, va fatto solo manualmente dall'utente in app. */
+/** Seed v1: about 180 Italian-cooking ingredients, grouped into Esselunga-style departments.
+ * No nuts or tree nuts are included due to a family allergy (ANALISI.md RF13). If one is ever
+ * needed, it must be added manually by the user in the app. */
 export const SEED_VERSION = 1;
 
-export const SEED_INGREDIENTI: SeedIngrediente[] = [
-  // ── Ortofrutta ──
+export const SEED_INGREDIENTS: SeedIngredient[] = [
+  // ── Produce ──
   { nome: "Zucchine", reparto: "Ortofrutta", unitaDefault: "1 kg" },
   { nome: "Melanzane", reparto: "Ortofrutta", unitaDefault: "1 kg" },
   { nome: "Pomodori", reparto: "Ortofrutta", unitaDefault: "1 kg", alias: ["pomodori da insalata"] },
@@ -48,7 +48,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Radicchio", reparto: "Ortofrutta", unitaDefault: "1 pz" },
   { nome: "Porri", reparto: "Ortofrutta", unitaDefault: "1 pz" },
 
-  // ── Banco frigo ──
+  // ── Dairy counter ──
   { nome: "Mozzarella", reparto: "Banco frigo", unitaDefault: "2×125 g", alias: ["fior di latte"] },
   { nome: "Mozzarella di bufala", reparto: "Banco frigo", unitaDefault: "1 conf." },
   { nome: "Parmigiano Reggiano", reparto: "Banco frigo", unitaDefault: "100 g", alias: ["parmigiano"] },
@@ -75,7 +75,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Pasta fresca all'uovo", reparto: "Banco frigo", unitaDefault: "250 g", alias: ["tagliatelle fresche"] },
   { nome: "Tortellini freschi", reparto: "Banco frigo", unitaDefault: "250 g" },
 
-  // ── Macelleria e pesce ──
+  // ── Meat and fish ──
   { nome: "Petto di pollo", reparto: "Macelleria e pesce", unitaDefault: "500 g" },
   { nome: "Cosce di pollo", reparto: "Macelleria e pesce", unitaDefault: "1 kg" },
   { nome: "Macinato di manzo", reparto: "Macelleria e pesce", unitaDefault: "500 g", alias: ["carne macinata"] },
@@ -97,7 +97,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Branzino", reparto: "Macelleria e pesce", unitaDefault: "1 pz" },
   { nome: "Sogliola", reparto: "Macelleria e pesce", unitaDefault: "1 pz" },
 
-  // ── Surgelati ──
+  // ── Frozen foods ──
   { nome: "Piselli surgelati", reparto: "Surgelati", unitaDefault: "500 g" },
   { nome: "Spinaci surgelati", reparto: "Surgelati", unitaDefault: "500 g" },
   { nome: "Verdure miste surgelate", reparto: "Surgelati", unitaDefault: "500 g", alias: ["misto verdure"] },
@@ -114,7 +114,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Bastoncini di pesce", reparto: "Surgelati", unitaDefault: "1 conf." },
   { nome: "Spinaci in cubetti", reparto: "Surgelati", unitaDefault: "500 g" },
 
-  // ── Dispensa ──
+  // ── Pantry ──
   { nome: "Spaghetti", reparto: "Dispensa", unitaDefault: "500 g", alias: ["pasta lunga"] },
   { nome: "Penne", reparto: "Dispensa", unitaDefault: "500 g", alias: ["pasta corta"] },
   { nome: "Orecchiette", reparto: "Dispensa", unitaDefault: "500 g" },
@@ -163,7 +163,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Lievito di birra secco", reparto: "Dispensa", unitaDefault: "1 bustina" },
   { nome: "Gnocchi di patate", reparto: "Dispensa", unitaDefault: "500 g" },
 
-  // ── Forno ──
+  // ── Bakery ──
   { nome: "Pane comune", reparto: "Forno", unitaDefault: "500 g", alias: ["pane"] },
   { nome: "Pane in cassetta", reparto: "Forno", unitaDefault: "1 conf." },
   { nome: "Grissini", reparto: "Forno", unitaDefault: "1 conf." },
@@ -180,7 +180,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Pane azzimo", reparto: "Forno", unitaDefault: "1 conf." },
   { nome: "Crostatine", reparto: "Forno", unitaDefault: "1 conf." },
 
-  // ── Bevande ──
+  // ── Drinks ──
   { nome: "Acqua naturale", reparto: "Bevande", unitaDefault: "6×1,5 l" },
   { nome: "Acqua frizzante", reparto: "Bevande", unitaDefault: "6×1,5 l" },
   { nome: "Vino rosso", reparto: "Bevande", unitaDefault: "1 bottiglia" },
@@ -197,7 +197,7 @@ export const SEED_INGREDIENTI: SeedIngrediente[] = [
   { nome: "Tè in bustine", reparto: "Bevande", unitaDefault: "1 conf." },
   { nome: "Spremuta d'arancia confezionata", reparto: "Bevande", unitaDefault: "1 l" },
 
-  // ── Casa e igiene ──
+  // ── Household and personal care ──
   { nome: "Detersivo per piatti", reparto: "Casa e igiene", unitaDefault: "1 conf." },
   { nome: "Detersivo per lavatrice", reparto: "Casa e igiene", unitaDefault: "1 conf." },
   { nome: "Ammorbidente", reparto: "Casa e igiene", unitaDefault: "1 conf." },

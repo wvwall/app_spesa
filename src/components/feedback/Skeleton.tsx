@@ -7,7 +7,7 @@ interface SkeletonProps {
   style?: CSSProperties;
 }
 
-/** Blocco shimmer generico per gli stati di primo caricamento (vedi index.css per l'animazione). */
+/** Generic shimmer block for initial loading states (see index.css for the animation). */
 export function Skeleton({ width = "100%", height = 14, radius = 6, style }: SkeletonProps) {
   return (
     <span

@@ -9,8 +9,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      // Registrazione fatta a mano in src/pwa.ts (con controllo periodico attivo di
-      // nuove versioni): niente script auto-iniettato, per non registrare due volte.
+      // Registration is handled manually in src/pwa.ts, including periodic update checks.
+      // Disable auto-injection to avoid registering the service worker twice.
       injectRegister: null,
       includeAssets: [
         "icons/favicon-16.png",

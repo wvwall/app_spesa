@@ -1,29 +1,29 @@
-import { db, nowIso } from "./db";
+import { db, nowIso } from "./database";
 import type {
-  Profilo,
-  Ingrediente,
-  Piatto,
-  PiattoIngrediente,
-  PianoSettimana,
+  Profile,
+  Ingredient,
+  Dish,
+  DishIngredient,
+  WeeklyPlan,
   Slot,
-  ListaSpesa,
-  VoceLista,
-} from "./types";
+  ShoppingListRecord,
+  ShoppingListItem,
+} from "./models";
 
 interface BackupPayload {
   versione: 1;
   esportatoIl: string;
-  profilo: Profilo[];
-  ingredienti: Ingrediente[];
-  piatti: Piatto[];
-  piattoIngredienti: PiattoIngrediente[];
-  piani: PianoSettimana[];
+  profilo: Profile[];
+  ingredienti: Ingredient[];
+  piatti: Dish[];
+  piattoIngredienti: DishIngredient[];
+  piani: WeeklyPlan[];
   slot: Slot[];
-  liste: ListaSpesa[];
-  voci: VoceLista[];
+  liste: ShoppingListRecord[];
+  voci: ShoppingListItem[];
 }
 
-export async function esportaBackup(): Promise<BackupPayload> {
+export async function exportBackup(): Promise<BackupPayload> {
   const [profilo, ingredienti, piatti, piattoIngredienti, piani, slot, liste, voci] = await Promise.all([
     db.profilo.toArray(),
     db.ingredienti.toArray(),
@@ -37,8 +37,8 @@ export async function esportaBackup(): Promise<BackupPayload> {
   return { versione: 1, esportatoIl: nowIso(), profilo, ingredienti, piatti, piattoIngredienti, piani, slot, liste, voci };
 }
 
-export async function scaricaBackup(): Promise<void> {
-  const payload = await esportaBackup();
+export async function downloadBackup(): Promise<void> {
+  const payload = await exportBackup();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -48,7 +48,7 @@ export async function scaricaBackup(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export async function importaBackup(file: File): Promise<void> {
+export async function importBackup(file: File): Promise<void> {
   const testo = await file.text();
   const payload = JSON.parse(testo) as BackupPayload;
   if (payload.versione !== 1) {

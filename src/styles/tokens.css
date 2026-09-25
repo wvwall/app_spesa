@@ -1,5 +1,5 @@
 :root {
-  /* base — il quaderno */
+  /* Foundations — notebook palette. */
   --carta: #f3eedf;
   --quadretto: #e4e7de;
   --inchiostro: #23261e;
@@ -11,7 +11,7 @@
   --pomodoro-chiaro: #f7e5e0;
   --lavagna: #15181c;
 
-  /* semantici */
+  /* Semantic colors. */
   --surface-page: var(--carta);
   --surface-card: #ffffff;
   --surface-selected: var(--biro-chiaro);
@@ -24,14 +24,14 @@
   --accent-missing: var(--pomodoro);
   --focus-ring: 2px solid var(--biro);
 
-  /* quadrettatura 20px, pattern CSS (mai immagine) */
+  /* 20px graph-paper grid, rendered with a CSS pattern (never an image). */
   --grid-line: var(--quadretto);
   --bg-quadretti:
     linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   --bg-quadretti-size: 20px 20px;
 
-  /* tipografia */
+  /* Typography. */
   --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
   --font-text: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
   --font-hand: "Caveat", "Bradley Hand", "Segoe Print", cursive;
@@ -45,7 +45,7 @@
   --tracking-display: -0.02em;
   --tracking-label: 0.12em;
 
-  /* spaziatura e forma */
+  /* Spacing and shape. */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
@@ -61,7 +61,7 @@
   --touch-min: 44px;
   --riga-corsia: 56px;
 
-  /* motion: un solo momento firma (tratto di biro ~200ms) */
+  /* Motion: one signature moment, the ~200ms pen stroke. */
   --ease-pennata: cubic-bezier(0.6, 0, 0.3, 1);
   --dur-check: 220ms;
   --dur-stroke: 240ms;
@@ -69,7 +69,7 @@
   --dur-sheet: 300ms;
 }
 
-/* dark mode — SOLO tempo 1 (pianificazione); la corsia resta sempre chiara */
+/* Dark mode applies only to planning; the shopping aisle always stays light. */
 [data-theme="dark"] {
   --surface-page: var(--lavagna);
   --surface-card: #1c2025;
@@ -82,9 +82,9 @@
   --border-interactive: #7c96e8;
 }
 
-/* stitch — tema opzionale, l'Hawaii di Lilo & Stitch: sabbia calda, oceano, tramonto.
-   Palette campionata dal disegno ufficiale (blu corpo, lavanda orecchie), non più una
-   notte scura ma un pomeriggio chiaro sulla spiaggia. La corsia resta sempre chiara. */
+/* Optional Stitch theme: Lilo & Stitch's Hawaii, with warm sand, ocean, and sunset. Colors are
+   sampled from the official artwork (body blue and ear lavender), creating a bright beach
+   afternoon rather than a dark night. The shopping aisle always stays light. */
 [data-theme="stitch"] {
   --biro: #0f6e91;
   --biro-chiaro: #ffe3d1;

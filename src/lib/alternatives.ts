@@ -1,6 +1,6 @@
-/** Mappa locale di sostituzioni tra ingredienti simili: nessuna chiamata AI, nessuna rete,
- * risultato istantaneo e sempre disponibile offline (RF7). Gruppi curati a mano, non esaustivi:
- * un ingrediente non presente in nessun gruppo semplicemente non ha alternative suggerite. */
+/** Local map of substitutions between similar ingredients: no AI or network calls,
+ * with instant results that are always available offline (RF7). Groups are curated by hand
+ * and are not exhaustive: ingredients absent from every group have no suggested alternatives. */
 const GRUPPI_SOSTITUZIONE: string[][] = [
   ["Spinaci freschi", "Bietole", "Cime di rapa", "Friarielli surgelati", "Rucola"],
   ["Limoni", "Arance"],
@@ -34,8 +34,8 @@ for (const gruppo of GRUPPI_SOSTITUZIONE) {
   }
 }
 
-/** Fino a 3 alternative per l'ingrediente indicato, o nessuna se non è in un gruppo curato. */
-export function trovaAlternative(nome: string): string[] {
+/** Returns up to three alternatives for an ingredient, or none if it is not in a curated group. */
+export function findAlternatives(nome: string): string[] {
   const gruppo = INDICE.get(nome.trim().toLowerCase());
   if (!gruppo) return [];
   return gruppo.filter((n) => n.toLowerCase() !== nome.trim().toLowerCase()).slice(0, 3);

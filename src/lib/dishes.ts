@@ -1,21 +1,20 @@
-import { db, nowIso, nuovoId } from "./db";
-import type { Ingrediente, Piatto } from "./types";
-import type { PiattoGenerato } from "./ai";
+import { db, nowIso, createId } from "./database";
+import type { Ingredient, Dish } from "./models";
+import type { GeneratedDish } from "./ai";
 
-/** Crea un Piatto (origine "ai") + le sue PiattoIngrediente a partire da un risultato di
- * generazione: gli ingredienti già disponibili (dato noto lato client — mai un'invenzione
- * dell'AI, vedi src/screens/Piatti.tsx) e quelli "da comprare" proposti dal modello, che
- * ereditano reparto e collegamento al catalogo quando il nome corrisponde a un ingrediente
- * già noto. Nome e reparto sono uno snapshot permanente su ogni PiattoIngrediente (mai un
- * riferimento fragile): un ingrediente non deve mai sparire dalla lista della spesa.
- * Ritorna l'id del nuovo piatto. */
-export async function salvaPiattoGenerato(
-  generato: PiattoGenerato,
-  ingredientiGiaDisponibili: Ingrediente[],
-  catalogoCompleto: Ingrediente[]
+/** Creates a Dish (origin "ai") and its DishIngredients from a generated result: ingredients
+ * already available (known by the client and never invented by AI; see src/screens/Dishes.tsx)
+ * and ingredients to buy proposed by the model. Proposed items inherit their department and
+ * catalog link when their name matches a known ingredient. Each DishIngredient stores a
+ * permanent name and department snapshot rather than a fragile reference, so an ingredient
+ * can never disappear from the shopping list. Returns the new dish ID. */
+export async function saveGeneratedDish(
+  generato: GeneratedDish,
+  ingredientiGiaDisponibili: Ingredient[],
+  catalogoCompleto: Ingredient[]
 ): Promise<string> {
-  const piattoId = nuovoId();
-  const piatto: Piatto = {
+  const piattoId = createId();
+  const piatto: Dish = {
     id: piattoId,
     nome: generato.nome,
     procedimento: generato.procedimento.join("\n"),
@@ -29,7 +28,7 @@ export async function salvaPiattoGenerato(
   for (const ing of ingredientiGiaDisponibili) {
     // eslint-disable-next-line no-await-in-loop
     await db.piattoIngredienti.add({
-      id: nuovoId(),
+      id: createId(),
       piattoId,
       ingredienteId: ing.id,
       nome: ing.nome,
@@ -43,7 +42,7 @@ export async function salvaPiattoGenerato(
     const corrispondenza = catalogoCompleto.find((i) => i.nome.toLowerCase() === nomeVoce.toLowerCase());
     // eslint-disable-next-line no-await-in-loop
     await db.piattoIngredienti.add({
-      id: nuovoId(),
+      id: createId(),
       piattoId,
       ingredienteId: corrispondenza?.id,
       nome: corrispondenza?.nome ?? nomeVoce,

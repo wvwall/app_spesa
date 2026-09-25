@@ -1,5 +1,5 @@
-/* Self-hosted, nessun CDN (vincolo PWA offline-first, RNF2 di ANALISI.md).
-   Sottoinsieme latino: copre l'italiano (à è é ì ò ù). */
+/* Self-hosted with no CDN (offline-first PWA constraint, ANALISI.md RNF2).
+   Latin subset covering Italian characters (à è é ì ò ù). */
 
 @font-face {
   font-family: "Bricolage Grotesque";

@@ -1,9 +1,9 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-/** Controllo `‹ oggi ›` per scorrere i cicli spesa (settimane). Estratto da Settimana così
- * che Settimana e Lista usino lo stesso identico navigatore: ogni pagina tiene il proprio
- * offset (navigazione indipendente), ma il comportamento e i target tap 44px restano uguali. */
-export function NavigatoreCiclo({
+/** Control for navigating shopping cycles (weeks). Extracted from WeeklyPlanner so both it and
+ * ShoppingList use the same navigator. Each page keeps its own offset, while behavior and the
+ * 44px tap targets remain consistent. */
+export function CycleNavigator({
   onPrecedente,
   onOggi,
   onSuccessivo,

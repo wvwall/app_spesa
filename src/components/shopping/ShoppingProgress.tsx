@@ -1,12 +1,12 @@
 import type { CSSProperties } from "react";
 
-interface ProgressSpesaProps {
+interface ShoppingProgressProps {
   done?: number;
   total?: number;
   style?: CSSProperties;
 }
 
-export function ProgressSpesa({ done = 0, total = 0, style }: ProgressSpesaProps) {
+export function ShoppingProgress({ done = 0, total = 0, style }: ShoppingProgressProps) {
   const pct = total ? (done / total) * 100 : 0;
   return (
     <div style={{ fontFamily: "var(--font-text)", ...style }}>

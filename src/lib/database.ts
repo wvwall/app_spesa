@@ -1,25 +1,25 @@
 import Dexie, { type EntityTable } from "dexie";
 import type {
-  Profilo,
-  Ingrediente,
-  Piatto,
-  PiattoIngrediente,
-  PianoSettimana,
+  Profile,
+  Ingredient,
+  Dish,
+  DishIngredient,
+  WeeklyPlan,
   Slot,
-  ListaSpesa,
-  VoceLista,
-  Tema,
-} from "./types";
+  ShoppingListRecord,
+  ShoppingListItem,
+  Theme,
+} from "./models";
 
 export const db = new Dexie("LaSpesaDiCasa") as Dexie & {
-  profilo: EntityTable<Profilo, "id">;
-  ingredienti: EntityTable<Ingrediente, "id">;
-  piatti: EntityTable<Piatto, "id">;
-  piattoIngredienti: EntityTable<PiattoIngrediente, "id">;
-  piani: EntityTable<PianoSettimana, "id">;
+  profilo: EntityTable<Profile, "id">;
+  ingredienti: EntityTable<Ingredient, "id">;
+  piatti: EntityTable<Dish, "id">;
+  piattoIngredienti: EntityTable<DishIngredient, "id">;
+  piani: EntityTable<WeeklyPlan, "id">;
   slot: EntityTable<Slot, "id">;
-  liste: EntityTable<ListaSpesa, "id">;
-  voci: EntityTable<VoceLista, "id">;
+  liste: EntityTable<ShoppingListRecord, "id">;
+  voci: EntityTable<ShoppingListItem, "id">;
 };
 
 db.version(1).stores({
@@ -33,9 +33,9 @@ db.version(1).stores({
   voci: "id, listaId, reparto, checked",
 });
 
-export const PROFILO_ID = "profilo";
+export const PROFILE_ID = "profilo";
 
-export const REPARTI_DEFAULT = [
+export const DEFAULT_DEPARTMENTS = [
   "Ortofrutta",
   "Banco frigo",
   "Macelleria e pesce",
@@ -46,15 +46,15 @@ export const REPARTI_DEFAULT = [
   "Casa e igiene",
 ];
 
-export async function getOrCreateProfilo(): Promise<Profilo> {
-  const esistente = await db.profilo.get(PROFILO_ID);
+export async function getOrCreateProfile(): Promise<Profile> {
+  const esistente = await db.profilo.get(PROFILE_ID);
   if (esistente) return esistente;
-  const nuovo: Profilo = {
-    id: PROFILO_ID,
+  const nuovo: Profile = {
+    id: PROFILE_ID,
     porzioniDefault: 2,
     vincoliAlimentari: ["noci"],
-    ordineReparti: REPARTI_DEFAULT,
-    giornoSpesa: 5, // venerdì
+    ordineReparti: DEFAULT_DEPARTMENTS,
+    giornoSpesa: 5, // Friday.
     tema: "chiaro",
     seedVersion: 0,
     seedVersionPiatti: 0,
@@ -64,21 +64,21 @@ export async function getOrCreateProfilo(): Promise<Profilo> {
     await db.profilo.add(nuovo);
     return nuovo;
   } catch {
-    // Chiamata concorrente (es. doppio effect di React StrictMode in sviluppo):
-    // un'altra invocazione ha già creato il profilo nel frattempo.
-    const giaCreato = await db.profilo.get(PROFILO_ID);
+    // A concurrent call (for example, React StrictMode's duplicate development effect) may have
+    // created the profile in the meantime.
+    const giaCreato = await db.profilo.get(PROFILE_ID);
     if (giaCreato) return giaCreato;
     throw new Error("Impossibile creare il profilo.");
   }
 }
 
-const DATA_THEME_PER_TEMA: Record<Tema, string> = {
+const DATA_THEME_PER_TEMA: Record<Theme, string> = {
   chiaro: "light",
   scuro: "dark",
   stitch: "stitch",
 };
 
-export function applicaTema(tema: Tema): void {
+export function applyTheme(tema: Theme): void {
   document.documentElement.setAttribute("data-theme", DATA_THEME_PER_TEMA[tema]);
 }
 
@@ -86,6 +86,6 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-export function nuovoId(): string {
+export function createId(): string {
   return crypto.randomUUID();
 }

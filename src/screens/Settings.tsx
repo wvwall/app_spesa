@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Minus, Plus, GripVertical } from "lucide-react";
-import { db, getOrCreateProfilo, applicaTema } from "../lib/db";
-import { scaricaBackup, importaBackup } from "../lib/backup";
+import { db, getOrCreateProfile, applyTheme } from "../lib/database";
+import { downloadBackup, importBackup } from "../lib/backup";
 import { Button, Chip, Badge } from "../components";
-import type { Tema } from "../lib/types";
+import type { Theme } from "../lib/models";
 
 const GIORNI_OPZIONI: { label: string; valore: number }[] = [
   { label: "Lun", valore: 1 },
@@ -17,30 +17,30 @@ const GIORNI_OPZIONI: { label: string; valore: number }[] = [
   { label: "Dom", valore: 0 },
 ];
 
-export function Altro() {
-  const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
+export function Settings() {
+  const profilo = useLiveQuery(() => getOrCreateProfile(), []);
   const inputFileRef = useRef<HTMLInputElement>(null);
   const [messaggio, setMessaggio] = useState<string | null>(null);
 
   if (!profilo) return null;
 
-  async function cambiaPorzioni(delta: number) {
+  async function changeServings(delta: number) {
     const nuove = Math.max(1, profilo!.porzioniDefault + delta);
     await db.profilo.update(profilo!.id, { porzioniDefault: nuove });
   }
 
-  async function cambiaGiornoSpesa(valore: number) {
+  async function changeShoppingDay(valore: number) {
     await db.profilo.update(profilo!.id, { giornoSpesa: valore });
   }
 
-  async function cambiaTema(tema: Tema) {
+  async function changeTheme(tema: Theme) {
     await db.profilo.update(profilo!.id, { tema });
-    applicaTema(tema);
+    applyTheme(tema);
   }
 
-  async function gestisciImport(file: File) {
+  async function handleImport(file: File) {
     try {
-      await importaBackup(file);
+      await importBackup(file);
       setMessaggio("Backup importato.");
     } catch (err) {
       setMessaggio(err instanceof Error ? err.message : "Import fallito.");
@@ -54,18 +54,18 @@ export function Altro() {
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-6">
         <section>
-          <Etichetta>Porzioni</Etichetta>
+          <Label>Porzioni</Label>
           <div
             className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
             style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
           >
             <span style={{ fontWeight: 600 }}>Porzioni predefinite</span>
             <div className="flex items-center gap-3">
-              <button onClick={() => void cambiaPorzioni(-1)} aria-label="Diminuisci" style={{ display: "flex" }}>
+              <button onClick={() => void changeServings(-1)} aria-label="Diminuisci" style={{ display: "flex" }}>
                 <Minus size={16} strokeWidth={2.25} />
               </button>
               <span style={{ fontWeight: 700, color: "var(--biro)" }}>{profilo.porzioniDefault} persone</span>
-              <button onClick={() => void cambiaPorzioni(1)} aria-label="Aumenta" style={{ display: "flex" }}>
+              <button onClick={() => void changeServings(1)} aria-label="Aumenta" style={{ display: "flex" }}>
                 <Plus size={16} strokeWidth={2.25} />
               </button>
             </div>
@@ -73,13 +73,13 @@ export function Altro() {
         </section>
 
         <section>
-          <Etichetta>Giorno della spesa</Etichetta>
+          <Label>Giorno della spesa</Label>
           <div className="flex flex-wrap gap-2">
             {GIORNI_OPZIONI.map((g) => (
               <Chip
                 key={g.valore}
                 state={profilo.giornoSpesa === g.valore ? "selected" : "default"}
-                onClick={() => void cambiaGiornoSpesa(g.valore)}
+                onClick={() => void changeShoppingDay(g.valore)}
               >
                 {g.label}
               </Chip>
@@ -92,7 +92,7 @@ export function Altro() {
         </section>
 
         <section>
-          <Etichetta>Vincoli alimentari</Etichetta>
+          <Label>Vincoli alimentari</Label>
           <Badge kind="allergene" />
           <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 8, lineHeight: 1.5 }}>
             Per disattivarlo serve una conferma doppia. Ogni piatto generato dall'AI riporta «✓ verificato: senza noci».
@@ -100,20 +100,20 @@ export function Altro() {
         </section>
 
         <section>
-          <Etichetta>Ordine reparti</Etichetta>
+          <Label>Ordine reparti</Label>
           <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginBottom: 8, lineHeight: 1.5 }}>
             Tieni premuto e trascina per riordinare. Così vengono raggruppati in lista e in negozio.
           </p>
-          <OrdineReparti
+          <DepartmentOrder
             ordine={profilo.ordineReparti}
             onCambia={(nuovo) => void db.profilo.update(profilo.id, { ordineReparti: nuovo })}
           />
         </section>
 
         <section>
-          <Etichetta>Backup</Etichetta>
+          <Label>Backup</Label>
           <div className="flex flex-col gap-2">
-            <Button variant="ghost" onClick={() => void scaricaBackup()}>
+            <Button variant="ghost" onClick={() => void downloadBackup()}>
               Esporta backup (JSON)
             </Button>
             <Button variant="ghost" onClick={() => inputFileRef.current?.click()}>
@@ -126,7 +126,7 @@ export function Altro() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) void gestisciImport(file);
+                if (file) void handleImport(file);
               }}
             />
             {messaggio && <p style={{ fontSize: 13, color: "var(--basilico)" }}>{messaggio}</p>}
@@ -134,16 +134,16 @@ export function Altro() {
         </section>
 
         <section>
-          <Etichetta>Tema</Etichetta>
-          {profilo.tema === "stitch" && <IllustrazioneStitch />}
+          <Label>Tema</Label>
+          {profilo.tema === "stitch" && <StitchIllustration />}
           <div className="flex gap-2">
-            <Chip state={profilo.tema === "chiaro" ? "selected" : "default"} onClick={() => void cambiaTema("chiaro")}>
+            <Chip state={profilo.tema === "chiaro" ? "selected" : "default"} onClick={() => void changeTheme("chiaro")}>
               Chiaro
             </Chip>
-            <Chip state={profilo.tema === "scuro" ? "selected" : "default"} onClick={() => void cambiaTema("scuro")}>
+            <Chip state={profilo.tema === "scuro" ? "selected" : "default"} onClick={() => void changeTheme("scuro")}>
               Scuro
             </Chip>
-            <Chip state={profilo.tema === "stitch" ? "selected" : "default"} onClick={() => void cambiaTema("stitch")}>
+            <Chip state={profilo.tema === "stitch" ? "selected" : "default"} onClick={() => void changeTheme("stitch")}>
               Stitch
             </Chip>
           </div>
@@ -157,7 +157,7 @@ export function Altro() {
   );
 }
 
-function IllustrazioneStitch() {
+function StitchIllustration() {
   const [visibile, setVisibile] = useState(true);
   if (!visibile) return null;
   return (
@@ -177,7 +177,7 @@ function IllustrazioneStitch() {
   );
 }
 
-function Etichetta({ children }: { children: string }) {
+function Label({ children }: { children: string }) {
   return (
     <div className="text-xs font-bold uppercase mb-2" style={{ letterSpacing: ".12em", color: "var(--inchiostro-70)" }}>
       {children}
@@ -185,12 +185,12 @@ function Etichetta({ children }: { children: string }) {
   );
 }
 
-/** Riordino via Pointer Events (funziona con touch, mouse e penna senza librerie esterne:
- * la DnD nativa HTML5 non è affidabile su mobile). Durante il trascinamento l'elemento
- * segue il dito con un translateY calcolato sulla posizione di partenza; il resto della
- * lista si riordina "dal vivo" quando lo spostamento supera la metà di una riga vicina,
- * col passo (pitch) misurato dalla distanza reale fra due righe invece di un valore fisso. */
-function OrdineReparti({ ordine, onCambia }: { ordine: string[]; onCambia: (nuovo: string[]) => void }) {
+/** Reordering via Pointer Events works with touch, mouse, and pen without external libraries;
+ * native HTML5 drag-and-drop is unreliable on mobile. During a drag, the item follows the
+ * pointer using a translateY offset from its starting position. The rest of the list reorders
+ * live when the pointer crosses the midpoint of a neighboring row. Row pitch is measured from
+ * the actual distance between rows instead of using a fixed value. */
+function DepartmentOrder({ ordine, onCambia }: { ordine: string[]; onCambia: (nuovo: string[]) => void }) {
   const [elementi, setElementi] = useState(ordine);
   const [trascinato, setTrascinato] = useState<string | null>(null);
   const [offsetY, setOffsetY] = useState(0);

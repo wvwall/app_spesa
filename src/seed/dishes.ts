@@ -1,17 +1,17 @@
-export const SEED_PIATTI_VERSION = 1;
+export const SEED_DISHES_VERSION = 1;
 
-export interface SeedPiatto {
+export interface SeedDish {
   nome: string;
   porzioni: number;
   procedimento: string[];
-  /** Nomi esatti (case-insensitive) di ingredienti che devono esistere nel catalogo seed
-   * (src/seed/ingredienti.ts): se uno manca, viene semplicemente saltato per quel piatto. */
+  /** Exact, case-insensitive names of ingredients that must exist in the catalog seed
+   * (src/seed/ingredients.ts). If one is missing, it is skipped for this dish. */
   ingredienti: string[];
 }
 
-/** Piatti d'esempio pronti all'uso, per non partire con un ricettario vuoto.
- * Nessuna noce/frutta a guscio (allergia in famiglia, RF13 di ANALISI.md). */
-export const SEED_PIATTI: SeedPiatto[] = [
+/** Ready-to-use example dishes, so the recipe collection is not empty on first launch.
+ * Contains no nuts or tree nuts due to a family allergy (ANALISI.md RF13). */
+export const SEED_DISHES: SeedDish[] = [
   {
     nome: "Pasta al pomodoro e basilico",
     porzioni: 4,
