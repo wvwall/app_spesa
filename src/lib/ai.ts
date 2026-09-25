@@ -1,27 +1,27 @@
 import { z } from "zod";
 
-const PiattoGeneratoSchema = z.object({
+const GeneratedDishSchema = z.object({
   nome: z.string(),
   procedimento: z.array(z.string()),
   porzioni: z.number(),
   minuti: z.number().optional(),
-  // Niente "ingredientiPosseduti": ciò che è già disponibile lo sa solo l'app, dalla selezione
-  // dell'utente — non va mai fatto decidere all'AI (rischio di invenzioni tipo "hai già l'olio").
+  // Do not send "ingredientiPosseduti": only the app knows what is available from the user's
+  // selection. AI must not decide this, as it could invent claims such as "you already have oil".
   ingredientiDaComprare: z.array(z.object({ nome: z.string(), quantita: z.string() })),
   verificatoSenzaNoci: z.literal(true),
 });
-export type PiattoGenerato = z.infer<typeof PiattoGeneratoSchema>;
+export type GeneratedDish = z.infer<typeof GeneratedDishSchema>;
 
-const PiattoGeneratoConIdSchema = PiattoGeneratoSchema.extend({ id: z.string() });
-const RispostaSettimanaSchema = z.object({ piatti: z.array(PiattoGeneratoConIdSchema) });
+const GeneratedDishWithIdSchema = GeneratedDishSchema.extend({ id: z.string() });
+const WeekResponseSchema = z.object({ piatti: z.array(GeneratedDishWithIdSchema) });
 
-const RispostaClassificaSchema = z.object({
+const DepartmentClassificationResponseSchema = z.object({
   assegnazioni: z.array(z.object({ nome: z.string(), reparto: z.string() })),
 });
 
 const NETLIFY_FUNCTIONS_BASE = "/.netlify/functions";
 
-async function chiamaProxy(corpo: Record<string, unknown>): Promise<unknown> {
+async function callProxy(corpo: Record<string, unknown>): Promise<unknown> {
   const risposta = await fetch(`${NETLIFY_FUNCTIONS_BASE}/ai`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -34,33 +34,33 @@ async function chiamaProxy(corpo: Record<string, unknown>): Promise<unknown> {
   return risposta.json();
 }
 
-export async function generaPiatto(input: {
+export async function generateDish(input: {
   ingredienti: string[];
   vincoli: string[];
   porzioni: number;
   pasto: "pranzo" | "cena";
   evitaPiatti?: string[];
-}): Promise<PiattoGenerato> {
-  const dati = await chiamaProxy({ azione: "generaPiatto", ...input });
-  return PiattoGeneratoSchema.parse(dati);
+}): Promise<GeneratedDish> {
+  const dati = await callProxy({ azione: "generaPiatto", ...input });
+  return GeneratedDishSchema.parse(dati);
 }
 
-export async function generaSettimana(input: {
+export async function generateWeek(input: {
   pasti: { id: string; pasto: "pranzo" | "cena" }[];
   vincoli: string[];
   porzioni: number;
-}): Promise<{ id: string; generato: PiattoGenerato }[]> {
-  const dati = await chiamaProxy({ azione: "generaSettimana", ...input });
-  const risposta = RispostaSettimanaSchema.parse(dati);
+}): Promise<{ id: string; generato: GeneratedDish }[]> {
+  const dati = await callProxy({ azione: "generaSettimana", ...input });
+  const risposta = WeekResponseSchema.parse(dati);
   return risposta.piatti.map(({ id, ...generato }) => ({ id, generato }));
 }
 
-/** Classifica ogni ingrediente in uno dei `reparti` gestiti dall'app. Usato come fallback per
- * gli articoli che il catalogo locale non riconosce (vedi ordinaListaPerReparto in lista.ts). */
-export async function classificaReparti(input: {
+/** Classifies each ingredient into one of the app's `reparti`. Used as a fallback for items
+ * that the local catalog cannot identify (see sortListByDepartment in shoppingList.ts). */
+export async function classifyDepartments(input: {
   ingredienti: string[];
   reparti: string[];
 }): Promise<{ nome: string; reparto: string }[]> {
-  const dati = await chiamaProxy({ azione: "classificaReparti", ...input });
-  return RispostaClassificaSchema.parse(dati).assegnazioni;
+  const dati = await callProxy({ azione: "classificaReparti", ...input });
+  return DepartmentClassificationResponseSchema.parse(dati).assegnazioni;
 }

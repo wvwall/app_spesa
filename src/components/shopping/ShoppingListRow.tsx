@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 const TICK_PATH = "M5 13 L11 20 L26 4";
 const STROKE_PATH = "M2 8 C 60 3, 108 12, 156 7 S 220 9, 240 6";
 
-interface RigaListaProps {
+interface ShoppingListRowProps {
   name: string;
   qty?: string;
   note?: string;
@@ -13,7 +13,7 @@ interface RigaListaProps {
   style?: CSSProperties;
 }
 
-export function RigaLista({ name, qty, note, checked = false, substituted = false, onToggle, style }: RigaListaProps) {
+export function ShoppingListRow({ name, qty, note, checked = false, substituted = false, onToggle, style }: ShoppingListRowProps) {
   return (
     <button
       type="button"

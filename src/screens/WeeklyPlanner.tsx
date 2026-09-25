@@ -1,34 +1,33 @@
 import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Sparkles, X, RotateCcw, Plus } from "lucide-react";
-import { db, getOrCreateProfilo, nowIso, nuovoId } from "../lib/db";
+import { db, getOrCreateProfile, nowIso, createId } from "../lib/database";
 import {
-  getOrCreatePiano,
-  getOrCreateSlots,
-  assegnaPiattoASlot,
-} from "../lib/piano";
-import { generaListaDaPiano } from "../lib/lista";
-import { generaPiatto, generaSettimana, type PiattoGenerato } from "../lib/ai";
-import { salvaPiattoGenerato } from "../lib/piatti";
+  getOrCreateWeeklyPlan,
+  getOrCreatePlanSlots,
+  assignDishToSlot,
+} from "../lib/weeklyPlan";
+import { generateListFromPlan } from "../lib/shoppingList";
+import { generateDish, generateWeek, type GeneratedDish } from "../lib/ai";
+import { saveGeneratedDish } from "../lib/dishes";
 import {
-  inizioCiclo,
-  cicloSuccessivo,
-  giorniDelCiclo,
+  cycleStart,
+  shiftCycle,
+  cycleDays,
   toIsoDate,
-  etichettaGiorno,
-  etichettaCiclo,
-  isOggi,
-} from "../lib/settimana";
-import { CardPiatto, Button, SearchInput, Badge, NavigatoreCiclo, Skeleton } from "../components";
-import type { Ingrediente, Piatto, Slot } from "../lib/types";
+  formatDayLabel,
+  formatCycleLabel,
+  isToday,
+} from "../lib/calendar";
+import { DishCard, Button, SearchInput, Badge, CycleNavigator, Skeleton } from "../components";
+import type { Ingredient, Dish, Slot } from "../lib/models";
 
-// Pasti per chiamata AI: generare tutta la settimana (fino a ~14 piatti completi) in
-// un'unica risposta supera facilmente il timeout della function. Blocchi più piccoli,
-// lanciati in parallelo, restano veloci e il modello continua a vedere più pasti insieme
-// (quindi a variarli) invece di ricevere sempre lo stesso prompt generico per uno alla volta.
+// Meals per AI request: generating the entire week (up to ~14 complete dishes) in one response
+// can easily exceed the function timeout. Smaller parallel batches remain fast and let the
+// model see multiple meals at once, encouraging variety over repeated one-meal prompts.
 const DIMENSIONE_BLOCCO_SETTIMANA = 4;
 
-function suddividiInBlocchi<T>(elementi: T[], dimensione: number): T[][] {
+function splitIntoChunks<T>(elementi: T[], dimensione: number): T[][] {
   const blocchi: T[][] = [];
   for (let i = 0; i < elementi.length; i += dimensione) {
     blocchi.push(elementi.slice(i, i + dimensione));
@@ -36,45 +35,45 @@ function suddividiInBlocchi<T>(elementi: T[], dimensione: number): T[][] {
   return blocchi;
 }
 
-// Disabilitato per ora: anche a blocchi, generare tutta la settimana in un colpo solo non
-// convince (tempi/qualità). Resta la generazione per singolo pasto, che tiene conto dei
-// piatti già scelti nella settimana per evitare doppioni.
+// Disabled for now: even in batches, generating the whole week at once has not met expectations
+// for speed and quality. Single-meal generation remains and accounts for dishes already chosen
+// during the week to avoid duplicates.
 const GENERA_SETTIMANA_ABILITATO = false;
 
-interface PropostaSettimana {
+interface WeekProposal {
   slotId: string;
-  giornoEPasto: string;
-  generato: PiattoGenerato;
+  dayAndMeal: string;
+  generato: GeneratedDish;
   esclusa: boolean;
 }
 
 interface Props {
-  cicloOffset: number;
-  onCicloOffsetChange: (offset: number) => void;
-  onListaGenerata: (cicloOffset: number) => void;
+  cycleOffset: number;
+  onCycleOffsetChange: (offset: number) => void;
+  onListGenerated: (cycleOffset: number) => void;
 }
 
-export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }: Props) {
+export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerated }: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [todayEl, setTodayEl] = useState<HTMLDivElement | null>(null);
 
-  const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
+  const profilo = useLiveQuery(() => getOrCreateProfile(), []);
   const giornoSpesa = profilo?.giornoSpesa ?? 5;
 
-  const inizio = cicloSuccessivo(
-    inizioCiclo(new Date(), giornoSpesa),
-    cicloOffset,
+  const inizio = shiftCycle(
+    cycleStart(new Date(), giornoSpesa),
+    cycleOffset,
   );
   const cicloIso = toIsoDate(inizio);
-  const giorni = giorniDelCiclo(inizio);
+  const giorni = cycleDays(inizio);
 
   const [pianoId, setPianoId] = useState<string | null>(null);
 
   useEffect(() => {
     let annullato = false;
     void (async () => {
-      const piano = await getOrCreatePiano(cicloIso);
-      await getOrCreateSlots(piano.id, inizio);
+      const piano = await getOrCreateWeeklyPlan(cicloIso);
+      await getOrCreatePlanSlots(piano.id, inizio);
       if (!annullato) setPianoId(piano.id);
     })();
     return () => {
@@ -83,14 +82,12 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cicloIso]);
 
-  // Porta il giorno corrente vicino alla cima dell'area scrollabile, con un'animazione morbida
-  // che fa capire all'utente cosa sta succedendo: la pagina parte dall'alto e scorre dolcemente
-  // verso oggi. Lasciamo però il giorno precedente visibile sopra (se c'è) come spazio di
-  // contesto, invece di incollare oggi al bordo: come target dello scroll usiamo il blocco
-  // giorno precedente. Il piccolo delay iniziale dà tempo ai useLiveQuery di piatti/ingredienti
-  // di finire e al layout di stabilizzarsi (un'animazione smooth avviata prima verrebbe
-  // interrotta dai re-render, lasciando lo scroll a metà) e rende il movimento percepibile.
-  // Scrolliamo direttamente il container noto, così non c'è ambiguità su quale antenato si muove.
+  // Smoothly scroll the current day near the top of the scroll area so the movement is clear:
+  // the page starts at the top and glides toward today. Keep the previous day visible above it
+  // as context instead of pinning today to the edge, so target the previous day's block. A short
+  // initial delay lets dish/ingredient useLiveQuery calls finish and the layout settle; an early
+  // smooth scroll would be interrupted by rerenders and stop halfway. Scroll the known container
+  // directly to avoid ambiguity about which ancestor should move.
   const DELAY_SCROLL_MS = 350;
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -113,50 +110,50 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
     ) ?? [];
   const piatti = useLiveQuery(() => db.piatti.toArray(), []) ?? [];
   const ingredientiCatalogo = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
-  const piattoDiId = (id?: string) => piatti.find((p) => p.id === id);
-  const piattiAssegnatiSettimana = slots
+  const dishById = (id?: string) => piatti.find((p) => p.id === id);
+  const dishesAssignedThisWeek = slots
     .filter((s) => s.piattoId)
-    .map((s) => ({ slotId: s.id, nome: piattoDiId(s.piattoId)?.nome }))
+    .map((s) => ({ slotId: s.id, nome: dishById(s.piattoId)?.nome }))
     .filter((p): p is { slotId: string; nome: string } => !!p.nome);
 
   const tuttiVuoti = slots.length > 0 && slots.every((s) => !s.piattoId);
   const slotsAssegnati = slots.filter((s) => s.piattoId).length;
 
   const [generandoSettimana, setGenerandoSettimana] = useState(false);
-  const [propostaSettimana, setPropostaSettimana] = useState<PropostaSettimana[] | null>(null);
+  const [propostaSettimana, setPropostaSettimana] = useState<WeekProposal[] | null>(null);
   const [erroreSettimana, setErroreSettimana] = useState<string | null>(null);
   const [generandoLista, setGenerandoLista] = useState(false);
   const [erroreLista, setErroreLista] = useState<string | null>(null);
 
-  async function generaLista() {
+  async function generateList() {
     if (!pianoId) return;
     setGenerandoLista(true);
     setErroreLista(null);
     try {
-      await generaListaDaPiano(pianoId);
-      onListaGenerata(cicloOffset);
+      await generateListFromPlan(pianoId);
+      onListGenerated(cycleOffset);
     } catch (e) {
-      // Senza questo try/catch un errore qui finiva ignorato in silenzio: il tasto sembrava
-      // "non fare nulla" perché non si passava mai alla schermata Lista né si vedeva perché.
+      // Without this try/catch, errors were silently ignored: the button appeared to do nothing
+      // because the app neither opened the Shopping List screen nor explained why.
       setErroreLista(e instanceof Error ? e.message : "Non sono riuscito a generare la lista. Riprova.");
     } finally {
       setGenerandoLista(false);
     }
   }
 
-  async function generaInteraSettimana() {
+  async function generateFullWeek() {
     const slotVuoti = slots.filter((s) => !s.piattoId);
     if (slotVuoti.length === 0) return;
     const giornoPerData = new Map(giorni.map((g) => [toIsoDate(g), g]));
     const slotPerId = new Map(slotVuoti.map((s) => [s.id, s]));
-    const blocchi = suddividiInBlocchi(slotVuoti, DIMENSIONE_BLOCCO_SETTIMANA);
+    const blocchi = splitIntoChunks(slotVuoti, DIMENSIONE_BLOCCO_SETTIMANA);
 
     setGenerandoSettimana(true);
     setErroreSettimana(null);
     try {
       const risultatiPerBlocco = await Promise.allSettled(
         blocchi.map((blocco) =>
-          generaSettimana({
+          generateWeek({
             pasti: blocco.map((s) => ({ id: s.id, pasto: s.pasto })),
             vincoli: profilo?.vincoliAlimentari ?? ["noci"],
             porzioni: profilo?.porzioniDefault ?? 4,
@@ -164,7 +161,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
         )
       );
 
-      const proposte: PropostaSettimana[] = [];
+      const proposte: WeekProposal[] = [];
       for (const risultatoBlocco of risultatiPerBlocco) {
         if (risultatoBlocco.status !== "fulfilled") continue;
         for (const { id, generato } of risultatoBlocco.value) {
@@ -174,7 +171,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
           const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
           proposte.push({
             slotId: slot.id,
-            giornoEPasto: giorno ? `${etichettaGiorno(giorno)} · ${etichettaPasto}` : etichettaPasto,
+            dayAndMeal: giorno ? `${formatDayLabel(giorno)} · ${etichettaPasto}` : etichettaPasto,
             generato,
             esclusa: false,
           });
@@ -197,19 +194,19 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
     }
   }
 
-  function toggleEsclusioneProposta(slotId: string) {
+  function toggleProposalExclusion(slotId: string) {
     setPropostaSettimana((proposte) =>
       proposte ? proposte.map((p) => (p.slotId === slotId ? { ...p, esclusa: !p.esclusa } : p)) : proposte
     );
   }
 
-  async function confermaPropostaSettimana() {
+  async function confirmWeekProposal() {
     if (!propostaSettimana) return;
     for (const p of propostaSettimana.filter((p) => !p.esclusa)) {
       // eslint-disable-next-line no-await-in-loop
-      const piattoId = await salvaPiattoGenerato(p.generato, [], ingredientiCatalogo);
+      const piattoId = await saveGeneratedDish(p.generato, [], ingredientiCatalogo);
       // eslint-disable-next-line no-await-in-loop
-      await assegnaPiattoASlot(p.slotId, piattoId);
+      await assignDishToSlot(p.slotId, piattoId);
     }
     setPropostaSettimana(null);
     setErroreSettimana(null);
@@ -237,20 +234,20 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
               letterSpacing: "-0.02em",
               color: "var(--biro)",
             }}>
-            {etichettaCiclo(inizio)}
+            {formatCycleLabel(inizio)}
           </h1>
-          <NavigatoreCiclo
-            onPrecedente={() => onCicloOffsetChange(cicloOffset - 1)}
-            onOggi={() => onCicloOffsetChange(0)}
-            onSuccessivo={() => onCicloOffsetChange(cicloOffset + 1)}
+          <CycleNavigator
+            onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
+            onOggi={() => onCycleOffsetChange(0)}
+            onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
         </div>
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
-        {/* pianoId è null solo nell'istante prima che getOrCreatePiano/getOrCreateSlots
-            finiscano: uno skeleton dei giorni evita il flash del messaggio "menù in bianco". */}
-        {!pianoId && <SettimanaSkeleton />}
+        {/* pianoId is null only until getOrCreateWeeklyPlan/getOrCreatePlanSlots finish. The day
+            skeleton prevents a brief flash of the "empty menu" message. */}
+        {!pianoId && <WeeklyPlannerSkeleton />}
         {pianoId && tuttiVuoti && (
           <div className="text-center flex flex-col items-center gap-3 py-6">
             <div
@@ -272,7 +269,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
             </p>
             {GENERA_SETTIMANA_ABILITATO && (
               <div className="w-full px-4">
-                <Button onClick={() => void generaInteraSettimana()} disabled={generandoSettimana}>
+                <Button onClick={() => void generateFullWeek()} disabled={generandoSettimana}>
                   {generandoSettimana ? (
                     "Sto pensando alla settimana…"
                   ) : (
@@ -301,9 +298,9 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
             <div
               key={dataIso}
               className="mb-3"
-              ref={isOggi(giorno) ? setTodayEl : undefined}
+              ref={isToday(giorno) ? setTodayEl : undefined}
               style={
-                isOggi(giorno)
+                isToday(giorno)
                   ? {
                       border: "2px solid var(--biro)",
                       borderRadius: "var(--radius-card)",
@@ -317,12 +314,12 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
                 style={{
                   letterSpacing: ".12em",
                   textTransform: "uppercase",
-                  color: isOggi(giorno)
+                  color: isToday(giorno)
                     ? "var(--biro)"
                     : "var(--text-secondary)",
                 }}>
-                {etichettaGiorno(giorno)}
-                {isOggi(giorno) && (
+                {formatDayLabel(giorno)}
+                {isToday(giorno) && (
                   <Badge kind="sostituito" style={{ fontWeight: 700, letterSpacing: ".04em" }}>
                     Oggi
                   </Badge>
@@ -330,15 +327,15 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
               </div>
               <div className="flex flex-col gap-2">
                 {slotGiorno.map((slot) => (
-                  <SlotRiga
+                  <PlanSlotRow
                     key={slot.id}
                     slot={slot}
-                    piatto={piattoDiId(slot.piattoId)}
+                    piatto={dishById(slot.piattoId)}
                     piattiDisponibili={piatti}
                     porzioniDefault={profilo?.porzioniDefault ?? 4}
                     vincoliAlimentari={profilo?.vincoliAlimentari ?? ["noci"]}
                     ingredientiCatalogo={ingredientiCatalogo}
-                    piattiAssegnatiSettimana={piattiAssegnatiSettimana}
+                    dishesAssignedThisWeek={dishesAssignedThisWeek}
                   />
                 ))}
               </div>
@@ -349,7 +346,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
 
       {!tuttiVuoti && (
         <div className="px-5 pb-3 flex-none">
-          <Button onClick={() => void generaLista()} disabled={slotsAssegnati === 0 || generandoLista}>
+          <Button onClick={() => void generateList()} disabled={slotsAssegnati === 0 || generandoLista}>
             {generandoLista ? "Preparo la lista…" : `Genera lista spesa · ${slotsAssegnati} piatti`}
           </Button>
           {erroreLista && <p style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 6 }}>{erroreLista}</p>}
@@ -382,7 +379,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
                 >
                   <div>
                     <div style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: ".08em", textTransform: "uppercase" }}>
-                      {p.giornoEPasto}
+                      {p.dayAndMeal}
                     </div>
                     <div style={{ fontWeight: 600, textDecoration: p.esclusa ? "line-through" : "none" }}>
                       {p.generato.nome}
@@ -390,7 +387,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
                   </div>
                   <button
                     type="button"
-                    onClick={() => toggleEsclusioneProposta(p.slotId)}
+                    onClick={() => toggleProposalExclusion(p.slotId)}
                     aria-label={p.esclusa ? `Includi ${p.generato.nome}` : `Escludi ${p.generato.nome}`}
                     style={{
                       color: p.esclusa ? "var(--basilico)" : "var(--pomodoro)",
@@ -407,7 +404,7 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
                 </div>
               ))}
             </div>
-            <Button onClick={() => void confermaPropostaSettimana()}>
+            <Button onClick={() => void confirmWeekProposal()}>
               Conferma {propostaSettimana.filter((p) => !p.esclusa).length} piatti
             </Button>
             <Button
@@ -426,22 +423,22 @@ export function Settimana({ cicloOffset, onCicloOffsetChange, onListaGenerata }:
   );
 }
 
-function SlotRiga({
+function PlanSlotRow({
   slot,
   piatto,
   piattiDisponibili,
   porzioniDefault,
   vincoliAlimentari,
   ingredientiCatalogo,
-  piattiAssegnatiSettimana,
+  dishesAssignedThisWeek,
 }: {
   slot: Slot;
-  piatto?: Piatto;
-  piattiDisponibili: Piatto[];
+  piatto?: Dish;
+  piattiDisponibili: Dish[];
   porzioniDefault: number;
   vincoliAlimentari: string[];
-  ingredientiCatalogo: Ingrediente[];
-  piattiAssegnatiSettimana: { slotId: string; nome: string }[];
+  ingredientiCatalogo: Ingredient[];
+  dishesAssignedThisWeek: { slotId: string; nome: string }[];
 }) {
   const [ricerca, setRicerca] = useState(false);
   const [query, setQuery] = useState("");
@@ -449,15 +446,15 @@ function SlotRiga({
   const [erroreRigenerazione, setErroreRigenerazione] = useState<string | null>(null);
   const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
 
-  async function assegna(piattoId: string | undefined) {
-    await assegnaPiattoASlot(slot.id, piattoId);
+  async function assign(piattoId: string | undefined) {
+    await assignDishToSlot(slot.id, piattoId);
     setRicerca(false);
     setQuery("");
   }
 
-  async function creaLiberoEAssegna(nome: string) {
-    const piattoId = nuovoId();
-    const nuovo: Piatto = {
+  async function createCustomAndAssign(nome: string) {
+    const piattoId = createId();
+    const nuovo: Dish = {
       id: piattoId,
       nome,
       preferito: false,
@@ -466,25 +463,25 @@ function SlotRiga({
       updatedAt: nowIso(),
     };
     await db.piatti.add(nuovo);
-    await assegna(piattoId);
+    await assign(piattoId);
   }
 
-  async function generaConAI() {
+  async function generateWithAI() {
     setRigenerazione(true);
     setErroreRigenerazione(null);
     try {
-      const evitaPiatti = piattiAssegnatiSettimana
+      const evitaPiatti = dishesAssignedThisWeek
         .filter((p) => p.slotId !== slot.id)
         .map((p) => p.nome);
-      const generato = await generaPiatto({
+      const generato = await generateDish({
         ingredienti: [],
         vincoli: vincoliAlimentari,
         porzioni: porzioniDefault,
         pasto: slot.pasto,
         evitaPiatti,
       });
-      const nuovoPiattoId = await salvaPiattoGenerato(generato, [], ingredientiCatalogo);
-      await assegna(nuovoPiattoId);
+      const nuovoPiattoId = await saveGeneratedDish(generato, [], ingredientiCatalogo);
+      await assign(nuovoPiattoId);
     } catch (e) {
       setErroreRigenerazione(e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova.");
     } finally {
@@ -531,7 +528,7 @@ function SlotRiga({
           type="button"
           className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
           style={{ color: "var(--biro)", fontWeight: 600 }}
-          onClick={() => void generaConAI()}
+          onClick={() => void generateWithAI()}
           disabled={rigenerazione}
         >
           {rigenerazione ? (
@@ -552,7 +549,7 @@ function SlotRiga({
               type="button"
               className="text-left px-2.5 py-2 rounded-lg text-sm"
               style={{ color: "var(--text-body)", fontWeight: 600 }}
-              onClick={() => void assegna(p.id)}>
+              onClick={() => void assign(p.id)}>
               {p.nome}
             </button>
           ))}
@@ -571,7 +568,7 @@ function SlotRiga({
               type="button"
               className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
               style={{ color: "var(--biro)", fontWeight: 600 }}
-              onClick={() => void creaLiberoEAssegna(testoRicerca)}>
+              onClick={() => void createCustomAndAssign(testoRicerca)}>
               <Plus size={15} strokeWidth={2.25} /> Usa “{testoRicerca}” così com'è
             </button>
           )}
@@ -580,7 +577,7 @@ function SlotRiga({
               type="button"
               className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
               style={{ color: "var(--pomodoro)", fontWeight: 600 }}
-              onClick={() => void assegna(undefined)}>
+              onClick={() => void assign(undefined)}>
               <X size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
             </button>
           )}
@@ -593,7 +590,7 @@ function SlotRiga({
     return (
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <CardPiatto
+          <DishCard
             when={etichettaPasto}
             dish={piatto.nome}
             ai={piatto.origine === "ai"}
@@ -603,7 +600,7 @@ function SlotRiga({
         <button
           type="button"
           aria-label={`Rimuovi ${piatto.nome} da questo pasto`}
-          onClick={() => void assegna(undefined)}
+          onClick={() => void assign(undefined)}
           style={{
             color: "var(--pomodoro)",
             padding: "6px 4px",
@@ -617,11 +614,11 @@ function SlotRiga({
   }
 
   return (
-    <CardPiatto when={etichettaPasto} empty onClick={() => setRicerca(true)} />
+    <DishCard when={etichettaPasto} empty onClick={() => setRicerca(true)} />
   );
 }
 
-function SettimanaSkeleton() {
+function WeeklyPlannerSkeleton() {
   return (
     <div className="flex flex-col gap-3" aria-hidden="true">
       {[1, 2, 3].map((giorno) => (

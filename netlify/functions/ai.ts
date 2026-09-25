@@ -2,14 +2,14 @@ import type { Handler } from "@netlify/functions";
 import { GoogleGenAI, Type } from "@google/genai";
 import { z } from "zod";
 
-/** Proxy AI stateless (ANALISI.md §5.1/§5.4): nessun database, nessun dato utente.
- * Stesso pattern Netlify Function + Gemini del progetto dude_images_generator. */
+/** Stateless AI proxy (ANALISI.md §5.1/§5.4): no database and no user data.
+ * Uses the same Netlify Function + Gemini pattern as the dude_images_generator project. */
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 const MODEL = "gemini-2.5-flash";
 
-/** Doppia barriera anti-noci (DESIGN.md §8.6): il prompt di sistema esclude la frutta a guscio,
- * e in più ogni output viene scansionato con questa blocklist prima di essere restituito. */
+/** Two-layer nut safety check (DESIGN.md §8.6): the system prompt excludes tree nuts, and each
+ * response is also scanned against this blocklist before it is returned. */
 const BLOCKLIST_FRUTTA_A_GUSCIO = [
   "noce",
   "noci",
@@ -49,20 +49,19 @@ const RichiestaSchema = z.discriminatedUnion("azione", [
     vincoli: z.array(z.string()).default([]),
     porzioni: z.number().int().positive().default(4),
     pasto: z.enum(["pranzo", "cena"]).default("cena"),
-    // Piatti già scelti per altri pasti della settimana corrente: evita di riproporli uguali.
+    // Dishes already selected for other meals in the current week; avoid proposing them again.
     evitaPiatti: z.array(z.string()).default([]),
   }),
-  // Un'unica chiamata per tutti i pasti vuoti della settimana: generarli con N chiamate
-  // indipendenti (stesso prompt generico ripetuto) fa convergere il modello sempre sugli
-  // stessi piatti. Con un'unica chiamata il modello vede l'intero elenco e può variare davvero.
+  // Generate all empty meals in one request. Separate requests with the same generic prompt
+  // tend to converge on the same dishes; one request gives the model the full list to vary.
   z.object({
     azione: z.literal("generaSettimana"),
     pasti: z.array(z.object({ id: z.string(), pasto: z.enum(["pranzo", "cena"]) })).min(1).max(20),
     vincoli: z.array(z.string()).default([]),
     porzioni: z.number().int().positive().default(4),
   }),
-  // Classifica ingredienti (già scelti dall'utente) nei reparti gestiti dall'app. Non genera
-  // cibo, quindi non serve il vincolo anti-noci: assegna solo un'etichetta di reparto a un nome.
+  // Classifies user-selected ingredients into the app's departments. This does not generate
+  // food, so the nut restriction is not relevant; it only assigns a department label to a name.
   z.object({
     azione: z.literal("classificaReparti"),
     ingredienti: z.array(z.string()).min(1).max(60),
@@ -103,9 +102,8 @@ async function chiamaGemini(
     config: {
       responseMimeType: "application/json",
       responseSchema,
-      // Default 1.3, più alta del solito: con lo stesso prompt ripetuto per più pasti
-      // (rigenerazione di un singolo slot) riduce la tendenza del modello a ripetere sempre
-      // gli stessi piatti. La classificazione dei reparti passa invece temperature 0.
+      // The higher-than-usual 1.3 default reduces repeated dishes when the same prompt is reused
+      // across meals, such as when regenerating one slot. Department classification uses 0.
       temperature: opzioni?.temperature ?? 1.3,
     },
   });
@@ -223,7 +221,7 @@ async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettim
 
 async function classificaReparti(input: Extract<Richiesta, { azione: "classificaReparti" }>) {
   const reparti = input.reparti;
-  // Ripiego coerente col resto dell'app: "Dispensa" è il reparto catch-all (vedi lista.ts/piatti.ts).
+  // Match the app's fallback: "Dispensa" is the catch-all department (see shoppingList.ts/dishes.ts).
   const repartoRipiego = reparti.includes("Dispensa") ? "Dispensa" : reparti[reparti.length - 1];
   const prompt =
     `Assegna ogni ingrediente a UNO SOLO di questi reparti (usa esattamente queste etichette, ` +
@@ -251,7 +249,7 @@ async function classificaReparti(input: Extract<Richiesta, { azione: "classifica
 
   const grezzo = await chiamaGemini(prompt, responseSchema, { temperature: 0, sistema: SISTEMA_CLASSIFICA });
   const parsed = RispostaClassificaSchema.parse(grezzo);
-  // Clamp difensivo: un reparto fuori dalla lista consentita torna al ripiego.
+  // Defensive clamp: map any department outside the allowed list to the fallback.
   const consentiti = new Set(reparti);
   const assegnazioni = parsed.assegnazioni.map((a) => ({
     nome: a.nome,

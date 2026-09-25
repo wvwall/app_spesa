@@ -2,7 +2,7 @@
 @import "./fonts.css";
 @import "./tokens.css";
 
-/* Il nostro dark mode è guidato da [data-theme], non solo da prefers-color-scheme */
+/* Dark mode is driven by [data-theme], not just by prefers-color-scheme. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
@@ -52,8 +52,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* atmosfera hawaiana del tema Stitch: bagliore di tramonto in alto e di oceano in basso,
-   sopra la sabbia calda */
+/* Stitch theme's Hawaiian atmosphere: sunset glow above and ocean glow below,
+   over warm sand. */
 [data-theme="stitch"] body {
   background:
     radial-gradient(ellipse 65% 35% at 100% -5%, rgba(255, 138, 101, 0.28), transparent 60%),
@@ -61,11 +61,10 @@ body {
     var(--surface-page);
 }
 
-/* le prime tre schede hanno ciascuna un disegno diverso di Stitch in filigrana,
-   sotto la quadrettatura, ancorato in basso a destra. --bg-quadretti espande a DUE
-   gradienti: le liste size/position/repeat devono avere 3 voci (grid, grid, immagine),
-   altrimenti l'ultimo valore ricicla su tutti e tre i layer e l'immagine eredita le
-   dimensioni minuscole della quadrettatura. */
+/* The first three cards use different Stitch watermarks beneath the grid, anchored at the
+   bottom right. --bg-quadretti expands to TWO gradients, so size/position/repeat need three
+   entries (grid, grid, image). Otherwise the final value applies to all three layers and the
+   image inherits the grid's tiny dimensions. */
 [data-theme="stitch"] [data-tab="settimana"].bg-quadretti,
 [data-theme="stitch"] [data-tab="lista"].bg-quadretti,
 [data-theme="stitch"] [data-tab="piatti"].bg-quadretti {
@@ -74,13 +73,13 @@ body {
   background-repeat: repeat, repeat, no-repeat;
 }
 [data-theme="stitch"] [data-tab="settimana"].bg-quadretti {
-  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-1.png"); /* Stitch seduto */
+  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-1.png"); /* Stitch sitting. */
 }
 [data-theme="stitch"] [data-tab="lista"].bg-quadretti {
-  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-3.png"); /* Stitch che salta */
+  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-3.png"); /* Stitch jumping. */
 }
 [data-theme="stitch"] [data-tab="piatti"].bg-quadretti {
-  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-2.png"); /* Stitch che sfonda il foglio */
+  background-image: var(--bg-quadretti), url("/stitch/stitch-bg-2.png"); /* Stitch breaking through the page. */
 }
 
 button,
@@ -99,8 +98,8 @@ input {
   background-size: var(--bg-quadretti-size);
 }
 
-/* skeleton di primo caricamento: shimmer che scorre sui toni della quadrettatura, coerente
-   sia con carta chiara che con lavagna scura */
+/* Initial-loading skeleton: a shimmer in the graph-paper palette, matching both light paper
+   and the dark slate theme. */
 .skeleton-shimmer {
   background: linear-gradient(90deg, var(--quadretto) 25%, var(--surface-card, #fff) 37%, var(--quadretto) 63%);
   background-size: 400% 100%;

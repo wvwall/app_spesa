@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { Sun, Moon, Sparkles, Plus } from "lucide-react";
 
-interface CardPiattoProps {
+interface DishCardProps {
   when?: "Pranzo" | "Cena";
   dish?: string;
   empty?: boolean;
@@ -10,7 +10,7 @@ interface CardPiattoProps {
   style?: CSSProperties;
 }
 
-export function CardPiatto({ when = "Pranzo", dish, empty = false, ai = false, onClick, style }: CardPiattoProps) {
+export function DishCard({ when = "Pranzo", dish, empty = false, ai = false, onClick, style }: DishCardProps) {
   const Icona = when.toLowerCase().startsWith("c") ? Moon : Sun;
   return (
     <button

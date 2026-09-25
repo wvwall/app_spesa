@@ -7,7 +7,7 @@ interface BottomSheetProps {
   footer?: ReactNode;
   onClose?: () => void;
   children?: ReactNode;
-  /** true = si posiziona dentro un contenitore relative (es. la cornice telefono di anteprima) invece che a schermo intero */
+  /** When true, renders inside a relative container (such as a phone preview frame) instead of filling the screen. */
   container?: boolean;
   style?: CSSProperties;
 }

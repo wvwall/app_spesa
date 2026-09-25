@@ -1,9 +1,9 @@
-import type { VoceLista } from "./types";
-import { raggruppaPerReparto } from "./reparti";
+import type { ShoppingListItem } from "./models";
+import { groupByDepartment } from "./departments";
 
-export function costruisciTestoLista(voci: VoceLista[], ordineReparti: string[], titolo: string): string {
+export function buildListText(voci: ShoppingListItem[], ordineReparti: string[], titolo: string): string {
   let testo = `${titolo}\n`;
-  for (const { reparto, voci: vociReparto } of raggruppaPerReparto(voci, ordineReparti)) {
+  for (const { reparto, voci: vociReparto } of groupByDepartment(voci, ordineReparti)) {
     testo += `\n── ${reparto} ──\n`;
     for (const v of vociReparto) {
       const simbolo = v.checked ? "☑" : "☐";
@@ -16,13 +16,13 @@ export function costruisciTestoLista(voci: VoceLista[], ordineReparti: string[],
   return testo;
 }
 
-export async function condividiOScaricaTesto(testo: string, nomeFile: string): Promise<void> {
+export async function shareOrDownloadText(testo: string, nomeFile: string): Promise<void> {
   if (navigator.share) {
     try {
       await navigator.share({ text: testo, title: nomeFile });
       return;
     } catch {
-      // l'utente ha annullato la condivisione: procedi col download
+      // Sharing was canceled by the user; continue with the download.
     }
   }
   const blob = new Blob([testo], { type: "text/plain;charset=utf-8" });

@@ -1,15 +1,15 @@
-import { db, nowIso, nuovoId, getOrCreateProfilo } from "../lib/db";
-import type { Piatto } from "../lib/types";
-import { SEED_PIATTI, SEED_PIATTI_VERSION } from "./piatti";
+import { db, nowIso, createId, getOrCreateProfile } from "../lib/database";
+import type { Dish } from "../lib/models";
+import { SEED_DISHES, SEED_DISHES_VERSION } from "./dishes";
 
-/** Applica il seed di piatti d'esempio in modo additivo (come applicaSeedIngredienti):
- * salta i piatti già presenti per nome, non tocca mai quelli creati dall'utente.
- * Va eseguito DOPO applicaSeedIngredienti: cerca gli ingredienti per nome nel catalogo
- * e usa lo snapshot nome/reparto su PiattoIngrediente (mai un riferimento fragile). */
-export async function applicaSeedPiatti(): Promise<void> {
+/** Applies the example-dish seed additively (like applyIngredientSeed): skips dishes already
+ * present by name and never changes user-created dishes. Run this AFTER applyIngredientSeed:
+ * it resolves ingredients by name from the catalog and uses the DishIngredient name/department
+ * snapshot instead of a fragile reference. */
+export async function applyDishSeed(): Promise<void> {
   await db.transaction("rw", db.profilo, db.piatti, db.piattoIngredienti, db.ingredienti, async () => {
-    const profilo = await getOrCreateProfilo();
-    if (profilo.seedVersionPiatti >= SEED_PIATTI_VERSION) return;
+    const profilo = await getOrCreateProfile();
+    if (profilo.seedVersionPiatti >= SEED_DISHES_VERSION) return;
 
     const catalogo = await db.ingredienti.toArray();
     const perNome = new Map(catalogo.map((i) => [i.nome.toLowerCase(), i]));
@@ -17,11 +17,11 @@ export async function applicaSeedPiatti(): Promise<void> {
     const piattiEsistenti = await db.piatti.toArray();
     const nomiEsistenti = new Set(piattiEsistenti.map((p) => p.nome.toLowerCase()));
 
-    for (const seedPiatto of SEED_PIATTI) {
+    for (const seedPiatto of SEED_DISHES) {
       if (nomiEsistenti.has(seedPiatto.nome.toLowerCase())) continue;
 
-      const piattoId = nuovoId();
-      const piatto: Piatto = {
+      const piattoId = createId();
+      const piatto: Dish = {
         id: piattoId,
         nome: seedPiatto.nome,
         procedimento: seedPiatto.procedimento.join("\n"),
@@ -34,9 +34,9 @@ export async function applicaSeedPiatti(): Promise<void> {
 
       for (const nomeIngrediente of seedPiatto.ingredienti) {
         const ing = perNome.get(nomeIngrediente.toLowerCase());
-        if (!ing) continue; // difensivo: se il catalogo non lo contiene, si salta solo questa riga
+        if (!ing) continue; // Defensive: skip only this row if the catalog does not contain it.
         await db.piattoIngredienti.add({
-          id: nuovoId(),
+          id: createId(),
           piattoId,
           ingredienteId: ing.id,
           nome: ing.nome,
@@ -47,6 +47,6 @@ export async function applicaSeedPiatti(): Promise<void> {
       }
     }
 
-    await db.profilo.update(profilo.id, { seedVersionPiatti: SEED_PIATTI_VERSION });
+    await db.profilo.update(profilo.id, { seedVersionPiatti: SEED_DISHES_VERSION });
   });
 }

@@ -1,27 +1,27 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Sparkles, X, ChevronDown, ChevronRight, Plus } from "lucide-react";
-import { db, getOrCreateProfilo, nowIso, nuovoId, REPARTI_DEFAULT } from "../lib/db";
-import { generaPiatto, type PiattoGenerato } from "../lib/ai";
-import { salvaPiattoGenerato } from "../lib/piatti";
+import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
+import { generateDish, type GeneratedDish } from "../lib/ai";
+import { saveGeneratedDish } from "../lib/dishes";
 import { Button, Chip, SearchInput, ProposalCard, Skeleton } from "../components";
-import type { Ingrediente, Piatto } from "../lib/types";
+import type { Ingredient, Dish } from "../lib/models";
 
-export function Piatti() {
+export function Dishes() {
   const ingredientiRaw = useLiveQuery(() => db.ingredienti.toArray(), []);
   const piattiRaw = useLiveQuery(() => db.piatti.toArray(), []);
-  const profilo = useLiveQuery(() => getOrCreateProfilo(), []);
+  const profilo = useLiveQuery(() => getOrCreateProfile(), []);
   const ingredienti = ingredientiRaw ?? [];
   const piatti = piattiRaw ?? [];
-  // Al primo giro Dexie non ha ancora risposto: distinguiamo "sto caricando" da "catalogo
-  // vuoto" per non mostrare mai a torto lo stato "Nessun piatto salvato".
+  // Dexie has not responded on the initial render. Distinguish loading from an empty catalog
+  // so "No saved dishes" is never shown prematurely.
   const caricamento = ingredientiRaw === undefined || piattiRaw === undefined;
 
   const [query, setQuery] = useState("");
   const [selezionati, setSelezionati] = useState<string[]>([]);
   const [repartiEspansi, setRepartiEspansi] = useState<Set<string>>(new Set());
 
-  const [generato, setGenerato] = useState<PiattoGenerato | null>(null);
+  const [generato, setGenerato] = useState<GeneratedDish | null>(null);
   const [caricamentoAI, setCaricamentoAI] = useState(false);
   const [erroreAI, setErroreAI] = useState<string | null>(null);
   const [componendo, setComponendo] = useState(false);
@@ -33,13 +33,13 @@ export function Piatti() {
   });
   const corrispondenzaEsatta = ingredienti.some((i) => i.nome.toLowerCase() === testoRicerca);
 
-  const perReparto = new Map<string, Ingrediente[]>();
+  const perReparto = new Map<string, Ingredient[]>();
   for (const i of filtrati) {
     const arr = perReparto.get(i.reparto) ?? [];
     arr.push(i);
     perReparto.set(i.reparto, arr);
   }
-  const ordine = profilo?.ordineReparti ?? REPARTI_DEFAULT;
+  const ordine = profilo?.ordineReparti ?? DEFAULT_DEPARTMENTS;
   const reparti = [...perReparto.keys()].sort((a, b) => {
     const ia = ordine.indexOf(a);
     const ib = ordine.indexOf(b);
@@ -48,11 +48,11 @@ export function Piatti() {
 
   const nomiSelezionati = ingredienti.filter((i) => selezionati.includes(i.id)).map((i) => i.nome);
 
-  function toggleSelezionato(id: string) {
+  function toggleSelected(id: string) {
     setSelezionati((sel) => (sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
   }
 
-  function toggleReparto(reparto: string) {
+  function toggleDepartment(reparto: string) {
     setRepartiEspansi((set) => {
       const nuovo = new Set(set);
       if (nuovo.has(reparto)) nuovo.delete(reparto);
@@ -61,9 +61,9 @@ export function Piatti() {
     });
   }
 
-  async function aggiungiIngredienteAlVolo(reparto: string) {
-    const id = nuovoId();
-    const nuovo: Ingrediente = {
+  async function addIngredientInline(reparto: string) {
+    const id = createId();
+    const nuovo: Ingredient = {
       id,
       nome: query.trim(),
       reparto,
@@ -77,12 +77,12 @@ export function Piatti() {
     setQuery("");
   }
 
-  async function generaConAI() {
+  async function generateWithAI() {
     setCaricamentoAI(true);
     setErroreAI(null);
     try {
-      const profiloAttuale = await getOrCreateProfilo();
-      const piatto = await generaPiatto({
+      const profiloAttuale = await getOrCreateProfile();
+      const piatto = await generateDish({
         ingredienti: nomiSelezionati,
         vincoli: profiloAttuale.vincoliAlimentari,
         porzioni: profiloAttuale.porzioniDefault,
@@ -96,14 +96,14 @@ export function Piatti() {
     }
   }
 
-  async function salvaGenerato() {
+  async function saveGenerated() {
     if (!generato) return;
-    await salvaPiattoGenerato(generato, ingredienti.filter((i) => selezionati.includes(i.id)), ingredienti);
+    await saveGeneratedDish(generato, ingredienti.filter((i) => selezionati.includes(i.id)), ingredienti);
     setGenerato(null);
     setSelezionati([]);
   }
 
-  async function eliminaPiatto(piattoId: string) {
+  async function deleteDish(piattoId: string) {
     await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
       await db.piatti.delete(piattoId);
       const suoiIngredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
@@ -124,30 +124,30 @@ export function Piatti() {
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
         <SearchInput placeholder="Cerca o aggiungi un ingrediente…" value={query} onChange={(e) => setQuery(e.target.value)} />
 
-        {caricamento && <PiattiSkeleton />}
+        {caricamento && <DishesSkeleton />}
 
         {!caricamento && reparti.map((reparto) => (
-          <RepartoCollassabile
+          <CollapsibleDepartment
             key={reparto}
             nome={reparto}
             ingredienti={perReparto.get(reparto) ?? []}
             espanso={testoRicerca !== "" || repartiEspansi.has(reparto)}
-            onToggle={() => toggleReparto(reparto)}
+            onToggle={() => toggleDepartment(reparto)}
             selezionati={selezionati}
-            onToggleIngrediente={toggleSelezionato}
+            onToggleIngrediente={toggleSelected}
           />
         ))}
 
         {testoRicerca !== "" && !corrispondenzaEsatta && (
-          <AggiungiIngredienteInline query={query.trim()} reparti={ordine} onConferma={aggiungiIngredienteAlVolo} />
+          <AddIngredientInline query={query.trim()} reparti={ordine} onConferma={addIngredientInline} />
         )}
 
         <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
-          <Etichetta>
+          <Label>
             {selezionati.length > 0 ? `Con ${selezionati.length} ingredienti selezionati` : "Nessun ingrediente selezionato"}
-          </Etichetta>
+          </Label>
           <div className="flex gap-2 mb-2">
-            <Button onClick={() => void generaConAI()} disabled={caricamentoAI}>
+            <Button onClick={() => void generateWithAI()} disabled={caricamentoAI}>
               {caricamentoAI ? (
                 "Sto pensando a un piatto…"
               ) : (
@@ -167,15 +167,15 @@ export function Piatti() {
               meta={`${generato.minuti ? generato.minuti + " min · " : ""}${generato.porzioni} porzioni`}
               have={nomiSelezionati.length > 0 ? nomiSelezionati.join(", ") : "nessuno"}
               buy={generato.ingredientiDaComprare.map((i) => `${i.nome} ${i.quantita}`).join(", ")}
-              onAccept={() => void salvaGenerato()}
-              onRegenerate={() => void generaConAI()}
+              onAccept={() => void saveGenerated()}
+              onRegenerate={() => void generateWithAI()}
             />
           )}
           {componendo && (
-            <FormComposizioneManuale
+            <ManualDishForm
               ingredienti={ingredienti.filter((i) => selezionati.includes(i.id))}
               porzioniDefault={profilo?.porzioniDefault ?? 4}
-              onAnnulla={() => setComponendo(false)}
+              onCancel={() => setComponendo(false)}
               onSalvato={() => {
                 setComponendo(false);
                 setSelezionati([]);
@@ -185,7 +185,7 @@ export function Piatti() {
         </section>
 
         <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
-          <Etichetta>I tuoi piatti</Etichetta>
+          <Label>I tuoi piatti</Label>
           <div className="flex flex-col gap-2">
             {caricamento && (
               <>
@@ -218,7 +218,7 @@ export function Piatti() {
                   <button
                     type="button"
                     aria-label={`Elimina ${p.nome}`}
-                    onClick={() => void eliminaPiatto(p.id)}
+                    onClick={() => void deleteDish(p.id)}
                     style={{ color: "var(--pomodoro)", display: "flex" }}
                   >
                     <X size={16} strokeWidth={2} />
@@ -236,7 +236,7 @@ export function Piatti() {
   );
 }
 
-function PiattiSkeleton() {
+function DishesSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-hidden="true">
       {[1, 2, 3].map((riga) => (
@@ -253,7 +253,7 @@ function PiattiSkeleton() {
   );
 }
 
-function RepartoCollassabile({
+function CollapsibleDepartment({
   nome,
   ingredienti,
   espanso,
@@ -262,7 +262,7 @@ function RepartoCollassabile({
   onToggleIngrediente,
 }: {
   nome: string;
-  ingredienti: Ingrediente[];
+  ingredienti: Ingredient[];
   espanso: boolean;
   onToggle: () => void;
   selezionati: string[];
@@ -301,7 +301,7 @@ function RepartoCollassabile({
   );
 }
 
-function AggiungiIngredienteInline({
+function AddIngredientInline({
   query,
   reparti,
   onConferma,
@@ -335,15 +335,15 @@ function AggiungiIngredienteInline({
   );
 }
 
-function FormComposizioneManuale({
+function ManualDishForm({
   ingredienti,
   porzioniDefault,
-  onAnnulla,
+  onCancel,
   onSalvato,
 }: {
-  ingredienti: Ingrediente[];
+  ingredienti: Ingredient[];
   porzioniDefault: number;
-  onAnnulla: () => void;
+  onCancel: () => void;
   onSalvato: () => void;
 }) {
   const [nomePiatto, setNomePiatto] = useState("");
@@ -352,10 +352,10 @@ function FormComposizioneManuale({
     Object.fromEntries(ingredienti.map((i) => [i.id, { valore: 1, unita: i.unitaDefault }]))
   );
 
-  async function salva() {
+  async function save() {
     if (!nomePiatto.trim()) return;
-    const piattoId = nuovoId();
-    const piatto: Piatto = {
+    const piattoId = createId();
+    const piatto: Dish = {
       id: piattoId,
       nome: nomePiatto.trim(),
       preferito: false,
@@ -368,7 +368,7 @@ function FormComposizioneManuale({
       const q = quantita[ing.id] ?? { valore: 1, unita: ing.unitaDefault };
       // eslint-disable-next-line no-await-in-loop
       await db.piattoIngredienti.add({
-        id: nuovoId(),
+        id: createId(),
         piattoId,
         ingredienteId: ing.id,
         nome: ing.nome,
@@ -428,10 +428,10 @@ function FormComposizioneManuale({
         ))}
       </div>
       <div className="flex gap-2">
-        <Button onClick={() => void salva()} disabled={!nomePiatto.trim()}>
+        <Button onClick={() => void save()} disabled={!nomePiatto.trim()}>
           Salva piatto
         </Button>
-        <Button variant="ghost" onClick={onAnnulla}>
+        <Button variant="ghost" onClick={onCancel}>
           Annulla
         </Button>
       </div>
@@ -439,7 +439,7 @@ function FormComposizioneManuale({
   );
 }
 
-function Etichetta({ children }: { children: string }) {
+function Label({ children }: { children: string }) {
   return (
     <div className="text-xs font-bold uppercase mb-2" style={{ letterSpacing: ".12em", color: "var(--text-secondary)" }}>
       {children}
