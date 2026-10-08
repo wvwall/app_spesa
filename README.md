@@ -68,6 +68,16 @@ npm run build       # typecheck + build di produzione
 npm run typecheck    # solo typecheck
 ```
 
+## Versione
+
+La versione mostrata in *Altro* viene da `package.json`. Per incrementarla e aggiornare anche il lockfile:
+
+```bash
+npm run bump                 # patch (es. 1.0.0 → 1.0.1)
+npm run bump -- minor
+npm run bump -- major
+```
+
 ## Struttura del progetto
 
 ```

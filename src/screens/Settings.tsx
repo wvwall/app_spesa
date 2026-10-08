@@ -7,6 +7,7 @@ import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
 import { Button, Chip, Badge, GeminiKeySheet } from "../components";
 import type { Theme } from "../lib/models";
+import packageJson from "../../package.json";
 
 const GIORNI_OPZIONI: { label: string; valore: number }[] = [
   { label: "Lun", valore: 1 },
@@ -212,7 +213,7 @@ export function Settings() {
         </section>
 
         <p style={{ fontSize: 12, color: "var(--inchiostro-70)", textAlign: "center", marginTop: 4 }}>
-          Quaderno della spesa · v1.0 · dati salvati solo su questo telefono
+          Quaderno della spesa · v{packageJson.version} · dati salvati solo su questo telefono
         </p>
       </div>
       <GeminiKeySheet
