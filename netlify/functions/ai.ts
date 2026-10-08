@@ -1,6 +1,12 @@
 import type { Handler } from "@netlify/functions";
 import { GoogleGenAI, Type } from "@google/genai";
 import { z } from "zod";
+import {
+  allergeniNonRiconosciuti,
+  allergeniRiconosciuti,
+  allergeniViolati,
+  type Allergene,
+} from "../../src/lib/allergens.ts";
 
 /** Stateless AI proxy (ANALISI.md §5.1/§5.4): no database and no user data.
  * Uses the same Netlify Function + Gemini pattern as the dude_images_generator project. */
@@ -15,39 +21,37 @@ function jsonResponse(statusCode: number, body: unknown) {
   return { statusCode, headers: HEADERS_NO_STORE, body: JSON.stringify(body) };
 }
 
-/** Two-layer nut safety check (DESIGN.md §8.6): the system prompt excludes tree nuts, and each
- * response is also scanned against this blocklist before it is returned. */
-const BLOCKLIST_FRUTTA_A_GUSCIO = [
-  "noce",
-  "noci",
-  "nocciola",
-  "nocciole",
-  "gheriglio",
-  "gherigli",
-  "macadamia",
-  "anacardi",
-  "anacardio",
-  "pistacchio",
-  "pistacchi",
-  "mandorla",
-  "mandorle",
-  "pinolo",
-  "pinoli",
-  "pecan",
-  "noce del brasile",
-];
-
-function contieneFruttaAGuscio(testo: string): boolean {
-  const normalizzato = testo.toLowerCase();
-  return BLOCKLIST_FRUTTA_A_GUSCIO.some((termine) => normalizzato.includes(termine));
+/** Two-layer allergy safety check (DESIGN.md §8.6): the system prompt excludes the configured
+ * allergens, and each response is also scanned against their terms before it is returned. Only
+ * recognized allergens are checked automatically; custom ones are only passed to the model. */
+function istruzioniAllergeni(vincoli: string[]): {
+  sistema: string;
+  riconosciuti: Allergene[];
+  nonRiconosciuti: string[];
+} {
+  const riconosciuti = allergeniRiconosciuti(vincoli);
+  const nonRiconosciuti = allergeniNonRiconosciuti(vincoli);
+  const etichette = riconosciuti.map((a) => a.etichetta);
+  let sistema =
+    "Sei un assistente che propone piatti di cucina italiana/mediterranea, di stagione, in italiano. ";
+  if (etichette.length > 0) {
+    sistema +=
+      `Vincolo assoluto e non negoziabile: NON includere mai ${etichette.join(", ")} in nessuna forma, ` +
+      "nemmeno in tracce (salse, pesti, dolci). Se un ingrediente selezionato dall'utente li contiene, ignoralo. ";
+  }
+  if (nonRiconosciuti.length > 0) {
+    sistema += `L'utente deve inoltre evitare: ${nonRiconosciuti.join(", ")}. Tienine conto e non usarli. `;
+  }
+  sistema += "Rispondi SOLO con il JSON richiesto.";
+  return { sistema, riconosciuti, nonRiconosciuti };
 }
 
-const SISTEMA_BASE =
-  "Sei un assistente che propone piatti di cucina italiana/mediterranea, di stagione, in italiano. " +
-  "Vincolo assoluto e non negoziabile: NON includere mai noci, nocciole, mandorle, pistacchi, anacardi, " +
-  "pinoli né alcuna frutta a guscio, in nessuna forma (anche tracce in salse, pesti o dolci) — " +
-  "in famiglia c'è un'allergia. Se un ingrediente selezionato dall'utente contiene frutta a guscio, ignoralo. " +
-  "Rispondi SOLO con il JSON richiesto.";
+function esitoAllergeni(riconosciuti: Allergene[], nonRiconosciuti: string[]) {
+  return {
+    allergieVerificate: riconosciuti.map((a) => a.etichetta),
+    allergieNonVerificate: nonRiconosciuti,
+  };
+}
 
 const ApiKeySchema = z.string().trim().min(1).max(512).optional();
 
@@ -111,7 +115,7 @@ async function chiamaGemini(
   opzioni?: { temperature?: number; sistema?: string },
 ): Promise<unknown> {
   const ai = new GoogleGenAI({ apiKey });
-  const sistema = opzioni?.sistema ?? SISTEMA_BASE;
+  const sistema = opzioni?.sistema ?? SISTEMA_CLASSIFICA;
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: { parts: [{ text: `${sistema}\n\n${prompt}` }] },
@@ -131,6 +135,7 @@ async function chiamaGemini(
 }
 
 async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }>, apiKey: string) {
+  const { sistema, riconosciuti, nonRiconosciuti } = istruzioniAllergeni(input.vincoli);
   const vincoliTesto = input.vincoli.length ? input.vincoli.join(", ") : "nessuno";
   const prompt =
     `Ingredienti già disponibili (forniti dall'utente, NON elencarli come da comprare): ` +
@@ -164,21 +169,22 @@ async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }
 
   const massimoTentativi = 2;
   for (let tentativo = 0; tentativo < massimoTentativi; tentativo++) {
-    const grezzo = await chiamaGemini(apiKey, prompt, responseSchema);
+    const grezzo = await chiamaGemini(apiKey, prompt, responseSchema, { sistema });
     const piatto = PiattoGeneratoSchema.parse(grezzo);
     const testoCompleto = [
       piatto.nome,
       ...piatto.procedimento,
       ...piatto.ingredientiDaComprare.map((i) => i.nome),
     ].join(" ");
-    if (!contieneFruttaAGuscio(testoCompleto)) {
-      return { ...piatto, verificatoSenzaNoci: true as const };
+    if (allergeniViolati(testoCompleto, riconosciuti).length === 0) {
+      return { ...piatto, ...esitoAllergeni(riconosciuti, nonRiconosciuti) };
     }
   }
-  throw new Error("Non sono riuscito a generare un piatto che rispetti il vincolo senza noci. Componilo a mano.");
+  throw new Error("Non sono riuscito a generare un piatto che rispetti i vincoli indicati. Componilo a mano.");
 }
 
 async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettimana" }>, apiKey: string) {
+  const { sistema, riconosciuti, nonRiconosciuti } = istruzioniAllergeni(input.vincoli);
   const vincoliTesto = input.vincoli.length ? input.vincoli.join(", ") : "nessuno";
   const elencoPasti = input.pasti.map((p) => `- id "${p.id}": ${p.pasto}`).join("\n");
   const prompt =
@@ -221,18 +227,18 @@ async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettim
 
   const massimoTentativi = 2;
   for (let tentativo = 0; tentativo < massimoTentativi; tentativo++) {
-    const grezzo = await chiamaGemini(apiKey, prompt, responseSchema);
+    const grezzo = await chiamaGemini(apiKey, prompt, responseSchema, { sistema });
     const risposta = RispostaSettimanaSchema.parse(grezzo);
     const idRichiesti = new Set(input.pasti.map((p) => p.id));
     const piatti = risposta.piatti.filter((p) => idRichiesti.has(p.id));
     const testoCompleto = piatti
       .map((p) => [p.nome, ...p.procedimento, ...p.ingredientiDaComprare.map((i) => i.nome)].join(" "))
       .join(" ");
-    if (!contieneFruttaAGuscio(testoCompleto)) {
-      return piatti.map((p) => ({ ...p, verificatoSenzaNoci: true as const }));
+    if (allergeniViolati(testoCompleto, riconosciuti).length === 0) {
+      return piatti.map((p) => ({ ...p, ...esitoAllergeni(riconosciuti, nonRiconosciuti) }));
     }
   }
-  throw new Error("Non sono riuscito a generare la settimana rispettando il vincolo senza noci. Riprova.");
+  throw new Error("Non sono riuscito a generare la settimana rispettando i vincoli indicati. Riprova.");
 }
 
 async function classificaReparti(input: Extract<Richiesta, { azione: "classificaReparti" }>, apiKey: string) {

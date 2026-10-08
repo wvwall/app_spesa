@@ -21,6 +21,7 @@ export async function saveGeneratedDish(
     preferito: false,
     origine: "ai",
     porzioni: generato.porzioni,
+    allergieVerificate: generato.allergieVerificate,
     updatedAt: nowIso(),
   };
   await db.piatti.add(piatto);

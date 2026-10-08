@@ -123,7 +123,7 @@ export function ActiveShopping({ listId, onClose }: Props) {
         footer={
           missingItem && missingItem.alternative.length > 0 ? (
             <span className="inline-flex items-center gap-1">
-              <ShieldCheck size={13} strokeWidth={2} /> verificate: senza noci
+              <ShieldCheck size={13} strokeWidth={2} /> alternative suggerite
             </span>
           ) : undefined
         }

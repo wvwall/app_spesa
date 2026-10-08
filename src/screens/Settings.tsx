@@ -7,6 +7,7 @@ import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
 import { Button, Chip, Badge, GeminiKeySheet } from "../components";
 import type { Theme } from "../lib/models";
+import { CATALOGO_ALLERGENI, trovaAllergene } from "../lib/allergens";
 import packageJson from "../../package.json";
 
 const GIORNI_OPZIONI: { label: string; valore: number }[] = [
@@ -29,8 +30,29 @@ export function Settings() {
   const [messaggio, setMessaggio] = useState<string | null>(null);
   const [dialogChiaveAI, setDialogChiaveAI] = useState(false);
   const [confermaRimozioneChiave, setConfermaRimozioneChiave] = useState(false);
+  const [nuovoAllergene, setNuovoAllergene] = useState("");
+  const [confermaRimozioneAllergene, setConfermaRimozioneAllergene] = useState<string | null>(null);
 
   if (!profilo) return null;
+
+  async function addAllergene(nome: string) {
+    const pulito = nome.trim();
+    if (!pulito) return;
+    const esistenti = profilo!.vincoliAlimentari.map((a) => a.toLowerCase());
+    if (esistenti.includes(pulito.toLowerCase())) {
+      setNuovoAllergene("");
+      return;
+    }
+    await db.profilo.update(profilo!.id, { vincoliAlimentari: [...profilo!.vincoliAlimentari, pulito] });
+    setNuovoAllergene("");
+  }
+
+  async function removeAllergene(nome: string) {
+    await db.profilo.update(profilo!.id, {
+      vincoliAlimentari: profilo!.vincoliAlimentari.filter((a) => a !== nome),
+    });
+    setConfermaRimozioneAllergene(null);
+  }
 
   async function changeServings(delta: number) {
     const nuove = Math.max(1, profilo!.porzioniDefault + delta);
@@ -60,6 +82,15 @@ export function Settings() {
       setMessaggio(err instanceof Error ? err.message : "Import fallito.");
     }
   }
+
+  const allergeniAttivi = new Set(
+    profilo.vincoliAlimentari.map((a) => trovaAllergene(a)?.id).filter((id): id is string => Boolean(id)),
+  );
+  const allergeniSuggeriti = CATALOGO_ALLERGENI.filter(
+    (a) =>
+      !allergeniAttivi.has(a.id) &&
+      !profilo.vincoliAlimentari.some((v) => v.toLowerCase() === a.etichetta.toLowerCase()),
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -106,11 +137,83 @@ export function Settings() {
         </section>
 
         <section>
-          <Label>Vincoli alimentari</Label>
-          <Badge kind="allergene" />
-          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 8, lineHeight: 1.5 }}>
-            Per disattivarlo serve una conferma doppia. Ogni piatto generato dall'AI riporta «✓ verificato: senza noci».
+          <Label>Allergie e vincoli</Label>
+          {profilo.vincoliAlimentari.length > 0 ? (
+            <Badge kind="allergene">Da evitare</Badge>
+          ) : (
+            <p style={{ fontSize: 13, color: "var(--inchiostro-70)", lineHeight: 1.5 }}>
+              Nessun vincolo attivo. L’AI non esclude nulla.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2" style={{ marginTop: 10 }}>
+            {profilo.vincoliAlimentari.map((a) => (
+              <Chip
+                key={a}
+                state="allergen"
+                onClick={() => {
+                  if (trovaAllergene(a)?.id === "frutta-a-guscio") setConfermaRimozioneAllergene(a);
+                  else void removeAllergene(a);
+                }}
+              >
+                {a} ×
+              </Chip>
+            ))}
+          </div>
+          {confermaRimozioneAllergene && (
+            <div
+              className="flex flex-col gap-2 border rounded-2xl p-3 mt-3"
+              style={{ borderColor: "var(--pomodoro)" }}
+            >
+              <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                Rimuovere “{confermaRimozioneAllergene}”? È un vincolo di sicurezza: per la famiglia l’allergia è
+                critica. Confermi di volerlo disattivare?
+              </p>
+              <div className="flex gap-2">
+                <Button variant="warn" onClick={() => void removeAllergene(confermaRimozioneAllergene)}>
+                  Rimuovi
+                </Button>
+                <Button variant="ghost" onClick={() => setConfermaRimozioneAllergene(null)}>
+                  Annulla
+                </Button>
+              </div>
+            </div>
+          )}
+          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 10, lineHeight: 1.5 }}>
+            Le noci sono escluse di default. Ogni piatto generato dall’AI viene ricontrollato su questi vincoli;
+            per allergie non riconosciute l’app non può garantire l’assenza, quindi controlla sempre gli ingredienti.
           </p>
+          {allergeniSuggeriti.length > 0 && (
+            <>
+              <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", margin: "12px 0 8px" }}>Aggiungi un allergene comune:</p>
+              <div className="flex flex-wrap gap-2">
+                {allergeniSuggeriti.map((a) => (
+                  <Chip key={a.id} onClick={() => void addAllergene(a.etichetta)}>
+                    + {a.etichetta}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="flex gap-2" style={{ marginTop: 12 }}>
+            <input
+              className="border rounded-xl px-3 py-2.5 text-sm flex-1"
+              style={{ borderColor: "var(--quadretto)" }}
+              placeholder="Altra allergia…"
+              value={nuovoAllergene}
+              onChange={(e) => setNuovoAllergene(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void addAllergene(nuovoAllergene);
+              }}
+            />
+            <Button
+              fullWidth={false}
+              onClick={() => void addAllergene(nuovoAllergene)}
+              disabled={!nuovoAllergene.trim()}
+              style={{ padding: "10px 14px", fontSize: 14, flex: "none" }}
+            >
+              Aggiungi
+            </Button>
+          </div>
         </section>
 
         <section>

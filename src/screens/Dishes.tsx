@@ -172,6 +172,8 @@ export function Dishes() {
               meta={`${generato.minuti ? generato.minuti + " min · " : ""}${generato.porzioni} porzioni`}
               have={nomiSelezionati.length > 0 ? nomiSelezionati.join(", ") : "nessuno"}
               buy={generato.ingredientiDaComprare.map((i) => `${i.nome} ${i.quantita}`).join(", ")}
+              allergieVerificate={generato.allergieVerificate}
+              allergieNonVerificate={generato.allergieNonVerificate}
               onAccept={() => void saveGenerated()}
               onRegenerate={() => void generateWithAI()}
             />

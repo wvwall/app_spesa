@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { Sparkles, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "../core/Button";
 
 interface ProposalCardProps {
@@ -9,6 +9,10 @@ interface ProposalCardProps {
   have?: string;
   buy?: string;
   extra?: string;
+  /** Allergeni riconosciuti e verificati automaticamente. */
+  allergieVerificate?: string[];
+  /** Vincoli non riconosciuti: l'app non può verificarli da sola. */
+  allergieNonVerificate?: string[];
   onAccept?: () => void;
   onRegenerate?: () => void;
   style?: CSSProperties;
@@ -21,6 +25,8 @@ export function ProposalCard({
   have,
   buy,
   extra,
+  allergieVerificate = [],
+  allergieNonVerificate = [],
   onAccept,
   onRegenerate,
   style,
@@ -68,18 +74,36 @@ export function ProposalCard({
         <div style={{ color: "var(--biro)", fontSize: 13.5, marginBottom: extra ? 4 : 12 }}>Da comprare: {buy}</div>
       )}
       {extra && <div style={{ color: "var(--inchiostro-70)", fontSize: 13, marginBottom: 12 }}>L'AI aggiunge: {extra}</div>}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          fontSize: 12,
-          color: "var(--basilico)",
-          marginBottom: 12,
-        }}
-      >
-        <ShieldCheck size={14} strokeWidth={2} /> verificato: senza noci
-      </div>
+      {allergieVerificate.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 12,
+            color: "var(--basilico)",
+            marginBottom: allergieNonVerificate.length > 0 ? 4 : 12,
+          }}
+        >
+          <ShieldCheck size={14} strokeWidth={2} /> verificato: senza {allergieVerificate.join(", ")}
+        </div>
+      )}
+      {allergieNonVerificate.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 4,
+            fontSize: 12,
+            color: "var(--pomodoro)",
+            marginBottom: 12,
+            lineHeight: 1.4,
+          }}
+        >
+          <TriangleAlert size={14} strokeWidth={2} style={{ flex: "none", marginTop: 1 }} />
+          <span>Da controllare tu: l’AI non verifica automaticamente {allergieNonVerificate.join(", ")}.</span>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8 }}>
         <Button onClick={onAccept} style={{ flex: 1, borderRadius: 10, padding: 11, fontSize: 14 }}>
           Va bene

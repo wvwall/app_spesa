@@ -51,7 +51,7 @@ Una **web app mobile-first (PWA)** per pianificare i pasti della settimana (pran
 - **RF10 — Ordinamento per reparto**: ogni ingrediente ha un reparto (ortofrutta, banco frigo, scatolame…); in modalità spesa la lista segue l'ordine del negozio (personalizzabile).
 - **RF11 — Dispensa**: elenco di ciò che è già in casa, sottratto automaticamente dalla lista.
 - **RF12 — Copia settimana / template**: ripartire dal menù di una settimana precedente.
-- **RF13 — Vincoli alimentari**: allergie/preferenze come contesto fisso per ogni generazione AI. Vincolo già noto e **critico**: **niente noci** — esclusione assoluta (allergia), mai proposte in piatti né come alternative.
+- **RF13 — Vincoli alimentari**: allergie/preferenze come contesto per ogni generazione AI, modificabili dal profilo. Il default è **niente noci** — esclusione di sicurezza, mai proposta in piatti né come alternative; la rimozione richiede una conferma esplicita. L'utente può aggiungere altre allergie: quelle riconosciute da un catalogo hanno doppia barriera (prompt + controllo sull'output), quelle libere sono solo comunicate al modello.
 - **RF14 — Note per articolo**: "prendi quella in vetro", "solo se in offerta".
 
 > *Scartato:* budget stimato / promozioni — richiedeva i prezzi (integrazione Pepesto), fuori interesse.
@@ -117,7 +117,7 @@ La v1 supporta Google Gemini con il modello `gemini-2.5-flash`, senza selezione 
 - Prompt di sistema con: cucina italiana/mediterranea di default, stagionalità, vincoli dietetici della famiglia, porzioni.
 - L'AI può proporre ingredienti extra non selezionati → mostrati come "da aggiungere alla lista" con **conferma esplicita** dell'utente.
 - Le **alternative** (RF7) vengono generate in batch alla chiusura della lista e salvate localmente → disponibili offline in negozio.
-- **Vincoli critici come doppia barriera**: l'esclusione delle noci (allergia) sta sia nel prompt di sistema di ogni chiamata, sia in una **validazione post-generazione** sull'output JSON (blocklist di termini: noci, gherigli, salsa di noci…) che scarta e rigenera il piatto in caso di violazione. Non ci si affida mai al solo prompt per un vincolo di sicurezza.
+- **Vincoli critici come doppia barriera**: per gli allergeni riconosciuti (default: noci e frutta a guscio) l'esclusione sta sia nel prompt di sistema di ogni chiamata, sia in una **validazione post-generazione** sull'output JSON (termini dell'allergene: noci, gherigli, mandorle…) che scarta e rigenera il piatto in caso di violazione. Non ci si affida mai al solo prompt per un vincolo di sicurezza. Le allergie non riconosciute sono incluse nel prompt ma non verificate automaticamente: l'app lo segnala all'utente.
 
 ---
 

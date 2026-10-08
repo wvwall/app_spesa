@@ -29,9 +29,10 @@ roadmap) e [DESIGN.md](DESIGN.md) (identità visiva "il quaderno della spesa", t
 ingredienti selezionati, propone un piatto e restituisce separatamente cosa hai già (la selezione
 stessa, mai un'invenzione del modello) e cosa manca da comprare. La chiave viene usata solo per la
 richiesta e non viene salvata dalla Function. In produzione ogni utente può configurare la chiave
-al primo avvio, al primo uso dell'AI o da *Altro*; resta nel browser e non viene esportata nei backup. Vincolo non negoziabile:
-**in famiglia c'è un'allergia alle noci**, quindi ogni generazione passa da una doppia barriera
-(prompt di sistema + controllo sull'output) prima di arrivare all'app.
+al primo avvio, al primo uso dell'AI o da *Altro*; resta nel browser e non viene esportata nei backup.
+I **vincoli alimentari** (di default "noci") sono modificabili da *Altro*: ogni generazione passa da
+una doppia barriera per gli allergeni riconosciuti (prompt di sistema + controllo sull'output), mentre
+per allergie scritte liberamente l'AI le riceve come contesto ma l'app non le verifica da sola.
 
 I suggerimenti di ingredienti alternativi in negozio ("manca qualcosa?") **non** passano dall'AI:
 sono una mappa locale curata a mano (`src/lib/sostituzioni.ts`) — istantanea, gratuita e

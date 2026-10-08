@@ -16,7 +16,10 @@ const GeneratedDishSchema = z.object({
   // Do not send "ingredientiPosseduti": only the app knows what is available from the user's
   // selection. AI must not decide this, as it could invent claims such as "you already have oil".
   ingredientiDaComprare: z.array(z.object({ nome: z.string(), quantita: z.string() })),
-  verificatoSenzaNoci: z.literal(true),
+  // Etichette degli allergeni controllati e superati, e vincoli non riconosciuti che l'app non
+  // può verificare automaticamente (vedi src/lib/allergens.ts).
+  allergieVerificate: z.array(z.string()),
+  allergieNonVerificate: z.array(z.string()),
 });
 export type GeneratedDish = z.infer<typeof GeneratedDishSchema>;
 
