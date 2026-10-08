@@ -5,8 +5,15 @@ import { z } from "zod";
 /** Stateless AI proxy (ANALISI.md §5.1/§5.4): no database and no user data.
  * Uses the same Netlify Function + Gemini pattern as the dude_images_generator project. */
 
-const apiKey = process.env.GEMINI_API_KEY || "";
 const MODEL = "gemini-2.5-flash";
+const HEADERS_NO_STORE = {
+  "Cache-Control": "no-store, private",
+  "Content-Type": "application/json; charset=utf-8",
+};
+
+function jsonResponse(statusCode: number, body: unknown) {
+  return { statusCode, headers: HEADERS_NO_STORE, body: JSON.stringify(body) };
+}
 
 /** Two-layer nut safety check (DESIGN.md §8.6): the system prompt excludes tree nuts, and each
  * response is also scanned against this blocklist before it is returned. */
@@ -42,9 +49,15 @@ const SISTEMA_BASE =
   "in famiglia c'è un'allergia. Se un ingrediente selezionato dall'utente contiene frutta a guscio, ignoralo. " +
   "Rispondi SOLO con il JSON richiesto.";
 
+const ApiKeySchema = z.string().trim().min(1).max(512).optional();
+
 const RichiestaSchema = z.discriminatedUnion("azione", [
   z.object({
+    azione: z.literal("stato"),
+  }),
+  z.object({
     azione: z.literal("generaPiatto"),
+    apiKey: ApiKeySchema,
     ingredienti: z.array(z.string()).default([]),
     vincoli: z.array(z.string()).default([]),
     porzioni: z.number().int().positive().default(4),
@@ -56,6 +69,7 @@ const RichiestaSchema = z.discriminatedUnion("azione", [
   // tend to converge on the same dishes; one request gives the model the full list to vary.
   z.object({
     azione: z.literal("generaSettimana"),
+    apiKey: ApiKeySchema,
     pasti: z.array(z.object({ id: z.string(), pasto: z.enum(["pranzo", "cena"]) })).min(1).max(20),
     vincoli: z.array(z.string()).default([]),
     porzioni: z.number().int().positive().default(4),
@@ -64,6 +78,7 @@ const RichiestaSchema = z.discriminatedUnion("azione", [
   // food, so the nut restriction is not relevant; it only assigns a department label to a name.
   z.object({
     azione: z.literal("classificaReparti"),
+    apiKey: ApiKeySchema,
     ingredienti: z.array(z.string()).min(1).max(60),
     reparti: z.array(z.string()).min(1).max(20),
   }),
@@ -90,6 +105,7 @@ const SISTEMA_CLASSIFICA =
   "quelle etichette. Rispondi SOLO con il JSON richiesto.";
 
 async function chiamaGemini(
+  apiKey: string,
   prompt: string,
   responseSchema: object,
   opzioni?: { temperature?: number; sistema?: string },
@@ -114,7 +130,7 @@ async function chiamaGemini(
   return JSON.parse(testo);
 }
 
-async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }>) {
+async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }>, apiKey: string) {
   const vincoliTesto = input.vincoli.length ? input.vincoli.join(", ") : "nessuno";
   const prompt =
     `Ingredienti già disponibili (forniti dall'utente, NON elencarli come da comprare): ` +
@@ -148,7 +164,7 @@ async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }
 
   const massimoTentativi = 2;
   for (let tentativo = 0; tentativo < massimoTentativi; tentativo++) {
-    const grezzo = await chiamaGemini(prompt, responseSchema);
+    const grezzo = await chiamaGemini(apiKey, prompt, responseSchema);
     const piatto = PiattoGeneratoSchema.parse(grezzo);
     const testoCompleto = [
       piatto.nome,
@@ -162,7 +178,7 @@ async function generaPiatto(input: Extract<Richiesta, { azione: "generaPiatto" }
   throw new Error("Non sono riuscito a generare un piatto che rispetti il vincolo senza noci. Componilo a mano.");
 }
 
-async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettimana" }>) {
+async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettimana" }>, apiKey: string) {
   const vincoliTesto = input.vincoli.length ? input.vincoli.join(", ") : "nessuno";
   const elencoPasti = input.pasti.map((p) => `- id "${p.id}": ${p.pasto}`).join("\n");
   const prompt =
@@ -205,7 +221,7 @@ async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettim
 
   const massimoTentativi = 2;
   for (let tentativo = 0; tentativo < massimoTentativi; tentativo++) {
-    const grezzo = await chiamaGemini(prompt, responseSchema);
+    const grezzo = await chiamaGemini(apiKey, prompt, responseSchema);
     const risposta = RispostaSettimanaSchema.parse(grezzo);
     const idRichiesti = new Set(input.pasti.map((p) => p.id));
     const piatti = risposta.piatti.filter((p) => idRichiesti.has(p.id));
@@ -219,7 +235,7 @@ async function generaSettimana(input: Extract<Richiesta, { azione: "generaSettim
   throw new Error("Non sono riuscito a generare la settimana rispettando il vincolo senza noci. Riprova.");
 }
 
-async function classificaReparti(input: Extract<Richiesta, { azione: "classificaReparti" }>) {
+async function classificaReparti(input: Extract<Richiesta, { azione: "classificaReparti" }>, apiKey: string) {
   const reparti = input.reparti;
   // Match the app's fallback: "Dispensa" is the catch-all department (see shoppingList.ts/dishes.ts).
   const repartoRipiego = reparti.includes("Dispensa") ? "Dispensa" : reparti[reparti.length - 1];
@@ -247,7 +263,7 @@ async function classificaReparti(input: Extract<Richiesta, { azione: "classifica
     required: ["assegnazioni"],
   };
 
-  const grezzo = await chiamaGemini(prompt, responseSchema, { temperature: 0, sistema: SISTEMA_CLASSIFICA });
+  const grezzo = await chiamaGemini(apiKey, prompt, responseSchema, { temperature: 0, sistema: SISTEMA_CLASSIFICA });
   const parsed = RispostaClassificaSchema.parse(grezzo);
   // Defensive clamp: map any department outside the allowed list to the fallback.
   const consentiti = new Set(reparti);
@@ -260,40 +276,52 @@ async function classificaReparti(input: Extract<Richiesta, { azione: "classifica
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ errore: "Metodo non consentito." }) };
-  }
-  if (!apiKey) {
-    return { statusCode: 500, body: JSON.stringify({ errore: "GEMINI_API_KEY non configurata sul server." }) };
+    return jsonResponse(405, { errore: "Metodo non consentito." });
   }
 
   let corpo: unknown;
   try {
     corpo = JSON.parse(event.body || "{}");
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ errore: "JSON non valido." }) };
+    return jsonResponse(400, { errore: "JSON non valido." });
   }
 
   const parsed = RichiestaSchema.safeParse(corpo);
   if (!parsed.success) {
-    return { statusCode: 400, body: JSON.stringify({ errore: "Richiesta non valida." }) };
+    return jsonResponse(400, { errore: "Richiesta non valida." });
+  }
+
+  if (parsed.data.azione === "stato") {
+    return jsonResponse(200, {
+      ripiegoLocale: process.env.NETLIFY_DEV === "true" && Boolean(process.env.GEMINI_API_KEY?.trim()),
+    });
+  }
+
+  // Netlify CLI sets NETLIFY_DEV for local Function execution. Never fall back to a deploy
+  // environment variable: production requests must use the user's own key from the POST body.
+  const apiKey = parsed.data.apiKey || (process.env.NETLIFY_DEV === "true" ? process.env.GEMINI_API_KEY?.trim() : "") || "";
+  if (!apiKey) {
+    return jsonResponse(428, {
+      codice: "GEMINI_API_KEY_REQUIRED",
+      errore: "Per usare Google Gemini, inserisci la tua chiave API.",
+    });
   }
 
   try {
     if (parsed.data.azione === "generaSettimana") {
-      const piatti = await generaSettimana(parsed.data);
-      return { statusCode: 200, body: JSON.stringify({ piatti }) };
+      const piatti = await generaSettimana(parsed.data, apiKey);
+      return jsonResponse(200, { piatti });
     }
     if (parsed.data.azione === "classificaReparti") {
-      const risultato = await classificaReparti(parsed.data);
-      return { statusCode: 200, body: JSON.stringify(risultato) };
+      const risultato = await classificaReparti(parsed.data, apiKey);
+      return jsonResponse(200, risultato);
     }
-    const risultato = await generaPiatto(parsed.data);
-    return { statusCode: 200, body: JSON.stringify(risultato) };
+    const risultato = await generaPiatto(parsed.data, apiKey);
+    return jsonResponse(200, risultato);
   } catch (errore) {
-    console.error("ai function error:", errore);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ errore: errore instanceof Error ? errore.message : "Errore sconosciuto." }),
-    };
+    // Do not log request bodies or provider error details: they may include user data or secrets.
+    console.error("ai function error:", errore instanceof Error ? errore.name : "UnknownError");
+    const messaggio = errore instanceof Error ? errore.message : "Errore sconosciuto.";
+    return jsonResponse(502, { errore: messaggio.replaceAll(apiKey, "[redacted]") });
   }
 };

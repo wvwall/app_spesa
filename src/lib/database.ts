@@ -8,6 +8,7 @@ import type {
   Slot,
   ShoppingListRecord,
   ShoppingListItem,
+  AiSettings,
   Theme,
 } from "./models";
 
@@ -20,6 +21,7 @@ export const db = new Dexie("LaSpesaDiCasa") as Dexie & {
   slot: EntityTable<Slot, "id">;
   liste: EntityTable<ShoppingListRecord, "id">;
   voci: EntityTable<ShoppingListItem, "id">;
+  aiSettings: EntityTable<AiSettings, "id">;
 };
 
 db.version(1).stores({
@@ -31,6 +33,10 @@ db.version(1).stores({
   slot: "id, pianoId, data, pasto",
   liste: "id, pianoId",
   voci: "id, listaId, reparto, checked",
+});
+
+db.version(2).stores({
+  aiSettings: "id",
 });
 
 export const PROFILE_ID = "profilo";

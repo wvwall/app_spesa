@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { getGeminiApiKey, hasLocalGeminiFallback } from "./aiSettings";
+
+export class GeminiApiKeyRequiredError extends Error {
+  constructor() {
+    super("Per usare Google Gemini, inserisci la tua chiave API.");
+    this.name = "GeminiApiKeyRequiredError";
+  }
+}
 
 const GeneratedDishSchema = z.object({
   nome: z.string(),
@@ -22,13 +30,17 @@ const DepartmentClassificationResponseSchema = z.object({
 const NETLIFY_FUNCTIONS_BASE = "/.netlify/functions";
 
 async function callProxy(corpo: Record<string, unknown>): Promise<unknown> {
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey && !(await hasLocalGeminiFallback())) throw new GeminiApiKeyRequiredError();
   const risposta = await fetch(`${NETLIFY_FUNCTIONS_BASE}/ai`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(corpo),
+    cache: "no-store",
+    body: JSON.stringify({ ...corpo, ...(apiKey ? { apiKey } : {}) }),
   });
   if (!risposta.ok) {
     const dati = await risposta.json().catch(() => ({}));
+    if (dati.codice === "GEMINI_API_KEY_REQUIRED") throw new GeminiApiKeyRequiredError();
     throw new Error(dati.errore ?? "Il piatto non è arrivato. Riprova o componilo a mano.");
   }
   return risposta.json();

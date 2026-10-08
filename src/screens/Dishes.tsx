@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Sparkles, X, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
-import { generateDish, type GeneratedDish } from "../lib/ai";
+import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
-import { Button, Chip, SearchInput, ProposalCard, Skeleton } from "../components";
+import { Button, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
 import type { Ingredient, Dish } from "../lib/models";
 
 export function Dishes() {
@@ -25,6 +25,7 @@ export function Dishes() {
   const [caricamentoAI, setCaricamentoAI] = useState(false);
   const [erroreAI, setErroreAI] = useState<string | null>(null);
   const [componendo, setComponendo] = useState(false);
+  const [richiestaChiaveAI, setRichiestaChiaveAI] = useState(false);
 
   const testoRicerca = query.trim().toLowerCase();
   const filtrati = ingredienti.filter((i) => {
@@ -90,6 +91,10 @@ export function Dishes() {
       });
       setGenerato(piatto);
     } catch (e) {
+      if (e instanceof GeminiApiKeyRequiredError) {
+        setRichiestaChiaveAI(true);
+        return;
+      }
       setErroreAI(e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova o componilo a mano.");
     } finally {
       setCaricamentoAI(false);
@@ -232,6 +237,14 @@ export function Dishes() {
           </div>
         </section>
       </div>
+      <GeminiKeySheet
+        open={richiestaChiaveAI}
+        onClose={() => setRichiestaChiaveAI(false)}
+        onSaved={() => {
+          setRichiestaChiaveAI(false);
+          void generateWithAI();
+        }}
+      />
     </div>
   );
 }

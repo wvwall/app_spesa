@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
-import { TabBar } from "./components";
+import { GeminiKeySheet, TabBar } from "./components";
 import { WeeklyPlanner } from "./screens/WeeklyPlanner";
 import { ShoppingList } from "./screens/ShoppingList";
 import { ActiveShopping } from "./screens/ActiveShopping";
 import { Dishes } from "./screens/Dishes";
 import { Settings } from "./screens/Settings";
 import { getOrCreateProfile, applyTheme } from "./lib/database";
+import {
+  dismissGeminiSetupPrompt,
+  getGeminiApiKey,
+  hasDismissedGeminiSetupPrompt,
+} from "./lib/aiSettings";
 import { applyIngredientSeed } from "./seed/applyIngredients";
 import { applyDishSeed } from "./seed/applyDishes";
 
@@ -14,6 +19,7 @@ type Tab = "settimana" | "lista" | "piatti" | "altro";
 export function App() {
   const [tab, setTab] = useState<Tab>("settimana");
   const [activeShoppingListId, setActiveShoppingListId] = useState<string | null>(null);
+  const [setupGeminiOpen, setSetupGeminiOpen] = useState(false);
   // Each screen remembers its own week (an offset from the current cycle). State lives in App
   // so it survives tab changes. Weekly planning and the shopping list navigate independently;
   // "Generate list" is the only synchronization point and opens the week it was generated from.
@@ -28,6 +34,26 @@ export function App() {
     // the ingredient seed has completed.
     void applyIngredientSeed().then(() => applyDishSeed());
   }, []);
+
+  useEffect(() => {
+    let annullato = false;
+    void (async () => {
+      const [apiKey, setupGiaRimandato] = await Promise.all([
+        getGeminiApiKey(),
+        hasDismissedGeminiSetupPrompt(),
+      ]);
+      if (annullato || apiKey || setupGiaRimandato) return;
+      if (!annullato) setSetupGeminiOpen(true);
+    })();
+    return () => {
+      annullato = true;
+    };
+  }, []);
+
+  function closeInitialGeminiSetup() {
+    setSetupGeminiOpen(false);
+    void dismissGeminiSetupPrompt();
+  }
 
   if (activeShoppingListId) {
     return <ActiveShopping listId={activeShoppingListId} onClose={() => setActiveShoppingListId(null)} />;
@@ -57,6 +83,11 @@ export function App() {
         {tab === "altro" && <Settings />}
       </div>
       <TabBar active={tab} onChange={(id) => setTab(id as Tab)} />
+      <GeminiKeySheet
+        open={setupGeminiOpen}
+        onClose={closeInitialGeminiSetup}
+        onSaved={() => setSetupGeminiOpen(false)}
+      />
     </div>
   );
 }

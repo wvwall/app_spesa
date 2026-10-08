@@ -19,17 +19,19 @@ roadmap) e [DESIGN.md](DESIGN.md) (identità visiva "il quaderno della spesa", t
 - **Frontend**: Vite + React 19 + TypeScript (strict) + Tailwind CSS v4
 - **Dati**: Dexie (IndexedDB) — tutto locale al dispositivo, nessun account, nessun backend dati
 - **PWA**: `vite-plugin-pwa`, installabile, funziona offline (tranne la generazione AI)
-- **AI**: Google Gemini (`gemini-2.5-flash`) via una Netlify Function stateless — la chiave non
-  è mai esposta al client
+- **AI**: Google Gemini (`gemini-2.5-flash`) via una Netlify Function stateless; la chiave personale
+  è salvata solo nell'IndexedDB del browser e non viene inclusa nei backup
 - **Hosting**: Netlify (deploy continuo dal branch `main`)
 
 ## Come funziona l'AI
 
-`netlify/functions/ai.ts` è un proxy stateless: riceve gli ingredienti selezionati e propone un
-piatto, restituendo separatamente cosa hai già (la selezione stessa, mai un'invenzione del
-modello) e cosa manca da comprare. Vincolo non negoziabile: **in famiglia c'è un'allergia alle
-noci**, quindi ogni generazione passa da una doppia barriera (prompt di sistema + controllo
-sull'output) prima di arrivare all'app.
+`netlify/functions/ai.ts` è un proxy stateless: riceve la chiave Gemini fornita dall'utente e gli
+ingredienti selezionati, propone un piatto e restituisce separatamente cosa hai già (la selezione
+stessa, mai un'invenzione del modello) e cosa manca da comprare. La chiave viene usata solo per la
+richiesta e non viene salvata dalla Function. In produzione ogni utente può configurare la chiave
+al primo avvio, al primo uso dell'AI o da *Altro*; resta nel browser e non viene esportata nei backup. Vincolo non negoziabile:
+**in famiglia c'è un'allergia alle noci**, quindi ogni generazione passa da una doppia barriera
+(prompt di sistema + controllo sull'output) prima di arrivare all'app.
 
 I suggerimenti di ingredienti alternativi in negozio ("manca qualcosa?") **non** passano dall'AI:
 sono una mappa locale curata a mano (`src/lib/sostituzioni.ts`) — istantanea, gratuita e
@@ -51,7 +53,9 @@ npm run netlify:dev    # Vite + Netlify Functions — http://localhost:8888
 Con `netlify:dev`, **apri il browser sulla porta stampata come "Netlify Dev" (di solito 8888)**,
 non sulla porta nuda di Vite: solo il proxy di Netlify conosce le rotte `/.netlify/functions/*`.
 
-Serve una chiave Gemini in un file `.env` in root (vedi `.env.example`):
+Per lo sviluppo locale con `netlify:dev` puoi usare una chiave Gemini in un file `.env` in root
+(vedi `.env.example`). Netlify Dev usa questa variabile solo come ripiego locale; in produzione
+non è richiesta e l'utente inserisce la propria chiave dalla schermata *Altro*.
 
 ```
 GEMINI_API_KEY=...
@@ -79,6 +83,5 @@ design-system/            token e componenti generati dal design system, riferim
 
 ## Deploy
 
-Deploy continuo su Netlify a ogni push su `main`. Sul sito Netlify va impostata la variabile
-d'ambiente `GEMINI_API_KEY` (Site settings → Environment variables) perché la generazione AI
-funzioni in produzione.
+Deploy continuo su Netlify a ogni push su `main`. Non serve configurare `GEMINI_API_KEY` sul sito:
+in produzione l'AI usa la chiave Gemini configurata localmente dall'utente nell'app.

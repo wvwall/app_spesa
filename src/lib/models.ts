@@ -21,6 +21,14 @@ export interface Profile {
   updatedAt: string;
 }
 
+/** Local-only provider credentials. This table is intentionally excluded from backups. */
+export interface AiSettings {
+  id: "gemini";
+  geminiApiKey?: string;
+  setupPromptDismissed?: boolean;
+  updatedAt: string;
+}
+
 export interface Ingredient {
   id: string;
   nome: string;

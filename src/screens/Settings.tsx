@@ -3,8 +3,9 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Minus, Plus, GripVertical } from "lucide-react";
 import { db, getOrCreateProfile, applyTheme } from "../lib/database";
+import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
-import { Button, Chip, Badge } from "../components";
+import { Button, Chip, Badge, GeminiKeySheet } from "../components";
 import type { Theme } from "../lib/models";
 
 const GIORNI_OPZIONI: { label: string; valore: number }[] = [
@@ -19,8 +20,14 @@ const GIORNI_OPZIONI: { label: string; valore: number }[] = [
 
 export function Settings() {
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
+  const chiaveGeminiConfigurata = useLiveQuery(
+    async () => Boolean((await db.aiSettings.get(GEMINI_SETTINGS_ID))?.geminiApiKey),
+    [],
+  );
   const inputFileRef = useRef<HTMLInputElement>(null);
   const [messaggio, setMessaggio] = useState<string | null>(null);
+  const [dialogChiaveAI, setDialogChiaveAI] = useState(false);
+  const [confermaRimozioneChiave, setConfermaRimozioneChiave] = useState(false);
 
   if (!profilo) return null;
 
@@ -36,6 +43,12 @@ export function Settings() {
   async function changeTheme(tema: Theme) {
     await db.profilo.update(profilo!.id, { tema });
     applyTheme(tema);
+  }
+
+  async function handleRemoveGeminiKey() {
+    await removeGeminiApiKey();
+    setConfermaRimozioneChiave(false);
+    setMessaggio("Chiave Gemini rimossa da questo browser.");
   }
 
   async function handleImport(file: File) {
@@ -111,6 +124,55 @@ export function Settings() {
         </section>
 
         <section>
+          <Label>Intelligenza artificiale</Label>
+          <p style={{ fontSize: 13, color: "var(--inchiostro-70)", margin: "0 0 10px", lineHeight: 1.5 }}>
+            Per i suggerimenti AI puoi usare solo Google Gemini. La chiave resta salvata su questo dispositivo.
+          </p>
+          <div
+            className="flex items-center justify-between gap-3 border rounded-2xl px-3.5 py-3"
+            style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+          >
+            <div>
+              <div style={{ fontWeight: 700 }}>Google Gemini</div>
+              <div style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 3 }}>
+                {chiaveGeminiConfigurata ? "Chiave configurata su questo browser" : "Chiave non configurata"}
+              </div>
+            </div>
+            <Button
+              fullWidth={false}
+              onClick={() => setDialogChiaveAI(true)}
+              style={{ padding: "10px 12px", fontSize: 13.5, flex: "none" }}
+            >
+              {chiaveGeminiConfigurata ? "Sostituisci" : "Configura"}
+            </Button>
+          </div>
+          {chiaveGeminiConfigurata && !confermaRimozioneChiave && (
+            <Button
+              variant="warn"
+              onClick={() => setConfermaRimozioneChiave(true)}
+              style={{ marginTop: 8, fontSize: 14 }}
+            >
+              Rimuovi chiave
+            </Button>
+          )}
+          {confermaRimozioneChiave && (
+            <div className="flex flex-col gap-2 mt-2">
+              <p style={{ fontSize: 13, color: "var(--inchiostro-70)", margin: 0 }}>
+                Rimuovere la chiave da questo browser? Le funzioni base continueranno a essere disponibili.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="warn" onClick={() => void handleRemoveGeminiKey()}>
+                  Rimuovi
+                </Button>
+                <Button variant="ghost" onClick={() => setConfermaRimozioneChiave(false)}>
+                  Annulla
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section>
           <Label>Backup</Label>
           <div className="flex flex-col gap-2">
             <Button variant="ghost" onClick={() => void downloadBackup()}>
@@ -153,6 +215,14 @@ export function Settings() {
           Quaderno della spesa · v1.0 · dati salvati solo su questo telefono
         </p>
       </div>
+      <GeminiKeySheet
+        open={dialogChiaveAI}
+        onClose={() => setDialogChiaveAI(false)}
+        onSaved={() => {
+          setDialogChiaveAI(false);
+          setMessaggio("Chiave Gemini salvata su questo browser.");
+        }}
+      />
     </div>
   );
 }
