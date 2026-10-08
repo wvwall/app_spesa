@@ -3,9 +3,12 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Minus, Plus, GripVertical } from "lucide-react";
 import { db, getOrCreateProfile, applyTheme } from "../lib/database";
+import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
-import { Button, Chip, Badge } from "../components";
+import { Button, Chip, Badge, GeminiKeySheet } from "../components";
 import type { Theme } from "../lib/models";
+import { CATALOGO_ALLERGENI, trovaAllergene } from "../lib/allergens";
+import packageJson from "../../package.json";
 
 const GIORNI_OPZIONI: { label: string; valore: number }[] = [
   { label: "Lun", valore: 1 },
@@ -19,10 +22,37 @@ const GIORNI_OPZIONI: { label: string; valore: number }[] = [
 
 export function Settings() {
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
+  const chiaveGeminiConfigurata = useLiveQuery(
+    async () => Boolean((await db.aiSettings.get(GEMINI_SETTINGS_ID))?.geminiApiKey),
+    [],
+  );
   const inputFileRef = useRef<HTMLInputElement>(null);
   const [messaggio, setMessaggio] = useState<string | null>(null);
+  const [dialogChiaveAI, setDialogChiaveAI] = useState(false);
+  const [confermaRimozioneChiave, setConfermaRimozioneChiave] = useState(false);
+  const [nuovoAllergene, setNuovoAllergene] = useState("");
+  const [confermaRimozioneAllergene, setConfermaRimozioneAllergene] = useState<string | null>(null);
 
   if (!profilo) return null;
+
+  async function addAllergene(nome: string) {
+    const pulito = nome.trim();
+    if (!pulito) return;
+    const esistenti = profilo!.vincoliAlimentari.map((a) => a.toLowerCase());
+    if (esistenti.includes(pulito.toLowerCase())) {
+      setNuovoAllergene("");
+      return;
+    }
+    await db.profilo.update(profilo!.id, { vincoliAlimentari: [...profilo!.vincoliAlimentari, pulito] });
+    setNuovoAllergene("");
+  }
+
+  async function removeAllergene(nome: string) {
+    await db.profilo.update(profilo!.id, {
+      vincoliAlimentari: profilo!.vincoliAlimentari.filter((a) => a !== nome),
+    });
+    setConfermaRimozioneAllergene(null);
+  }
 
   async function changeServings(delta: number) {
     const nuove = Math.max(1, profilo!.porzioniDefault + delta);
@@ -38,6 +68,12 @@ export function Settings() {
     applyTheme(tema);
   }
 
+  async function handleRemoveGeminiKey() {
+    await removeGeminiApiKey();
+    setConfermaRimozioneChiave(false);
+    setMessaggio("Chiave Gemini rimossa da questo browser.");
+  }
+
   async function handleImport(file: File) {
     try {
       await importBackup(file);
@@ -46,6 +82,15 @@ export function Settings() {
       setMessaggio(err instanceof Error ? err.message : "Import fallito.");
     }
   }
+
+  const allergeniAttivi = new Set(
+    profilo.vincoliAlimentari.map((a) => trovaAllergene(a)?.id).filter((id): id is string => Boolean(id)),
+  );
+  const allergeniSuggeriti = CATALOGO_ALLERGENI.filter(
+    (a) =>
+      !allergeniAttivi.has(a.id) &&
+      !profilo.vincoliAlimentari.some((v) => v.toLowerCase() === a.etichetta.toLowerCase()),
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -92,11 +137,83 @@ export function Settings() {
         </section>
 
         <section>
-          <Label>Vincoli alimentari</Label>
-          <Badge kind="allergene" />
-          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 8, lineHeight: 1.5 }}>
-            Per disattivarlo serve una conferma doppia. Ogni piatto generato dall'AI riporta «✓ verificato: senza noci».
+          <Label>Allergie e vincoli</Label>
+          {profilo.vincoliAlimentari.length > 0 ? (
+            <Badge kind="allergene">Da evitare</Badge>
+          ) : (
+            <p style={{ fontSize: 13, color: "var(--inchiostro-70)", lineHeight: 1.5 }}>
+              Nessun vincolo attivo. L’AI non esclude nulla.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2" style={{ marginTop: 10 }}>
+            {profilo.vincoliAlimentari.map((a) => (
+              <Chip
+                key={a}
+                state="allergen"
+                onClick={() => {
+                  if (trovaAllergene(a)?.id === "frutta-a-guscio") setConfermaRimozioneAllergene(a);
+                  else void removeAllergene(a);
+                }}
+              >
+                {a} ×
+              </Chip>
+            ))}
+          </div>
+          {confermaRimozioneAllergene && (
+            <div
+              className="flex flex-col gap-2 border rounded-2xl p-3 mt-3"
+              style={{ borderColor: "var(--pomodoro)" }}
+            >
+              <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                Rimuovere “{confermaRimozioneAllergene}”? È un vincolo di sicurezza: per la famiglia l’allergia è
+                critica. Confermi di volerlo disattivare?
+              </p>
+              <div className="flex gap-2">
+                <Button variant="warn" onClick={() => void removeAllergene(confermaRimozioneAllergene)}>
+                  Rimuovi
+                </Button>
+                <Button variant="ghost" onClick={() => setConfermaRimozioneAllergene(null)}>
+                  Annulla
+                </Button>
+              </div>
+            </div>
+          )}
+          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 10, lineHeight: 1.5 }}>
+            Le noci sono escluse di default. Ogni piatto generato dall’AI viene ricontrollato su questi vincoli;
+            per allergie non riconosciute l’app non può garantire l’assenza, quindi controlla sempre gli ingredienti.
           </p>
+          {allergeniSuggeriti.length > 0 && (
+            <>
+              <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", margin: "12px 0 8px" }}>Aggiungi un allergene comune:</p>
+              <div className="flex flex-wrap gap-2">
+                {allergeniSuggeriti.map((a) => (
+                  <Chip key={a.id} onClick={() => void addAllergene(a.etichetta)}>
+                    + {a.etichetta}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="flex gap-2" style={{ marginTop: 12 }}>
+            <input
+              className="border rounded-xl px-3 py-2.5 text-sm flex-1"
+              style={{ borderColor: "var(--quadretto)" }}
+              placeholder="Altra allergia…"
+              value={nuovoAllergene}
+              onChange={(e) => setNuovoAllergene(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void addAllergene(nuovoAllergene);
+              }}
+            />
+            <Button
+              fullWidth={false}
+              onClick={() => void addAllergene(nuovoAllergene)}
+              disabled={!nuovoAllergene.trim()}
+              style={{ padding: "10px 14px", fontSize: 14, flex: "none" }}
+            >
+              Aggiungi
+            </Button>
+          </div>
         </section>
 
         <section>
@@ -108,6 +225,55 @@ export function Settings() {
             ordine={profilo.ordineReparti}
             onCambia={(nuovo) => void db.profilo.update(profilo.id, { ordineReparti: nuovo })}
           />
+        </section>
+
+        <section>
+          <Label>Intelligenza artificiale</Label>
+          <p style={{ fontSize: 13, color: "var(--inchiostro-70)", margin: "0 0 10px", lineHeight: 1.5 }}>
+            Per i suggerimenti AI puoi usare solo Google Gemini. La chiave resta salvata su questo dispositivo.
+          </p>
+          <div
+            className="flex items-center justify-between gap-3 border rounded-2xl px-3.5 py-3"
+            style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+          >
+            <div>
+              <div style={{ fontWeight: 700 }}>Google Gemini</div>
+              <div style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 3 }}>
+                {chiaveGeminiConfigurata ? "Chiave configurata su questo browser" : "Chiave non configurata"}
+              </div>
+            </div>
+            <Button
+              fullWidth={false}
+              onClick={() => setDialogChiaveAI(true)}
+              style={{ padding: "10px 12px", fontSize: 13.5, flex: "none" }}
+            >
+              {chiaveGeminiConfigurata ? "Sostituisci" : "Configura"}
+            </Button>
+          </div>
+          {chiaveGeminiConfigurata && !confermaRimozioneChiave && (
+            <Button
+              variant="warn"
+              onClick={() => setConfermaRimozioneChiave(true)}
+              style={{ marginTop: 8, fontSize: 14 }}
+            >
+              Rimuovi chiave
+            </Button>
+          )}
+          {confermaRimozioneChiave && (
+            <div className="flex flex-col gap-2 mt-2">
+              <p style={{ fontSize: 13, color: "var(--inchiostro-70)", margin: 0 }}>
+                Rimuovere la chiave da questo browser? Le funzioni base continueranno a essere disponibili.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="warn" onClick={() => void handleRemoveGeminiKey()}>
+                  Rimuovi
+                </Button>
+                <Button variant="ghost" onClick={() => setConfermaRimozioneChiave(false)}>
+                  Annulla
+                </Button>
+              </div>
+            </div>
+          )}
         </section>
 
         <section>
@@ -150,9 +316,17 @@ export function Settings() {
         </section>
 
         <p style={{ fontSize: 12, color: "var(--inchiostro-70)", textAlign: "center", marginTop: 4 }}>
-          Quaderno della spesa · v1.0 · dati salvati solo su questo telefono
+          Quaderno della spesa · v{packageJson.version} · dati salvati solo su questo telefono
         </p>
       </div>
+      <GeminiKeySheet
+        open={dialogChiaveAI}
+        onClose={() => setDialogChiaveAI(false)}
+        onSaved={() => {
+          setDialogChiaveAI(false);
+          setMessaggio("Chiave Gemini salvata su questo browser.");
+        }}
+      />
     </div>
   );
 }

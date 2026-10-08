@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { getGeminiApiKey, hasLocalGeminiFallback } from "./aiSettings";
+
+export class GeminiApiKeyRequiredError extends Error {
+  constructor() {
+    super("Per usare Google Gemini, inserisci la tua chiave API.");
+    this.name = "GeminiApiKeyRequiredError";
+  }
+}
 
 const GeneratedDishSchema = z.object({
   nome: z.string(),
@@ -8,7 +16,10 @@ const GeneratedDishSchema = z.object({
   // Do not send "ingredientiPosseduti": only the app knows what is available from the user's
   // selection. AI must not decide this, as it could invent claims such as "you already have oil".
   ingredientiDaComprare: z.array(z.object({ nome: z.string(), quantita: z.string() })),
-  verificatoSenzaNoci: z.literal(true),
+  // Etichette degli allergeni controllati e superati, e vincoli non riconosciuti che l'app non
+  // può verificare automaticamente (vedi src/lib/allergens.ts).
+  allergieVerificate: z.array(z.string()),
+  allergieNonVerificate: z.array(z.string()),
 });
 export type GeneratedDish = z.infer<typeof GeneratedDishSchema>;
 
@@ -22,13 +33,17 @@ const DepartmentClassificationResponseSchema = z.object({
 const NETLIFY_FUNCTIONS_BASE = "/.netlify/functions";
 
 async function callProxy(corpo: Record<string, unknown>): Promise<unknown> {
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey && !(await hasLocalGeminiFallback())) throw new GeminiApiKeyRequiredError();
   const risposta = await fetch(`${NETLIFY_FUNCTIONS_BASE}/ai`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(corpo),
+    cache: "no-store",
+    body: JSON.stringify({ ...corpo, ...(apiKey ? { apiKey } : {}) }),
   });
   if (!risposta.ok) {
     const dati = await risposta.json().catch(() => ({}));
+    if (dati.codice === "GEMINI_API_KEY_REQUIRED") throw new GeminiApiKeyRequiredError();
     throw new Error(dati.errore ?? "Il piatto non è arrivato. Riprova o componilo a mano.");
   }
   return risposta.json();

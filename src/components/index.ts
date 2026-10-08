@@ -11,3 +11,4 @@ export { CycleNavigator } from "./navigation/CycleNavigator";
 export { TabBar } from "./navigation/TabBar";
 export { DishCard } from "./dishes/DishCard";
 export { ProposalCard } from "./dishes/ProposalCard";
+export { GeminiKeySheet } from "./ai/GeminiKeySheet";

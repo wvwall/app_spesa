@@ -51,7 +51,7 @@ Una **web app mobile-first (PWA)** per pianificare i pasti della settimana (pran
 - **RF10 — Ordinamento per reparto**: ogni ingrediente ha un reparto (ortofrutta, banco frigo, scatolame…); in modalità spesa la lista segue l'ordine del negozio (personalizzabile).
 - **RF11 — Dispensa**: elenco di ciò che è già in casa, sottratto automaticamente dalla lista.
 - **RF12 — Copia settimana / template**: ripartire dal menù di una settimana precedente.
-- **RF13 — Vincoli alimentari**: allergie/preferenze come contesto fisso per ogni generazione AI. Vincolo già noto e **critico**: **niente noci** — esclusione assoluta (allergia), mai proposte in piatti né come alternative.
+- **RF13 — Vincoli alimentari**: allergie/preferenze come contesto per ogni generazione AI, modificabili dal profilo. Il default è **niente noci** — esclusione di sicurezza, mai proposta in piatti né come alternative; la rimozione richiede una conferma esplicita. L'utente può aggiungere altre allergie: quelle riconosciute da un catalogo hanno doppia barriera (prompt + controllo sull'output), quelle libere sono solo comunicate al modello.
 - **RF14 — Note per articolo**: "prendi quella in vetro", "solo se in offerta".
 
 > *Scartato:* budget stimato / promozioni — richiedeva i prezzi (integrazione Pepesto), fuori interesse.
@@ -71,32 +71,32 @@ Una **web app mobile-first (PWA)** per pianificare i pasti della settimana (pran
 
 ## 5. Architettura
 
-### 5.1 Scelta: PWA local-only + proxy AI stateless
+### 5.1 Scelta: PWA local-first + proxy AI stateless
 
-Nessun sync e nessuna integrazione esterna per il catalogo: tutti i dati applicativi vivono sul dispositivo. Il backend esiste per un solo motivo — la chiave API dell'LLM non può stare nel client — ed è **stateless e senza database**: può essere anche una singola serverless function.
+Nessun sync e nessuna integrazione esterna per il catalogo: i dati applicativi e la chiave AI sono salvati sul dispositivo. Quando si usa l'AI, la richiesta invia via HTTPS alla Function stateless il prompt necessario e la chiave Gemini personale; la Function la usa per la singola chiamata e non la persiste. In locale Netlify Dev può usare `GEMINI_API_KEY` come ripiego; in produzione la variabile d'ambiente non è usata.
 
 ```
 ┌────────────────────────┐         ┌──────────────────────────┐
 │  PWA (React + TS)      │  HTTPS  │  Proxy AI stateless       │
 │  ──────────────────    │────────►│  (serverless function)    │
-│  IndexedDB: unica      │  solo   │  ───────────────────────  │
-│  fonte di verità       │   AI    │  • layer astratto         │
-│  (dati + catalogo)     │         │    provider LLM           │
-│  Seed catalogo (JSON   │         │  • chiave app + rate      │
-│  nel bundle dell'app)  │         │    limit anti-abuso       │
+│  IndexedDB: dati e     │  solo   │  ───────────────────────  │
+│  chiave Gemini locale  │   AI    │  • validazione richiesta  │
+│  (dati + catalogo)     │         │  • chiave utente effimera │
+│  Seed catalogo (JSON   │         │  • nessun DB / persistenza│
+│  nel bundle dell'app)  │         │                            │
 │  Service Worker        │         └──────────┬───────────────┘
 │  (offline)             │                    │
 └────────────────────────┘         ┌──────────▼───────────────┐
-                                   │  API LLM (Claude/GPT/…)   │
+                                   │  Google Gemini            │
                                    └──────────────────────────┘
 ```
 
 Principi:
 
-1. **Il client legge e scrive sempre e solo in locale** (IndexedDB): l'app è istantanea e funziona offline per definizione. La rete serve unicamente per generare piatti, piani e alternative.
-2. **Il backend è "stupido" di proposito**: solo endpoint `/ai/*`, nessun dato utente, nessun DB, nessuna auth utente — solo una protezione leggera anti-abuso (chiave app statica + rate limit) per non farsi consumare i crediti LLM da terzi.
+1. **Il client legge e scrive i dati in locale** (IndexedDB): l'app è istantanea e funziona offline per definizione. La rete serve per le funzioni AI.
+2. **Il backend è "stupido" di proposito**: solo endpoint AI, nessun account e nessun DB. Riceve la chiave Gemini scelta dall'utente per la singola richiesta, la usa e non la salva. Le chiavi non sono scritte nei log applicativi.
 3. **Catalogo nel bundle**: il seed del catalogo è un JSON versionato che viaggia con l'app (§5.3), caricato in IndexedDB al primo avvio → ricerca ingredienti sempre offline, zero chiamate di rete.
-4. **Privacy gratis**: i dati della famiglia non lasciano mai il dispositivo (all'LLM arrivano solo gli ingredienti della singola richiesta).
+4. **Privacy per dispositivo**: i dati non sono sincronizzati né conservati su un backend. Quando si usa l'AI, i dati inclusi nel prompt e la chiave personale transitano dalla Function Netlify e vengono inviati a Google Gemini.
 
 ### 5.2 Evoluzione futura (fuori scope, ma prevista)
 
@@ -109,23 +109,15 @@ Se in futuro servisse la lista condivisa in famiglia, l'architettura lo consente
 - **Estendibile in app**: aggiunta, rinomina, cambio reparto e cancellazione di ingredienti direttamente dall'interfaccia (`origine: seed | utente`).
 - **Decisione**: scartata l'integrazione con l'API Pepesto (catalogo Esselunga reale) — il suo valore erano prezzi e promozioni, che non interessano; senza quelli restavano solo costi (€29,90+) e una dipendenza da un servizio terzo di scraping.
 
-### 5.4 Integrazione AI (layer astratto)
+### 5.4 Integrazione AI
 
-Interfaccia interna unica sul backend, provider scelto via env:
-
-```ts
-interface RecipeAI {
-  generateDish(input: { ingredienti: Ingrediente[]; vincoli: VincoliDietetici; porzioni: number }): Promise<Piatto>;
-  generateWeekPlan(input: { ingredientiGlobali: Ingrediente[]; giorni: Slot[]; vincoli: VincoliDietetici }): Promise<PianoSettimana>;
-  suggestAlternatives(input: { ingrediente: Ingrediente; contesto: Piatto[] }): Promise<Alternativa[]>;
-}
-```
+La v1 supporta Google Gemini con il modello `gemini-2.5-flash`, senza selezione del provider o del modello. La chiave viene inserita dall'utente, salvata localmente in IndexedDB e non inclusa nei backup. L'integrazione non è ancora astratta: eventuali adapter per Anthropic e OpenAI sono fuori scope.
 
 - Output sempre **JSON strutturato e validato** (schema con Zod): mai testo libero da parsare.
 - Prompt di sistema con: cucina italiana/mediterranea di default, stagionalità, vincoli dietetici della famiglia, porzioni.
 - L'AI può proporre ingredienti extra non selezionati → mostrati come "da aggiungere alla lista" con **conferma esplicita** dell'utente.
 - Le **alternative** (RF7) vengono generate in batch alla chiusura della lista e salvate localmente → disponibili offline in negozio.
-- **Vincoli critici come doppia barriera**: l'esclusione delle noci (allergia) sta sia nel prompt di sistema di ogni chiamata, sia in una **validazione post-generazione** sull'output JSON (blocklist di termini: noci, gherigli, salsa di noci…) che scarta e rigenera il piatto in caso di violazione. Non ci si affida mai al solo prompt per un vincolo di sicurezza.
+- **Vincoli critici come doppia barriera**: per gli allergeni riconosciuti (default: noci e frutta a guscio) l'esclusione sta sia nel prompt di sistema di ogni chiamata, sia in una **validazione post-generazione** sull'output JSON (termini dell'allergene: noci, gherigli, mandorle…) che scarta e rigenera il piatto in caso di violazione. Non ci si affida mai al solo prompt per un vincolo di sicurezza. Le allergie non riconosciute sono incluse nel prompt ma non verificate automaticamente: l'app lo segnala all'utente.
 
 ---
 
@@ -136,6 +128,7 @@ Tutto risiede in IndexedDB sul dispositivo:
 ```
 Profilo (singleton)                 (porzioni default, vincoli dietetici, ordine reparti,
                                      seedVersion applicata)
+ConfigurazioneAI (singleton)         (chiave Gemini; locale e non inclusa nei backup)
 Ingrediente                         (nome, reparto, unitàDefault, alias[], note,
                                      origine: seed|utente)
 Piatto       ──< PiattoIngrediente  (quantità, unità; piatto: nome, procedimento?, preferito,
@@ -177,9 +170,9 @@ Le entità portano `id` UUID e `updatedAt`: oggi servono per l'export/import JSO
 | PWA/offline | `vite-plugin-pwa` (Workbox) + **IndexedDB via Dexie.js** | Dexie: API ergonomica, `liveQuery` per UI reattiva sui dati locali |
 | UI | **Tailwind CSS** (+ componenti headless, es. shadcn-style) | Controllo totale sul design mobile-first, leggero |
 | Stato | Dexie liveQuery + Zustand per stato UI effimero | I dati "veri" stanno in IndexedDB, non in uno store in memoria |
-| Backend | **Serverless functions** (Vercel/Netlify) — o micro NestJS se preferisci lo stack abituale | Unica responsabilità: proxy AI. Stateless, **nessun database server** |
-| Auth | Nessuna auth utente; chiave app statica + rate limit sul proxy | Protegge i crediti LLM da abusi, zero attrito per la famiglia |
-| AI | Layer astratto (§5.4), provider via env | Claude e GPT entrambi adeguati; si decide con un A/B sui prompt reali |
+| Backend | **Netlify Function** | Proxy AI stateless, nessun database; riceve la chiave utente per singola richiesta |
+| Auth | Nessun account; ogni utente fornisce la propria chiave Gemini | Nessuna chiave AI condivisa lato server |
+| AI | Google Gemini `gemini-2.5-flash` | Provider e modello fissi nella v1; Anthropic/OpenAI fuori scope |
 | Deploy | **Unico progetto** Vercel/Netlify: frontend statico + function proxy | Costo zero, una sola cosa da deployare |
 
 **Alternative scartate (e perché):**

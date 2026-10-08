@@ -8,7 +8,12 @@ import {
   assignDishToSlot,
 } from "../lib/weeklyPlan";
 import { generateListFromPlan } from "../lib/shoppingList";
-import { generateDish, generateWeek, type GeneratedDish } from "../lib/ai";
+import {
+  generateDish,
+  generateWeek,
+  GeminiApiKeyRequiredError,
+  type GeneratedDish,
+} from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
 import {
   cycleStart,
@@ -19,7 +24,15 @@ import {
   formatCycleLabel,
   isToday,
 } from "../lib/calendar";
-import { DishCard, Button, SearchInput, Badge, CycleNavigator, Skeleton } from "../components";
+import {
+  DishCard,
+  Button,
+  SearchInput,
+  Badge,
+  CycleNavigator,
+  Skeleton,
+  GeminiKeySheet,
+} from "../components";
 import type { Ingredient, Dish, Slot } from "../lib/models";
 
 // Meals per AI request: generating the entire week (up to ~14 complete dishes) in one response
@@ -444,6 +457,7 @@ function PlanSlotRow({
   const [query, setQuery] = useState("");
   const [rigenerazione, setRigenerazione] = useState(false);
   const [erroreRigenerazione, setErroreRigenerazione] = useState<string | null>(null);
+  const [richiestaChiaveAI, setRichiestaChiaveAI] = useState(false);
   const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
 
   async function assign(piattoId: string | undefined) {
@@ -483,6 +497,10 @@ function PlanSlotRow({
       const nuovoPiattoId = await saveGeneratedDish(generato, [], ingredientiCatalogo);
       await assign(nuovoPiattoId);
     } catch (e) {
+      if (e instanceof GeminiApiKeyRequiredError) {
+        setRichiestaChiaveAI(true);
+        return;
+      }
       setErroreRigenerazione(e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova.");
     } finally {
       setRigenerazione(false);
@@ -498,91 +516,101 @@ function PlanSlotRow({
       (p) => p.nome.toLowerCase() === testoRicerca.toLowerCase(),
     );
     return (
-      <div
-        className="flex flex-col gap-2 border rounded-2xl p-2.5"
-        style={{
-          borderColor: "var(--biro)",
-          background: "var(--surface-card)",
-        }}>
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <SearchInput
-              autoFocus
-              placeholder="Cerca o scrivi un piatto…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+      <>
+        <div
+          className="flex flex-col gap-2 border rounded-2xl p-2.5"
+          style={{
+            borderColor: "var(--biro)",
+            background: "var(--surface-card)",
+          }}>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <SearchInput
+                autoFocus
+                placeholder="Cerca o scrivi un piatto…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="text-xs px-1 flex-none"
+              style={{ color: "var(--text-secondary)" }}
+              onClick={() => {
+                setRicerca(false);
+                setQuery("");
+              }}>
+              annulla
+            </button>
           </div>
           <button
             type="button"
-            className="text-xs px-1 flex-none"
-            style={{ color: "var(--text-secondary)" }}
-            onClick={() => {
-              setRicerca(false);
-              setQuery("");
-            }}>
-            annulla
+            className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
+            style={{ color: "var(--biro)", fontWeight: 600 }}
+            onClick={() => void generateWithAI()}
+            disabled={rigenerazione}
+          >
+            {rigenerazione ? (
+              "Sto pensando a un piatto…"
+            ) : (
+              <>
+                <Sparkles size={15} strokeWidth={2} /> {piatto ? "Rigenera con AI" : "Genera con AI"}
+              </>
+            )}
           </button>
+          {erroreRigenerazione && (
+            <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreRigenerazione}</p>
+          )}
+          <div className="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
+            {risultati.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="text-left px-2.5 py-2 rounded-lg text-sm"
+                style={{ color: "var(--text-body)", fontWeight: 600 }}
+                onClick={() => void assign(p.id)}>
+                {p.nome}
+              </button>
+            ))}
+            {risultati.length === 0 && testoRicerca === "" && (
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: 13,
+                  padding: "4px 2px",
+                }}>
+                Scrivi per cercare nel ricettario, o descrivi un piatto al volo.
+              </p>
+            )}
+            {testoRicerca !== "" && !corrispondenzaEsatta && (
+              <button
+                type="button"
+                className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
+                style={{ color: "var(--biro)", fontWeight: 600 }}
+                onClick={() => void createCustomAndAssign(testoRicerca)}>
+                <Plus size={15} strokeWidth={2.25} /> Usa “{testoRicerca}” così com'è
+              </button>
+            )}
+            {piatto && (
+              <button
+                type="button"
+                className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
+                style={{ color: "var(--pomodoro)", fontWeight: 600 }}
+                onClick={() => void assign(undefined)}>
+                <X size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
+              </button>
+            )}
+          </div>
         </div>
-        <button
-          type="button"
-          className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
-          style={{ color: "var(--biro)", fontWeight: 600 }}
-          onClick={() => void generateWithAI()}
-          disabled={rigenerazione}
-        >
-          {rigenerazione ? (
-            "Sto pensando a un piatto…"
-          ) : (
-            <>
-              <Sparkles size={15} strokeWidth={2} /> {piatto ? "Rigenera con AI" : "Genera con AI"}
-            </>
-          )}
-        </button>
-        {erroreRigenerazione && (
-          <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreRigenerazione}</p>
-        )}
-        <div className="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
-          {risultati.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className="text-left px-2.5 py-2 rounded-lg text-sm"
-              style={{ color: "var(--text-body)", fontWeight: 600 }}
-              onClick={() => void assign(p.id)}>
-              {p.nome}
-            </button>
-          ))}
-          {risultati.length === 0 && testoRicerca === "" && (
-            <p
-              style={{
-                color: "var(--text-secondary)",
-                fontSize: 13,
-                padding: "4px 2px",
-              }}>
-              Scrivi per cercare nel ricettario, o descrivi un piatto al volo.
-            </p>
-          )}
-          {testoRicerca !== "" && !corrispondenzaEsatta && (
-            <button
-              type="button"
-              className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
-              style={{ color: "var(--biro)", fontWeight: 600 }}
-              onClick={() => void createCustomAndAssign(testoRicerca)}>
-              <Plus size={15} strokeWidth={2.25} /> Usa “{testoRicerca}” così com'è
-            </button>
-          )}
-          {piatto && (
-            <button
-              type="button"
-              className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
-              style={{ color: "var(--pomodoro)", fontWeight: 600 }}
-              onClick={() => void assign(undefined)}>
-              <X size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
-            </button>
-          )}
-        </div>
-      </div>
+        <GeminiKeySheet
+          open={richiestaChiaveAI}
+          onClose={() => setRichiestaChiaveAI(false)}
+          onSaved={() => {
+            setRichiestaChiaveAI(false);
+            void generateWithAI();
+          }}
+        />
+      </>
     );
   }
 

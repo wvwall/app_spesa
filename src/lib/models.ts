@@ -3,8 +3,9 @@ export type IngredientOrigin = "seed" | "utente";
 export type RecipeOrigin = "manuale" | "ai";
 export type Theme = "chiaro" | "scuro" | "stitch";
 
-/** Non-negotiable safety constraint: "noci" must always be present and must never be removed
- * without the user's explicit confirmation (see DESIGN.md §8.6 and ANALISI.md RF13). */
+/** Dietary constraints from the profile (see DESIGN.md §8.6 and ANALISI.md RF13). New profiles
+ * default to ["noci"]; the list is user-editable, but removing the nuts constraint requires an
+ * explicit double confirmation. */
 export interface Profile {
   id: string; // singleton
   porzioniDefault: number;
@@ -18,6 +19,14 @@ export interface Profile {
   /** Example-dish seed version (src/seed/dishes.ts), separate from seedVersion (ingredient
    * catalog) because the two depend on and evolve independently from each other. */
   seedVersionPiatti: number;
+  updatedAt: string;
+}
+
+/** Local-only provider credentials. This table is intentionally excluded from backups. */
+export interface AiSettings {
+  id: "gemini";
+  geminiApiKey?: string;
+  setupPromptDismissed?: boolean;
   updatedAt: string;
 }
 
@@ -40,6 +49,9 @@ export interface Dish {
   preferito: boolean;
   origine: RecipeOrigin;
   porzioni: number;
+  /** Allergeni riconosciuti e verificati automaticamente quando il piatto è stato generato.
+   * Salva il contesto del momento: cambiare le allergie nel profilo non riscrive il passato. */
+  allergieVerificate?: string[];
   updatedAt: string;
   deletedAt?: string;
 }

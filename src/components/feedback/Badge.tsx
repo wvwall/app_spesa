@@ -64,7 +64,7 @@ const KIND_CONTENT: Record<BadgeKind, ReactNode> = {
   ),
   allergene: (
     <>
-      <TriangleAlert size={16} strokeWidth={2} /> Niente noci — esclusione assoluta
+      <TriangleAlert size={16} strokeWidth={2} /> Vincoli alimentari attivi
     </>
   ),
   offline: (
@@ -75,7 +75,7 @@ const KIND_CONTENT: Record<BadgeKind, ReactNode> = {
   ),
   verificato: (
     <>
-      <ShieldCheck size={14} strokeWidth={2} /> verificato: senza noci
+      <ShieldCheck size={14} strokeWidth={2} /> verificato
     </>
   ),
   sostituito: "sostituito",
