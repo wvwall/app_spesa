@@ -62,7 +62,7 @@ export function TabBar({
               background: on ? "var(--biro-chiaro)" : "none",
               font: "inherit",
               fontSize: 11.5,
-              color: on ? "var(--biro)" : "var(--inchiostro-70)",
+              color: on ? "var(--biro)" : "var(--text-secondary)",
               fontWeight: on ? 700 : 400,
               padding: "7px 2px",
               borderRadius: 999,

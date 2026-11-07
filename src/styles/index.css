@@ -24,11 +24,14 @@
     --surface-card: #1C2025;
     --text-body: #E9EAE4;
     --text-secondary: #9AA095;
-    --text-interactive: #7C96E8;
+    --biro: #3BB3D1;
+    --biro-chiaro: rgba(59, 179, 209, .16);
+    --on-biro: #15181C;
+    --text-interactive: #3BB3D1;
     --border-quiet: #2A2F36;
     --grid-line: rgba(255, 255, 255, .06);
-    --surface-selected: rgba(124, 150, 232, .16);
-    --border-interactive: #7C96E8;
+    --surface-selected: rgba(59, 179, 209, .16);
+    --border-interactive: #3BB3D1;
   }
 }
 

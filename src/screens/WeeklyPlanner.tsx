@@ -256,33 +256,35 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
   return (
     <div className="flex flex-col h-full">
       <header className="px-5 pt-5 pb-2 flex-none">
-        <div
-          className="text-xs"
-          style={{
-            letterSpacing: ".14em",
-            textTransform: "uppercase",
-            color: "var(--text-secondary)",
-          }}>
-          La spesa di casa
-        </div>
-        <div className="flex items-baseline justify-between gap-2">
-          <h1
-            className="mt-0.5"
+        {/* Navigator on the first row, at the same height as in "Lista", so switching tabs
+            does not make it jump; the handwritten week label gets the full width below. */}
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className="text-xs"
             style={{
-              fontFamily: "var(--font-hand)",
-              fontWeight: 800,
-              fontSize: 26,
-              letterSpacing: "-0.02em",
-              color: "var(--biro)",
+              letterSpacing: ".14em",
+              textTransform: "uppercase",
+              color: "var(--text-secondary)",
             }}>
-            {formatCycleLabel(inizio)}
-          </h1>
+            La spesa di casa
+          </div>
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
             onOggi={() => onCycleOffsetChange(0)}
             onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
         </div>
+        <h1
+          style={{
+            fontFamily: "var(--font-hand)",
+            fontWeight: 800,
+            fontSize: 28,
+            lineHeight: 1.1,
+            letterSpacing: "-0.02em",
+            color: "var(--biro)",
+          }}>
+          {formatCycleLabel(inizio)}
+        </h1>
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
@@ -680,7 +682,7 @@ function PlanSlotRow({
           aria-label={`Rimuovi ${piatto.nome} da questo pasto`}
           onClick={() => void assign(undefined)}
           style={{
-            color: "var(--pomodoro)",
+            color: "var(--text-secondary)",
             padding: "6px 4px",
             flex: "none",
             display: "flex",

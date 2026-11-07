@@ -107,6 +107,8 @@ export interface ShoppingListItem {
   /** Alternatives pre-generated when the list is closed, available offline. */
   alternative: string[];
   sostituitoCon?: string;
+  /** Marked as not found in the store during active shopping. */
+  mancante?: boolean;
   /** Locally stored, resized JPEG data URL for this shopping-list item. */
   fotoDataUrl?: string;
 }

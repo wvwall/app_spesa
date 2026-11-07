@@ -68,12 +68,12 @@ export function ProposalCard({
       >
         {title}
       </h2>
-      {meta && <div style={{ color: "var(--inchiostro-70)", fontSize: 13, marginBottom: 10 }}>{meta}</div>}
+      {meta && <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 10 }}>{meta}</div>}
       {have && <div style={{ color: "var(--basilico)", fontSize: 13.5 }}>Hai già: {have}</div>}
       {buy && (
         <div style={{ color: "var(--biro)", fontSize: 13.5, marginBottom: extra ? 4 : 12 }}>Da comprare: {buy}</div>
       )}
-      {extra && <div style={{ color: "var(--inchiostro-70)", fontSize: 13, marginBottom: 12 }}>L'AI aggiunge: {extra}</div>}
+      {extra && <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 12 }}>L'AI aggiunge: {extra}</div>}
       {allergieVerificate.length > 0 && (
         <div
           style={{

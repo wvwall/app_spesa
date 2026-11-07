@@ -4,8 +4,10 @@
   --quadretto: #e4e7de;
   --inchiostro: #23261e;
   --inchiostro-70: #5a5e52;
-  --biro: #098fae;
+  /* #0a7190: 4.8:1 on carta, 5.6:1 with white text (WCAG AA). */
+  --biro: #0a7190;
   --biro-chiaro: #e8f6f9;
+  --on-biro: #ffffff;
   --basilico: #39724a;
   --pomodoro: #be3f27;
   --pomodoro-chiaro: #f7e5e0;
@@ -75,11 +77,15 @@
   --surface-card: #1c2025;
   --text-body: #e9eae4;
   --text-secondary: #9aa095;
-  --text-interactive: #7c96e8;
+  /* Light teal on lavagna (7.2:1); filled buttons switch to dark text (--on-biro). */
+  --biro: #3bb3d1;
+  --biro-chiaro: rgba(59, 179, 209, 0.16);
+  --on-biro: #15181c;
+  --text-interactive: #3bb3d1;
   --border-quiet: #2a2f36;
   --grid-line: rgba(255, 255, 255, 0.06);
-  --surface-selected: rgba(124, 150, 232, 0.16);
-  --border-interactive: #7c96e8;
+  --surface-selected: rgba(59, 179, 209, 0.16);
+  --border-interactive: #3bb3d1;
 }
 
 /* Optional Stitch theme: Lilo & Stitch's Hawaii, with warm sand, ocean, and sunset. Colors are
