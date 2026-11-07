@@ -9,7 +9,7 @@ interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Chip({ state = "default", children, style, ...rest }: ChipProps) {
   const s: CSSProperties = {
-    border: "1px solid var(--quadretto)",
+    border: "1px solid var(--border-quiet)",
     background: "var(--surface-card,#fff)",
     color: "var(--text-body)",
     borderRadius: "var(--radius-chip,8px)",
@@ -22,7 +22,11 @@ export function Chip({ state = "default", children, style, ...rest }: ChipProps)
     lineHeight: 1.3,
   };
   if (state === "selected") {
-    Object.assign(s, { background: "var(--biro-chiaro)", color: "var(--biro)", border: "1px solid var(--biro)" });
+    Object.assign(s, {
+      background: "var(--evidenziatore)",
+      color: "var(--on-evidenziatore)",
+      border: "1px solid var(--evidenziatore-bordo)",
+    });
   }
   if (state === "owned") {
     Object.assign(s, { background: "transparent", color: "var(--basilico)", border: "1px solid var(--basilico)" });

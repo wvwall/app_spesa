@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X, Upload } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X, Upload, Share2, ArrowDownWideNarrow } from "lucide-react";
 import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { getOrCreateWeeklyPlan } from "../lib/weeklyPlan";
 import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel } from "../lib/calendar";
@@ -17,9 +18,22 @@ import {
 } from "../lib/shoppingList";
 import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
+import { splitUnitFromNote, joinUnitAndNote, UNITA_SUGGERITE } from "../lib/textImport";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, Chip, CycleNavigator, Skeleton, ShoppingImportSheet } from "../components";
+import { Button, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
+
+/** Secondary list tools: icon over a short label, three per row, still 44px+ tall. */
+const COMPACT_ACTION: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 4,
+  padding: "9px 4px",
+  fontSize: 13,
+  minHeight: 60,
+};
 
 interface Props {
   cycleOffset: number;
@@ -60,14 +74,14 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   async function clearList() {
     if (!lista) return;
-    if (!window.confirm("Cancellare tutta la lista? Dovrai rigenerarla da Settimana.")) return;
+    if (!window.confirm("Cancellare tutta la lista? Non si può annullare.")) return;
     await deleteCompleteList(lista.id);
   }
 
-  async function addItem(nome: string, reparto: string, quantita: string, fotoDataUrl?: string) {
+  async function addItem(nome: string, reparto: string, quantita: string, fotoDataUrl?: string, nota?: string) {
     const piano = await getOrCreateWeeklyPlan(cicloIso);
     const listaAperta = await getOrCreateOpenList(piano.id);
-    await addFreeItem(listaAperta.id, nome, quantita, reparto, fotoDataUrl);
+    await addFreeItem(listaAperta.id, nome, quantita, reparto, fotoDataUrl, nota);
   }
 
   const [ordinando, setOrdinando] = useState(false);
@@ -122,9 +136,9 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--quadretto)" }}>
+      <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--border-quiet)" }}>
         <div className="flex items-center justify-between gap-2">
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>Lista della spesa</div>
+          <h1 className="truncate min-w-0" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22 }}>Lista della spesa</h1>
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
             onOggi={() => onCycleOffsetChange(0)}
@@ -155,14 +169,37 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
               >
                 {reparto}
               </div>
-              <div className="px-5 py-1">
+              {vociReparto.map((v) =>
+                itemBeingEdited?.id === v.id ? (
+                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
+                    <AddShoppingItemForm
+                      initiallyOpen
+                      initialName={v.nome}
+                      initialQuantity={v.quantita}
+                      initialDepartment={v.reparto}
+                      initialPhoto={v.fotoDataUrl}
+                      initialNote={v.nota}
+                      confirmLabel="Salva"
+                      onAdd={async (nome, reparto, quantita, fotoDataUrl, nota) => {
+                        await updateItem(v, { nome, reparto, quantita, fotoDataUrl, nota });
+                        setItemBeingEdited(null);
+                      }}
+                      onCancel={() => setItemBeingEdited(null)}
+                      reparti={ordineReparti}
+                    />
+                  </div>
+                ) : (
+                  <ShoppingListReviewRow key={v.id} voce={v} onEdit={() => setItemBeingEdited(v)} />
+                ),
+              )}
+              <div className="px-5 pt-1 pb-2">
                 {departmentWithForm === reparto ? (
                   <AddShoppingItemForm
                     initiallyOpen
                     initialDepartment={reparto}
                     reparti={ordineReparti}
-                    onAdd={async (nome, repartoSelezionato, quantita, fotoDataUrl) => {
-                      await addItem(nome, repartoSelezionato, quantita, fotoDataUrl);
+                    onAdd={async (nome, repartoSelezionato, quantita, fotoDataUrl, nota) => {
+                      await addItem(nome, repartoSelezionato, quantita, fotoDataUrl, nota);
                       setDepartmentWithForm(null);
                     }}
                     onCancel={() => setDepartmentWithForm(null)}
@@ -178,28 +215,6 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
                   </button>
                 )}
               </div>
-              {vociReparto.map((v) =>
-                itemBeingEdited?.id === v.id ? (
-                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--quadretto)" }}>
-                    <AddShoppingItemForm
-                      initiallyOpen
-                      initialName={v.nome}
-                      initialQuantity={v.quantita}
-                      initialDepartment={v.reparto}
-                      initialPhoto={v.fotoDataUrl}
-                      confirmLabel="Salva"
-                      onAdd={async (nome, reparto, quantita, fotoDataUrl) => {
-                        await updateItem(v, { nome, reparto, quantita, fotoDataUrl });
-                        setItemBeingEdited(null);
-                      }}
-                      onCancel={() => setItemBeingEdited(null)}
-                      reparti={ordineReparti}
-                    />
-                  </div>
-                ) : (
-                  <ShoppingListReviewRow key={v.id} voce={v} onEdit={() => setItemBeingEdited(v)} />
-                ),
-              )}
             </div>
           ))}
           <div className="px-5 py-3">
@@ -207,30 +222,41 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
           </div>
           {/* Keep the actions in the scrolling list instead of a fixed footer. This prevents
               overlap with the "Add item" form, especially when the keyboard is open, and avoids
-              accidental taps on "Start shopping" while entering an item. */}
-          <div className="px-5 pt-3 pb-6 flex flex-col gap-2 border-t" style={{ borderColor: "var(--quadretto)" }}>
-            <Button variant="ghost" onClick={() => void sortByDepartment()} disabled={ordinando}>
-              {ordinando ? "Ordino per reparto…" : "Ordina per reparto"}
-            </Button>
+              accidental taps on "Start shopping" while entering an item.
+              The primary action comes first; secondary tools sit in one compact row, and the
+              destructive "Clear list" is kept well away from "Start shopping". */}
+          <div className="px-5 pt-4 pb-6 flex flex-col gap-2 border-t" style={{ borderColor: "var(--border-quiet)" }}>
+            <Button onClick={() => void closeAndStartShopping()}>Inizia la spesa</Button>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="ghost"
+                style={COMPACT_ACTION}
+                onClick={() => void sortByDepartment()}
+                disabled={ordinando}
+              >
+                <ArrowDownWideNarrow size={17} strokeWidth={2} />
+                {ordinando ? "Ordino…" : "Ordina"}
+              </Button>
+              <Button variant="ghost" style={COMPACT_ACTION} onClick={exportText}>
+                <Share2 size={17} strokeWidth={2} />
+                Esporta
+              </Button>
+              <Button variant="ghost" style={COMPACT_ACTION} onClick={() => setImportOpen(true)}>
+                <Upload size={17} strokeWidth={2} />
+                Importa
+              </Button>
+            </div>
             {esitoOrdina && (
-              <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>{esitoOrdina}</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0 }}>{esitoOrdina}</p>
             )}
-            <Button variant="ghost" onClick={exportText}>
-              Esporta testo
-            </Button>
-            <Button variant="ghost" onClick={() => setImportOpen(true)}>
-              <span className="inline-flex items-center gap-1.5">
-                <Upload size={15} strokeWidth={2.25} /> Importa lista
-              </span>
-            </Button>
             {esitoImport && (
               <p style={{ color: "var(--basilico)", fontSize: 13, margin: 0 }}>{esitoImport}</p>
             )}
-            <Button onClick={() => void closeAndStartShopping()}>Inizia la spesa</Button>
             <button
               type="button"
               onClick={() => void clearList()}
-              style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 4 }}
+              className="self-center"
+              style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 28, minHeight: 44, padding: "0 12px" }}
             >
               Svuota lista
             </button>
@@ -240,10 +266,10 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center text-center gap-4 px-8">
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>Nessuna lista ancora</div>
           <p style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>
-            Pianifica qualche pasto in Settimana e genera la lista da lì, oppure aggiungi articoli a mano.
+            Aggiungi gli articoli a mano, oppure importa una lista che hai già scritto.
           </p>
           <div className="w-full flex flex-col gap-2">
-            <AddShoppingItemForm reparti={ordineReparti} onAdd={addItem} />
+            <AddShoppingItemForm reparti={ordineReparti} onAdd={addItem} centered />
             <Button variant="ghost" onClick={() => setImportOpen(true)}>
               <span className="inline-flex items-center gap-1.5">
                 <Upload size={15} strokeWidth={2.25} /> Importa lista
@@ -275,18 +301,24 @@ function AddShoppingItemForm({
   initialQuantity = "1",
   initialDepartment = null,
   initialPhoto,
+  initialNote,
   confirmLabel = "Aggiungi",
   onCancel,
+  centered = false,
 }: {
   reparti: string[];
-  onAdd: (nome: string, reparto: string, quantita: string, fotoDataUrl?: string) => Promise<void>;
+  /** `nota` already combines unit and free note (see joinUnitAndNote). */
+  onAdd: (nome: string, reparto: string, quantita: string, fotoDataUrl?: string, nota?: string) => Promise<void>;
   initiallyOpen?: boolean;
   initialName?: string;
   initialQuantity?: string;
   initialDepartment?: string | null;
   initialPhoto?: string;
+  initialNote?: string;
   confirmLabel?: string;
   onCancel?: () => void;
+  /** Center the collapsed "Add item" link (used in the centered empty state). */
+  centered?: boolean;
 }) {
   // No department is preselected: chips stay hidden until opened. If none is chosen, the item
   // goes to the "Dispensa" catch-all department, matching the app's other fallbacks.
@@ -294,6 +326,10 @@ function AddShoppingItemForm({
   const [aperto, setAperto] = useState(initiallyOpen);
   const [nome, setNome] = useState(initialName);
   const [quantita, setQuantita] = useState(initialQuantity);
+  const idUnita = useId();
+  const iniziali = splitUnitFromNote(initialNote);
+  const [unita, setUnita] = useState(iniziali.unita ?? "");
+  const [nota, setNota] = useState(iniziali.nota ?? "");
   const [reparto, setReparto] = useState<string | null>(initialDepartment);
   const [departmentsOpen, setRepartiAperti] = useState(false);
   const [isSaving, setSalvando] = useState(false);
@@ -319,9 +355,17 @@ function AddShoppingItemForm({
     if (!trimmedName || isSaving) return;
     setSalvando(true);
     try {
-      await onAdd(trimmedName, reparto ?? REPARTO_RIPIEGO, quantita.trim(), fotoDataUrl);
+      await onAdd(
+        trimmedName,
+        reparto ?? REPARTO_RIPIEGO,
+        quantita.trim(),
+        fotoDataUrl,
+        joinUnitAndNote(unita, nota),
+      );
       setNome("");
       setQuantita("1");
+      setUnita("");
+      setNota("");
       setReparto(null);
       setFotoDataUrl(undefined);
       setRepartiAperti(false);
@@ -334,8 +378,8 @@ function AddShoppingItemForm({
     return (
       <button
         type="button"
-        className="inline-flex items-center gap-1.5 text-sm"
-        style={{ color: "var(--biro)", fontWeight: 600 }}
+        className={`inline-flex items-center gap-1.5 text-sm${centered ? " self-center" : ""}`}
+        style={{ color: "var(--biro)", fontWeight: 600, minHeight: 44 }}
         onClick={() => setAperto(true)}
       >
         <Plus size={16} strokeWidth={2.25} /> Aggiungi articolo
@@ -343,50 +387,85 @@ function AddShoppingItemForm({
     );
   }
 
+  const campo: CSSProperties = { borderColor: "var(--border-quiet)", background: "var(--surface-card)" };
+
   return (
     <div
       className="flex flex-col gap-2 border rounded-2xl p-3"
       style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}
     >
-      <div className="flex items-center gap-2">
-        <input
-          autoFocus
-          className="border rounded-lg px-2.5 py-1.5 text-sm flex-1"
-          style={{ borderColor: "var(--quadretto)" }}
-          placeholder="Nome articolo…"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void submit();
-          }}
-        />
-        <input
-          inputMode="numeric"
-          className="border rounded-lg px-2.5 py-1.5 text-sm text-right"
-          style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)", width: 88 }}
-          placeholder="quantità"
-          value={quantita}
-          onChange={(e) => setQuantita(e.target.value)}
-        />
+      {/* What */}
+      <input
+        autoFocus
+        aria-label="Nome articolo"
+        className="border rounded-lg px-3 py-2.5 text-sm w-full"
+        style={{ ...campo, fontWeight: 600 }}
+        placeholder="Nome articolo…"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void submit();
+        }}
+      />
+
+      {/* How much and where: quantity and unit read as one value ("1 kg"), department beside. */}
+      <div className="flex items-stretch gap-2">
+        <div
+          className="flex items-stretch flex-none border rounded-lg overflow-hidden border-border-quiet focus-within:border-biro"
+          style={{ background: "var(--surface-card)" }}
+        >
+          <input
+            inputMode="decimal"
+            aria-label="Quantità"
+            className="px-2.5 py-2.5 text-sm text-right"
+            style={{ width: 52, border: 0, outline: "none", background: "transparent", fontVariantNumeric: "tabular-nums" }}
+            placeholder="q.tà"
+            value={quantita}
+            onChange={(e) => setQuantita(e.target.value)}
+          />
+          <span aria-hidden="true" style={{ width: 1, background: "var(--border-quiet)", margin: "8px 0" }} />
+          <input
+            aria-label="Unità"
+            list={idUnita}
+            autoCapitalize="none"
+            className="px-2.5 py-2.5 text-sm"
+            style={{ width: 84, border: 0, outline: "none", background: "transparent" }}
+            placeholder="unità"
+            value={unita}
+            onChange={(e) => setUnita(e.target.value)}
+          />
+          <datalist id={idUnita}>
+            {UNITA_SUGGERITE.map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
+        </div>
+        <button
+          type="button"
+          aria-expanded={departmentsOpen}
+          aria-label={reparto ? `Reparto: ${reparto}` : "Scegli reparto (opzionale)"}
+          className="flex-1 min-w-0 inline-flex items-center justify-between gap-1 border rounded-lg px-3 text-sm"
+          style={campo}
+          onClick={() => setRepartiAperti((v) => !v)}
+        >
+          <span
+            className="truncate"
+            style={reparto ? { color: "var(--text-body)", fontWeight: 600 } : { color: "var(--text-secondary)" }}
+          >
+            {reparto ?? "Reparto"}
+          </span>
+          <ChevronDown
+            size={15}
+            strokeWidth={2.25}
+            style={{
+              flex: "none",
+              color: "var(--text-secondary)",
+              transform: departmentsOpen ? "rotate(180deg)" : undefined,
+              transition: "transform .15s",
+            }}
+          />
+        </button>
       </div>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 self-start text-sm"
-        style={{ color: "var(--text-secondary)" }}
-        onClick={() => setRepartiAperti((v) => !v)}
-      >
-        Reparto:{" "}
-        {reparto ? (
-          <span style={{ color: "var(--biro)", fontWeight: 600 }}>{reparto}</span>
-        ) : (
-          <span style={{ fontStyle: "italic" }}>opzionale</span>
-        )}
-        <ChevronDown
-          size={15}
-          strokeWidth={2.25}
-          style={{ transform: departmentsOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }}
-        />
-      </button>
       {departmentsOpen && (
         <div className="flex flex-wrap gap-2">
           {reparti.map((r) => (
@@ -404,43 +483,74 @@ function AddShoppingItemForm({
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: "var(--biro)" }}>
-          <ImagePlus size={17} /> {fotoDataUrl ? "Cambia foto" : "Aggiungi foto"}
+
+      <input
+        aria-label="Nota"
+        className="border rounded-lg px-3 py-2.5 text-sm"
+        style={campo}
+        placeholder="Nota (es. quella in vetro)"
+        value={nota}
+        onChange={(e) => setNota(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void submit();
+        }}
+      />
+
+      {/* Actions on one row: photo on the left, cancel and confirm on the right. */}
+      <div className="flex items-center gap-1 pt-1">
+        <label
+          className="inline-flex items-center gap-1.5 text-sm cursor-pointer"
+          style={{ color: "var(--biro)", minHeight: 44 }}
+        >
+          {fotoDataUrl ? (
+            <img src={fotoDataUrl} alt="Anteprima" className="h-8 w-8 rounded-md object-cover" />
+          ) : (
+            <ImagePlus size={18} />
+          )}
+          {fotoDataUrl ? "Cambia" : "Foto"}
           <input
             type="file"
             accept="image/*"
-            capture="environment"
+            // No `capture`: the OS picker then offers both the camera and the photo library.
             className="sr-only"
             onChange={(event) => void loadPhoto(event.target.files?.[0])}
           />
         </label>
         {fotoDataUrl && (
-          <>
-            <img src={fotoDataUrl} alt="Anteprima" className="h-10 w-10 rounded-md object-cover" />
-            <button type="button" aria-label="Rimuovi foto" onClick={() => setFotoDataUrl(undefined)}>
-              <X size={16} />
-            </button>
-          </>
+          <button
+            type="button"
+            aria-label="Rimuovi foto"
+            onClick={() => setFotoDataUrl(undefined)}
+            style={{ color: "var(--text-secondary)", minWidth: 32, minHeight: 44, display: "grid", placeItems: "center" }}
+          >
+            <X size={16} />
+          </button>
         )}
-        {photoError && <span role="alert" className="text-xs" style={{ color: "var(--pomodoro)" }}>{photoError}</span>}
-      </div>
-      <div className="flex items-center gap-2">
-        <Button onClick={() => void submit()} disabled={!nome.trim() || isSaving} style={{ flex: 1 }}>
-           {confirmLabel}
-        </Button>
         <button
           type="button"
-          className="text-xs px-1"
-          style={{ color: "var(--text-secondary)" }}
-           onClick={() => {
-             if (onCancel) onCancel();
-             else setAperto(false);
-           }}
+          className="ml-auto text-sm px-3"
+          style={{ color: "var(--text-secondary)", minHeight: 44 }}
+          onClick={() => {
+            if (onCancel) onCancel();
+            else setAperto(false);
+          }}
         >
-          chiudi
+          annulla
         </button>
+        <Button
+          fullWidth={false}
+          onClick={() => void submit()}
+          disabled={!nome.trim() || isSaving}
+          style={{ padding: "11px 22px" }}
+        >
+          {confirmLabel}
+        </Button>
       </div>
+      {photoError && (
+        <p role="alert" className="text-xs" style={{ color: "var(--pomodoro)", margin: 0 }}>
+          {photoError}
+        </p>
+      )}
     </div>
   );
 }
@@ -459,47 +569,55 @@ async function resizePhoto(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
+/** Row actions share the quantity box height, so the three controls read as one set. */
+const AZIONE_RIGA = 36;
+
 function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdit: () => void }) {
   const [quantita, setQuantita] = useState(voce.quantita);
+  const { unita, nota } = splitUnitFromNote(voce.nota);
 
   return (
-    <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--quadretto)" }}>
-      <div className="flex-1">
+    <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
+      <div className="flex-1 min-w-0">
         <div style={{ fontWeight: 600 }}>{voce.nome}</div>
-        {voce.nota && (
-          <div style={{ fontFamily: "var(--font-hand)", color: "var(--biro)", fontSize: 15 }}>“{voce.nota}”</div>
+        {nota && (
+          <div style={{ fontFamily: "var(--font-hand)", color: "var(--biro)", fontSize: 15 }}>“{nota}”</div>
         )}
       </div>
-      <input
-        inputMode="numeric"
-        className="border rounded-lg px-2 py-1.5 text-sm text-right"
-        style={{
-          borderColor: "var(--quadretto)",
-          background: "var(--surface-card)",
-          width: 96,
-          marginRight: 6,
-        }}
-        placeholder="quantità"
-        value={quantita}
-        onChange={(e) => setQuantita(e.target.value)}
-        onBlur={() => void updateQuantity(voce.id, quantita)}
-      />
-      <button
-        type="button"
-        aria-label={`Modifica ${voce.nome}`}
-        onClick={onEdit}
-        style={{ color: "var(--biro)", flex: "none", display: "flex", marginRight: 10 }}
-      >
+      <label className="flex items-center gap-1.5 flex-none" style={{ marginRight: 2 }}>
+        {/* Unit sits left of the box, right-aligned: quantity boxes line up against the actions
+            on every row, and rows without a unit leave no gap. */}
+        {unita && (
+          <span
+            className="truncate text-right"
+            style={{ color: "var(--text-secondary)", fontSize: 13, maxWidth: 76 }}
+          >
+            {unita}
+          </span>
+        )}
+        <input
+          inputMode="numeric"
+          className="border rounded-lg px-2 text-sm text-right"
+          style={{
+            borderColor: "var(--border-quiet)",
+            background: "var(--surface-card)",
+            width: 56,
+            height: AZIONE_RIGA,
+            fontVariantNumeric: "tabular-nums",
+          }}
+          aria-label={`Quantità di ${voce.nome}`}
+          placeholder="—"
+          value={quantita}
+          onChange={(e) => setQuantita(e.target.value)}
+          onBlur={() => void updateQuantity(voce.id, quantita)}
+        />
+      </label>
+      <IconButton tone="accent" size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
         <Pencil size={16} strokeWidth={2} />
-      </button>
-      <button
-        type="button"
-        aria-label={`Rimuovi ${voce.nome}`}
-        onClick={() => void deleteItem(voce.id)}
-        style={{ color: "var(--pomodoro)", flex: "none", display: "flex" }}
-      >
+      </IconButton>
+      <IconButton size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void deleteItem(voce.id)}>
         <Trash2 size={16} strokeWidth={2} />
-      </button>
+      </IconButton>
     </div>
   );
 }

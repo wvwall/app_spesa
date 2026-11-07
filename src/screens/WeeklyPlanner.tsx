@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sparkles, X, RotateCcw, Plus, Upload } from "lucide-react";
+import { Sparkles, X, RotateCcw, Plus, Upload, Trash2 } from "lucide-react";
 import { db, getOrCreateProfile, nowIso, createId } from "../lib/database";
 import {
   getOrCreateWeeklyPlan,
@@ -29,6 +29,7 @@ import {
 import {
   DishCard,
   Button,
+  IconButton,
   SearchInput,
   Badge,
   CycleNavigator,
@@ -256,33 +257,35 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
   return (
     <div className="flex flex-col h-full">
       <header className="px-5 pt-5 pb-2 flex-none">
-        <div
-          className="text-xs"
-          style={{
-            letterSpacing: ".14em",
-            textTransform: "uppercase",
-            color: "var(--text-secondary)",
-          }}>
-          La spesa di casa
-        </div>
-        <div className="flex items-baseline justify-between gap-2">
-          <h1
-            className="mt-0.5"
+        {/* Navigator on the first row, at the same height as in "Lista", so switching tabs
+            does not make it jump; the handwritten week label gets the full width below. */}
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className="text-xs"
             style={{
-              fontFamily: "var(--font-hand)",
-              fontWeight: 800,
-              fontSize: 26,
-              letterSpacing: "-0.02em",
-              color: "var(--biro)",
+              letterSpacing: ".14em",
+              textTransform: "uppercase",
+              color: "var(--text-secondary)",
             }}>
-            {formatCycleLabel(inizio)}
-          </h1>
+            La spesa di casa
+          </div>
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
             onOggi={() => onCycleOffsetChange(0)}
             onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
         </div>
+        <h1
+          style={{
+            fontFamily: "var(--font-hand)",
+            fontWeight: 800,
+            fontSize: 28,
+            lineHeight: 1.1,
+            letterSpacing: "-0.02em",
+            color: "var(--biro)",
+          }}>
+          {formatCycleLabel(inizio)}
+        </h1>
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
@@ -361,7 +364,15 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
                 }}>
                 {formatDayLabel(giorno)}
                 {isToday(giorno) && (
-                  <Badge kind="sostituito" style={{ fontWeight: 700, letterSpacing: ".04em" }}>
+                  <Badge
+                    kind="sostituito"
+                    style={{
+                      fontWeight: 700,
+                      letterSpacing: ".04em",
+                      background: "var(--evidenziatore)",
+                      color: "var(--on-evidenziatore)",
+                    }}
+                  >
                     Oggi
                   </Badge>
                 )}
@@ -431,7 +442,7 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
                 <div
                   key={p.slotId}
                   className="flex items-center justify-between gap-2 px-3 py-2.5 border rounded-xl"
-                  style={{ borderColor: "var(--quadretto)", opacity: p.esclusa ? 0.5 : 1 }}
+                  style={{ borderColor: "var(--border-quiet)", opacity: p.esclusa ? 0.5 : 1 }}
                 >
                   <div>
                     <div style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: ".08em", textTransform: "uppercase" }}>
@@ -647,7 +658,7 @@ function PlanSlotRow({
                 className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
                 style={{ color: "var(--pomodoro)", fontWeight: 600 }}
                 onClick={() => void assign(undefined)}>
-                <X size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
+                <Trash2 size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
               </button>
             )}
           </div>
@@ -675,18 +686,12 @@ function PlanSlotRow({
             onClick={() => setRicerca(true)}
           />
         </div>
-        <button
-          type="button"
+        <IconButton
           aria-label={`Rimuovi ${piatto.nome} da questo pasto`}
           onClick={() => void assign(undefined)}
-          style={{
-            color: "var(--pomodoro)",
-            padding: "6px 4px",
-            flex: "none",
-            display: "flex",
-          }}>
-          <X size={17} strokeWidth={2} />
-        </button>
+        >
+          <Trash2 size={16} strokeWidth={2} />
+        </IconButton>
       </div>
     );
   }

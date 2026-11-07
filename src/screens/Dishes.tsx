@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sparkles, X, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
@@ -124,7 +124,7 @@ export function Dishes() {
   return (
     <div className="flex flex-col h-full">
       <header className="px-5 pt-5 pb-3 flex-none">
-        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22 }}>Piatti</h1>
+        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, lineHeight: "44px" }}>Piatti</h1>
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
         <SearchInput placeholder="Cerca o aggiungi un ingrediente…" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -147,7 +147,7 @@ export function Dishes() {
           <AddIngredientInline query={query.trim()} reparti={ordine} onConferma={addIngredientInline} />
         )}
 
-        <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
+        <section className="border-t pt-4" style={{ borderColor: "var(--border-quiet)" }}>
           <Label>
             {selezionati.length > 0 ? `Con ${selezionati.length} ingredienti selezionati` : "Nessun ingrediente selezionato"}
           </Label>
@@ -191,7 +191,7 @@ export function Dishes() {
           )}
         </section>
 
-        <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
+        <section className="border-t pt-4" style={{ borderColor: "var(--border-quiet)" }}>
           <Label>I tuoi piatti</Label>
           <div className="flex flex-col gap-2">
             {caricamento && (
@@ -204,7 +204,7 @@ export function Dishes() {
               <div
                 key={p.id}
                 className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
-                style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+                style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
               >
                 <span style={{ fontWeight: 600 }}>{p.nome}</span>
                 <div className="flex items-center gap-2 flex-none">
@@ -226,9 +226,9 @@ export function Dishes() {
                     type="button"
                     aria-label={`Elimina ${p.nome}`}
                     onClick={() => void deleteDish(p.id)}
-                    style={{ color: "var(--pomodoro)", display: "flex" }}
+                    style={{ color: "var(--text-secondary)", display: "flex" }}
                   >
-                    <X size={16} strokeWidth={2} />
+                    <Trash2 size={16} strokeWidth={2} />
                   </button>
                 </div>
               </div>
@@ -402,7 +402,7 @@ function ManualDishForm({
     >
       <input
         className="border rounded-lg px-3 py-2 text-sm"
-        style={{ borderColor: "var(--quadretto)" }}
+        style={{ borderColor: "var(--border-quiet)" }}
         placeholder="Nome del piatto"
         value={nomePiatto}
         onChange={(e) => setNomePiatto(e.target.value)}
@@ -413,7 +413,7 @@ function ManualDishForm({
           type="number"
           min={1}
           className="border rounded-lg px-2 py-1 w-16"
-          style={{ borderColor: "var(--quadretto)" }}
+          style={{ borderColor: "var(--border-quiet)" }}
           value={porzioni}
           onChange={(e) => setPorzioni(Math.max(1, Number(e.target.value) || 1))}
         />
@@ -427,7 +427,7 @@ function ManualDishForm({
               min={0}
               step="any"
               className="border rounded-lg px-2 py-1 w-16 text-sm"
-              style={{ borderColor: "var(--quadretto)" }}
+              style={{ borderColor: "var(--border-quiet)" }}
               value={quantita[ing.id]?.valore ?? 1}
               onChange={(e) =>
                 setQuantita((q) => ({ ...q, [ing.id]: { ...q[ing.id], valore: Number(e.target.value) || 0 } }))
@@ -435,7 +435,7 @@ function ManualDishForm({
             />
             <input
               className="border rounded-lg px-2 py-1 w-20 text-sm"
-              style={{ borderColor: "var(--quadretto)" }}
+              style={{ borderColor: "var(--border-quiet)" }}
               value={quantita[ing.id]?.unita ?? ing.unitaDefault}
               onChange={(e) => setQuantita((q) => ({ ...q, [ing.id]: { ...q[ing.id], unita: e.target.value } }))}
             />

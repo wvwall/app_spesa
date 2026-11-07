@@ -1,11 +1,20 @@
 :root {
-  /* Foundations — notebook palette. */
-  --carta: #f3eedf;
-  --quadretto: #e4e7de;
-  --inchiostro: #23261e;
-  --inchiostro-70: #5a5e52;
-  --biro: #098fae;
-  --biro-chiaro: #e8f6f9;
+  /* Foundations — notebook palette: "biro + evidenziatore".
+     Paper is a neutral off-white; the grid takes the ink's blue-grey, like a real quaderno.
+     One blue for every action (planning and aisle alike); the highlighter yellow marks what
+     is selected or current (today, active tab, chosen chip) — never an action. */
+  --carta: #f5f2ea;
+  --quadretto: #dfe4ee;
+  --inchiostro: #22252b;
+  --inchiostro-70: #5b5f66;
+  /* Bic blue: 7.9:1 on carta, 8.9:1 with white text. */
+  --biro: #2140a8;
+  --biro-chiaro: #e7ecf9;
+  --on-biro: #ffffff;
+  /* Highlighter: blue text on it 7.7:1, ink 13:1. */
+  --evidenziatore: #fff0a3;
+  --evidenziatore-bordo: #e0c84f;
+  --on-evidenziatore: var(--biro);
   --basilico: #39724a;
   --pomodoro: #be3f27;
   --pomodoro-chiaro: #f7e5e0;
@@ -13,8 +22,9 @@
 
   /* Semantic colors. */
   --surface-page: var(--carta);
-  --surface-card: #ffffff;
-  --surface-selected: var(--biro-chiaro);
+  /* Warm white, like a note slip on the page rather than a pure-white web card. */
+  --surface-card: #fffdf8;
+  --surface-selected: var(--evidenziatore);
   --text-body: var(--inchiostro);
   --text-secondary: var(--inchiostro-70);
   --text-interactive: var(--biro);
@@ -75,11 +85,19 @@
   --surface-card: #1c2025;
   --text-body: #e9eae4;
   --text-secondary: #9aa095;
-  --text-interactive: #7c96e8;
+  /* Light blue on lavagna (8.2:1); filled buttons switch to dark text (--on-biro). */
+  --biro: #98aef5;
+  --biro-chiaro: rgba(152, 174, 245, 0.16);
+  --on-biro: #15181c;
+  /* A dimmed highlighter: blue would fail on it (3.9:1), so selected text uses body ink (6.9:1). */
+  --evidenziatore: #524e35;
+  --evidenziatore-bordo: #8a7f45;
+  --on-evidenziatore: #e9eae4;
+  --text-interactive: #98aef5;
   --border-quiet: #2a2f36;
   --grid-line: rgba(255, 255, 255, 0.06);
-  --surface-selected: rgba(124, 150, 232, 0.16);
-  --border-interactive: #7c96e8;
+  --surface-selected: var(--evidenziatore);
+  --border-interactive: #98aef5;
 }
 
 /* Optional Stitch theme: Lilo & Stitch's Hawaii, with warm sand, ocean, and sunset. Colors are
@@ -88,6 +106,9 @@
 [data-theme="stitch"] {
   --biro: #0f6e91;
   --biro-chiaro: #ffe3d1;
+  --evidenziatore: #ffe3d1;
+  --evidenziatore-bordo: #f0a882;
+  --on-evidenziatore: #0f6e91;
   --surface-page: #f5ecd9;
   --surface-card: #d3ece7;
   --text-body: #1b3b3a;

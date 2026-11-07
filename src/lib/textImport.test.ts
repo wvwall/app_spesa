@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseMealText, parseShoppingText } from "./textImport.ts";
+import { parseMealText, parseShoppingText, splitUnitFromNote, joinUnitAndNote } from "./textImport.ts";
 import { cycleDays, mealsForDay, toIsoDate } from "./calendar.ts";
 import { SEED_INGREDIENTS } from "../seed/ingredients.ts";
 
@@ -134,4 +134,26 @@ test("ignora le righe dei pasti quando importa la spesa", () => {
 
   assert.equal(risultato.righe.length, 1);
   assert.equal(risultato.righe[0].nome, "spinaci");
+});
+
+test("separa l'unità dalla nota per mostrarla accanto alla quantità", () => {
+  assert.deepEqual(splitUnitFromNote("kg"), { unita: "kg", nota: undefined });
+  assert.deepEqual(splitUnitFromNote("confezione · già tagliato"), {
+    unita: "confezione",
+    nota: "già tagliato",
+  });
+  assert.deepEqual(splitUnitFromNote("quella in vetro"), { nota: "quella in vetro" });
+  assert.deepEqual(splitUnitFromNote("+ Walter"), { nota: "+ Walter" });
+  assert.deepEqual(splitUnitFromNote(undefined), {});
+});
+
+test("ricompone unità e nota nel campo nota", () => {
+  assert.equal(joinUnitAndNote("kg", "quella in vetro"), "kg · quella in vetro");
+  assert.equal(joinUnitAndNote("  ", "solo nota"), "solo nota");
+  assert.equal(joinUnitAndNote("g", ""), "g");
+  assert.equal(joinUnitAndNote(undefined, undefined), undefined);
+  assert.deepEqual(splitUnitFromNote(joinUnitAndNote("confezione", "già tagliato")), {
+    unita: "confezione",
+    nota: "già tagliato",
+  });
 });

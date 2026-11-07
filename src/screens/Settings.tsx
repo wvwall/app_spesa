@@ -5,7 +5,7 @@ import { Minus, Plus, GripVertical } from "lucide-react";
 import { db, getOrCreateProfile, applyTheme } from "../lib/database";
 import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
-import { Button, Chip, Badge, GeminiKeySheet } from "../components";
+import { Button, Chip, GeminiKeySheet } from "../components";
 import type { Theme } from "../lib/models";
 import { CATALOGO_ALLERGENI, trovaAllergene } from "../lib/allergens";
 import packageJson from "../../package.json";
@@ -95,14 +95,14 @@ export function Settings() {
   return (
     <div className="flex flex-col h-full">
       <header className="px-5 pt-5 pb-3 flex-none">
-        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>Altro</h1>
+        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, lineHeight: "44px" }}>Altro</h1>
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-6">
         <section>
           <Label>Porzioni</Label>
           <div
             className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
-            style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+            style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
           >
             <span style={{ fontWeight: 600 }}>Porzioni predefinite</span>
             <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export function Settings() {
               </Chip>
             ))}
           </div>
-          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 8, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.5 }}>
             La settimana in "Settimana" parte da qui: dalla cena di questo giorno al pranzo dello stesso giorno la
             settimana successiva.
           </p>
@@ -138,14 +138,13 @@ export function Settings() {
 
         <section>
           <Label>Allergie e vincoli</Label>
-          {profilo.vincoliAlimentari.length > 0 ? (
-            <Badge kind="allergene">Da evitare</Badge>
-          ) : (
-            <p style={{ fontSize: 13, color: "var(--inchiostro-70)", lineHeight: 1.5 }}>
+          {/* The heading and the red chips already say "avoid these": no extra label needed. */}
+          {profilo.vincoliAlimentari.length === 0 && (
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
               Nessun vincolo attivo. L’AI non esclude nulla.
             </p>
           )}
-          <div className="flex flex-wrap gap-2" style={{ marginTop: 10 }}>
+          <div className="flex flex-wrap gap-2">
             {profilo.vincoliAlimentari.map((a) => (
               <Chip
                 key={a}
@@ -178,13 +177,13 @@ export function Settings() {
               </div>
             </div>
           )}
-          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 10, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5 }}>
             Le noci sono escluse di default. Ogni piatto generato dall’AI viene ricontrollato su questi vincoli;
             per allergie non riconosciute l’app non può garantire l’assenza, quindi controlla sempre gli ingredienti.
           </p>
           {allergeniSuggeriti.length > 0 && (
             <>
-              <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", margin: "12px 0 8px" }}>Aggiungi un allergene comune:</p>
+              <p style={{ fontSize: 12.5, color: "var(--text-secondary)", margin: "12px 0 8px" }}>Aggiungi un allergene comune:</p>
               <div className="flex flex-wrap gap-2">
                 {allergeniSuggeriti.map((a) => (
                   <Chip key={a.id} onClick={() => void addAllergene(a.etichetta)}>
@@ -197,7 +196,7 @@ export function Settings() {
           <div className="flex gap-2" style={{ marginTop: 12 }}>
             <input
               className="border rounded-xl px-3 py-2.5 text-sm flex-1"
-              style={{ borderColor: "var(--quadretto)" }}
+              style={{ borderColor: "var(--border-quiet)" }}
               placeholder="Altra allergia…"
               value={nuovoAllergene}
               onChange={(e) => setNuovoAllergene(e.target.value)}
@@ -218,7 +217,7 @@ export function Settings() {
 
         <section>
           <Label>Ordine reparti</Label>
-          <p style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginBottom: 8, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 8, lineHeight: 1.5 }}>
             Tieni premuto e trascina per riordinare. Così vengono raggruppati in lista e in negozio.
           </p>
           <DepartmentOrder
@@ -229,16 +228,16 @@ export function Settings() {
 
         <section>
           <Label>Intelligenza artificiale</Label>
-          <p style={{ fontSize: 13, color: "var(--inchiostro-70)", margin: "0 0 10px", lineHeight: 1.5 }}>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 10px", lineHeight: 1.5 }}>
             Per i suggerimenti AI puoi usare solo Google Gemini. La chiave resta salvata su questo dispositivo.
           </p>
           <div
             className="flex items-center justify-between gap-3 border rounded-2xl px-3.5 py-3"
-            style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+            style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
           >
             <div>
               <div style={{ fontWeight: 700 }}>Google Gemini</div>
-              <div style={{ fontSize: 12.5, color: "var(--inchiostro-70)", marginTop: 3 }}>
+              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 3 }}>
                 {chiaveGeminiConfigurata ? "Chiave configurata su questo browser" : "Chiave non configurata"}
               </div>
             </div>
@@ -261,7 +260,7 @@ export function Settings() {
           )}
           {confermaRimozioneChiave && (
             <div className="flex flex-col gap-2 mt-2">
-              <p style={{ fontSize: 13, color: "var(--inchiostro-70)", margin: 0 }}>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
                 Rimuovere la chiave da questo browser? Le funzioni base continueranno a essere disponibili.
               </p>
               <div className="flex gap-2">
@@ -315,7 +314,7 @@ export function Settings() {
           </div>
         </section>
 
-        <p style={{ fontSize: 12, color: "var(--inchiostro-70)", textAlign: "center", marginTop: 4 }}>
+        <p style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "center", marginTop: 4 }}>
           Quaderno della spesa · v{packageJson.version} · dati salvati solo su questo telefono
         </p>
       </div>
@@ -353,7 +352,7 @@ function StitchIllustration() {
 
 function Label({ children }: { children: string }) {
   return (
-    <div className="text-xs font-bold uppercase mb-2" style={{ letterSpacing: ".12em", color: "var(--inchiostro-70)" }}>
+    <div className="text-xs font-bold uppercase mb-2" style={{ letterSpacing: ".12em", color: "var(--text-secondary)" }}>
       {children}
     </div>
   );
@@ -427,7 +426,7 @@ function DepartmentOrder({ ordine, onCambia }: { ordine: string[]; onCambia: (nu
           onPointerCancel={handlePointerUp}
           className="flex items-center gap-2.5 px-3 py-2.5 border rounded-xl select-none"
           style={{
-            borderColor: "var(--quadretto)",
+            borderColor: "var(--border-quiet)",
             background: "var(--surface-card)",
             touchAction: "none",
             position: trascinato === reparto ? "relative" : undefined,
@@ -437,7 +436,7 @@ function DepartmentOrder({ ordine, onCambia }: { ordine: string[]; onCambia: (nu
             transition: trascinato === reparto ? "none" : "transform 160ms ease, box-shadow 160ms ease",
           }}
         >
-          <span aria-hidden style={{ display: "flex", color: "var(--inchiostro-70)", cursor: "grab" }}>
+          <span aria-hidden style={{ display: "flex", color: "var(--text-secondary)", cursor: "grab" }}>
             <GripVertical size={17} strokeWidth={2} />
           </span>
           <span style={{ flex: 1, fontWeight: 600, fontSize: 14.5 }}>{reparto}</span>

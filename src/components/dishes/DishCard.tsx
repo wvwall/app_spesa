@@ -23,7 +23,7 @@ export function DishCard({ when = "Pranzo", dish, empty = false, ai = false, onC
         width: "100%",
         boxSizing: "border-box",
         background: empty ? "transparent" : "var(--surface-card,#fff)",
-        border: "1px " + (empty ? "dashed" : "solid") + " var(--quadretto)",
+        border: "1px " + (empty ? "dashed" : "solid") + " var(--border-quiet)",
         borderRadius: "var(--radius-card,14px)",
         padding: "12px 14px",
         font: "inherit",
@@ -40,7 +40,7 @@ export function DishCard({ when = "Pranzo", dish, empty = false, ai = false, onC
           alignItems: "center",
           gap: 3,
           fontSize: 12,
-          color: "var(--inchiostro-70)",
+          color: "var(--text-secondary)",
           width: 52,
           flex: "none",
         }}
@@ -52,12 +52,12 @@ export function DishCard({ when = "Pranzo", dish, empty = false, ai = false, onC
           display: "inline-flex",
           alignItems: "center",
           gap: 5,
-          fontWeight: 600,
+          fontWeight: empty && !dish ? 500 : 600,
           fontSize: 15.5,
-          color: empty ? "var(--biro)" : "var(--text-body)",
+          color: empty && !dish ? "var(--text-secondary)" : empty ? "var(--biro)" : "var(--text-body)",
         }}
       >
-        {empty && !dish && <Plus size={16} strokeWidth={2.25} />}
+        {empty && !dish && <Plus size={16} strokeWidth={2.25} style={{ color: "var(--biro)" }} />}
         {empty ? dish || "aggiungi piatto" : dish}
       </span>
       {ai && (

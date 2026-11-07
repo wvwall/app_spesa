@@ -9,11 +9,12 @@ interface ShoppingListRowProps {
   note?: string;
   checked?: boolean;
   substituted?: boolean;
+  missing?: boolean;
   onToggle?: () => void;
   style?: CSSProperties;
 }
 
-export function ShoppingListRow({ name, qty, note, checked = false, substituted = false, onToggle, style }: ShoppingListRowProps) {
+export function ShoppingListRow({ name, qty, note, checked = false, substituted = false, missing = false, onToggle, style }: ShoppingListRowProps) {
   return (
     <button
       type="button"
@@ -100,6 +101,22 @@ export function ShoppingListRow({ name, qty, note, checked = false, substituted 
             }}
           >
             sostituito
+          </span>
+        )}
+        {missing && !checked && (
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--pomodoro)",
+              border: "1px solid var(--pomodoro)",
+              borderRadius: 99,
+              padding: "1px 8px",
+              marginLeft: 8,
+              verticalAlign: "middle",
+              fontWeight: 600,
+            }}
+          >
+            manca
           </span>
         )}
         {note && (

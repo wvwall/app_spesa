@@ -49,19 +49,24 @@ L'oggetto reale che questa app sostituisce è **il foglietto a quadretti scritto
 
 ### 4.1 Colori
 
+Palette "biro + evidenziatore" (novembre 2026): un solo blu per tutte le azioni, in pianificazione e in corsia; il giallo evidenziatore segna ciò che è selezionato o attuale, mai un'azione.
+
 | Token | Hex | Uso |
 |-------|-----|-----|
-| `carta` | `#FAFAF6` | Sfondo pagina (tempo 1) |
-| `quadretto` | `#E4E7DE` | Griglia di sfondo, bordi quieti, divisori |
-| `inchiostro` | `#23261E` | Testo primario |
-| `inchiostro-70` | `#5A5E52` | Testo secondario, label |
-| `biro` | `#1D3EA5` | Interattivi: link, bottoni, tab attiva, focus |
-| `biro-chiaro` | `#E8ECF9` | Sfondi selezione, chip attive |
+| `carta` | `#F5F2EA` | Sfondo pagina (tempo 1) |
+| `quadretto` | `#DFE4EE` | Griglia di sfondo (grigio-azzurro, famiglia dell'inchiostro), bordi quieti, divisori |
+| `inchiostro` | `#22252B` | Testo primario |
+| `inchiostro-70` | `#5B5F66` | Testo secondario, label |
+| `biro` | `#2140A8` | Interattivi: link, bottoni, focus, spunta e tratto in corsia (7.9:1 su carta) |
+| `biro-chiaro` | `#E7ECF9` | Fondo tenue delle azioni secondarie (modifica), badge AI |
+| `evidenziatore` | `#FFF0A3` | Selezionato/attuale: tab attiva, chip scelte, "Oggi" (testo biro 7.7:1) |
 | `basilico` | `#39724A` | Check fatto, conferme, badge "in dispensa" |
 | `pomodoro` | `#BE3F27` | "Manca", errori, allergene. Mai decorativo |
 | `lavagna` | `#15181C` | Sfondo dark mode (tempo 1, sera) |
 
-**Dark mode** (pianificazione serale): sfondo `lavagna`, quadrettatura al 6% di bianco, inchiostro → `#E9EAE4`, biro schiarita per il contrasto (`#7C96E8`). La **modalità corsia resta sempre chiara** anche col tema scuro attivo: sotto i neon del supermercato il contrasto positivo (scuro su chiaro) è più leggibile — è una scelta funzionale, il design deve dichiararla nell'UI (nessun "bug del tema").
+Le card usano un bianco caldo `#FFFDF8`, come un foglietto appoggiato sul quaderno.
+
+**Dark mode** (pianificazione serale): sfondo `lavagna`, quadrettatura al 6% di bianco, inchiostro → `#E9EAE4`, biro schiarita per il contrasto (`#98AEF5`, 8.2:1; i bottoni pieni passano a testo scuro), evidenziatore attenuato `#524E35` con testo chiaro. La **modalità corsia resta sempre chiara** anche col tema scuro attivo: sotto i neon del supermercato il contrasto positivo (scuro su chiaro) è più leggibile — è una scelta funzionale, il design deve dichiararla nell'UI (nessun "bug del tema").
 
 Tutte le coppie testo/sfondo ≥ 4.5:1 (AA); in modalità corsia puntare a ≥ 7:1 (AAA) per il testo delle voci.
 

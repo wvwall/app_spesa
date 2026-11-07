@@ -121,6 +121,7 @@ export async function addFreeItem(
   quantita: string,
   reparto: string,
   fotoDataUrl?: string,
+  nota?: string,
 ): Promise<void> {
   const voce: ShoppingListItem = {
     id: createId(),
@@ -134,6 +135,7 @@ export async function addFreeItem(
     checked: false,
     alternative: findAlternatives(nome),
     fotoDataUrl,
+    nota,
   };
   await db.voci.add(voce);
 }
@@ -208,7 +210,16 @@ export async function importShoppingItems(
 }
 
 export async function toggleItem(voceId: string, checked: boolean): Promise<void> {
-  await db.voci.update(voceId, { checked, checkedAt: checked ? nowIso() : undefined });
+  // Taking an item off the shelf means it was found after all.
+  await db.voci.update(voceId, {
+    checked,
+    checkedAt: checked ? nowIso() : undefined,
+    ...(checked ? { mancante: false } : {}),
+  });
+}
+
+export async function setItemMissing(voceId: string, mancante: boolean): Promise<void> {
+  await db.voci.update(voceId, { mancante });
 }
 
 export async function deleteItem(voceId: string): Promise<void> {
@@ -221,20 +232,21 @@ export async function updateQuantity(voceId: string, quantita: string): Promise<
 
 export async function updateItem(
   voce: ShoppingListItem,
-  dati: { nome: string; quantita: string; reparto: string; fotoDataUrl?: string },
+  dati: { nome: string; quantita: string; reparto: string; fotoDataUrl?: string; nota?: string },
 ): Promise<void> {
   await db.voci.update(voce.id, {
     nome: dati.nome,
     quantita: dati.quantita,
     reparto: dati.reparto,
     fotoDataUrl: dati.fotoDataUrl,
+    nota: dati.nota,
     alternative: findAlternatives(dati.nome),
     ...(voce.testoLibero ? { testoLibero: dati.nome } : {}),
   });
 }
 
 export async function replaceItem(voceId: string, sostitutoNome: string): Promise<void> {
-  await db.voci.update(voceId, { sostituitoCon: sostitutoNome });
+  await db.voci.update(voceId, { sostituitoCon: sostitutoNome, mancante: false });
 }
 
 /** Deletes the list and all its items, returning to the "no list yet" state. */

@@ -22,7 +22,7 @@ export function Button({ variant = "primary", fullWidth = true, children, style,
     cursor: "pointer",
     textAlign: "center",
     background: "var(--biro)",
-    color: "#fff",
+    color: "var(--on-biro, #fff)",
     lineHeight: 1.3,
   };
   if (variant === "ghost") {

@@ -11,6 +11,7 @@
   --color-inchiostro: var(--inchiostro);
   --color-biro: var(--biro);
   --color-biro-chiaro: var(--biro-chiaro);
+  --color-border-quiet: var(--border-quiet);
   --color-basilico: var(--basilico);
   --color-pomodoro: var(--pomodoro);
   --font-display: var(--font-display);
@@ -24,11 +25,17 @@
     --surface-card: #1C2025;
     --text-body: #E9EAE4;
     --text-secondary: #9AA095;
-    --text-interactive: #7C96E8;
+    --biro: #98AEF5;
+    --biro-chiaro: rgba(152, 174, 245, .16);
+    --on-biro: #15181C;
+    --evidenziatore: #524E35;
+    --evidenziatore-bordo: #8A7F45;
+    --on-evidenziatore: #E9EAE4;
+    --text-interactive: #98AEF5;
     --border-quiet: #2A2F36;
     --grid-line: rgba(255, 255, 255, .06);
-    --surface-selected: rgba(124, 150, 232, .16);
-    --border-interactive: #7C96E8;
+    --surface-selected: var(--evidenziatore);
+    --border-interactive: #98AEF5;
   }
 }
 

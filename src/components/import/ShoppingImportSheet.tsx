@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, RotateCcw } from "lucide-react";
 import { BottomSheet } from "../navigation/BottomSheet";
 import { Button } from "../core/Button";
 import { ImportInput } from "./ImportInput";
@@ -263,7 +263,7 @@ export function ShoppingImportSheet({ open, catalogo, reparti, onClose, onConfir
           </Button>
           <Button variant="ghost" onClick={() => setRighe(null)} disabled={salvando}>
             <span className="inline-flex items-center gap-1.5">
-              <X size={15} strokeWidth={2.25} /> Indietro
+              <ArrowLeft size={15} strokeWidth={2.25} /> Indietro
             </span>
           </Button>
         </div>

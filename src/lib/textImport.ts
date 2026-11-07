@@ -81,8 +81,35 @@ const RE_RIGA_PASTO =
 
 const RE_INTESTAZIONE = /^(spesa|lista(?: della spesa)?|ingredienti|menu)$/;
 
-const RE_QUANTITA =
-  /^(\d+(?:[.,]\d+)?)\s*(?:x\s*)?((?:confezion[ei]|pacchett[oi]|pacch[ei]|bottigli[ae]|barattol[oi]|vasett[oi]|sacchett[oi]|scatol[ae]|vaschett[ae]|bust[ae]|pezz[oi]|pz|kg|g|gr|ml|l|lt|ett[oi]|litr[oi])\b)?\s*(?:di\s+)?(.+)$/i;
+/** Units and containers recognized after a quantity ("2 confezioni", "500 g"). */
+const UNITA =
+  "confezion[ei]|pacchett[oi]|pacch[ei]|bottigli[ae]|barattol[oi]|vasett[oi]|sacchett[oi]|scatol[ae]|vaschett[ae]|bust[ae]|pezz[oi]|pz|kg|g|gr|ml|l|lt|ett[oi]|litr[oi]";
+
+const RE_QUANTITA = new RegExp(
+  `^(\\d+(?:[.,]\\d+)?)\\s*(?:x\\s*)?((?:${UNITA})\\b)?\\s*(?:di\\s+)?(.+)$`,
+  "i",
+);
+
+const RE_SOLO_UNITA = new RegExp(`^(?:${UNITA})$`, "i");
+
+/** The parser stores the unit as the first segment of `nota` (so the quantity field stays
+ * numeric). For display, splits it back out so it can sit next to the quantity ("500 g")
+ * instead of reading like a handwritten note. */
+export function splitUnitFromNote(nota?: string): { unita?: string; nota?: string } {
+  if (!nota) return {};
+  const [primo, ...resto] = nota.split(" · ");
+  if (!RE_SOLO_UNITA.test(primo.trim())) return { nota };
+  return { unita: primo.trim(), nota: resto.length > 0 ? resto.join(" · ") : undefined };
+}
+
+/** Inverse of splitUnitFromNote: stores unit and free note in the single `nota` field. */
+export function joinUnitAndNote(unita?: string, nota?: string): string | undefined {
+  const parti = [unita?.trim(), nota?.trim()].filter((p): p is string => Boolean(p));
+  return parti.length > 0 ? parti.join(" · ") : undefined;
+}
+
+/** Common units offered as suggestions when typing an item by hand. */
+export const UNITA_SUGGERITE = ["g", "kg", "ml", "l", "pz", "confezione", "bottiglia", "vasetto", "busta"];
 
 /** Infers a department locally, without AI, from common Italian grocery words. Only used when
  * the name is not found in the ingredient catalog. */

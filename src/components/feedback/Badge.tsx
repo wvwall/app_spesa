@@ -36,7 +36,7 @@ const KIND_STYLES: Record<BadgeKind, CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    color: "var(--inchiostro-70)",
+    color: "var(--text-secondary)",
     fontSize: 12,
   },
   verificato: {
@@ -49,7 +49,7 @@ const KIND_STYLES: Record<BadgeKind, CSSProperties> = {
   sostituito: {
     display: "inline-block",
     fontSize: 11,
-    color: "#fff",
+    color: "var(--on-biro, #fff)",
     background: "var(--biro)",
     borderRadius: 99,
     padding: "2px 8px",
