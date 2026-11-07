@@ -35,7 +35,7 @@ export function ProposalCard({
     <div
       style={{
         background: "var(--surface-card,#fff)",
-        border: "1px solid var(--quadretto)",
+        border: "1px solid var(--border-quiet)",
         borderRadius: "var(--radius-card,14px)",
         padding: 16,
         fontFamily: "var(--font-text)",

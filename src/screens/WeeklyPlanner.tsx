@@ -364,7 +364,15 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
                 }}>
                 {formatDayLabel(giorno)}
                 {isToday(giorno) && (
-                  <Badge kind="sostituito" style={{ fontWeight: 700, letterSpacing: ".04em" }}>
+                  <Badge
+                    kind="sostituito"
+                    style={{
+                      fontWeight: 700,
+                      letterSpacing: ".04em",
+                      background: "var(--evidenziatore)",
+                      color: "var(--on-evidenziatore)",
+                    }}
+                  >
                     Oggi
                   </Badge>
                 )}
@@ -434,7 +442,7 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
                 <div
                   key={p.slotId}
                   className="flex items-center justify-between gap-2 px-3 py-2.5 border rounded-xl"
-                  style={{ borderColor: "var(--quadretto)", opacity: p.esclusa ? 0.5 : 1 }}
+                  style={{ borderColor: "var(--border-quiet)", opacity: p.esclusa ? 0.5 : 1 }}
                 >
                   <div>
                     <div style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: ".08em", textTransform: "uppercase" }}>

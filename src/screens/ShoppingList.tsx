@@ -136,7 +136,7 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--quadretto)" }}>
+      <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--border-quiet)" }}>
         <div className="flex items-center justify-between gap-2">
           <h1 className="truncate min-w-0" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22 }}>Lista della spesa</h1>
           <CycleNavigator
@@ -171,7 +171,7 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
               </div>
               {vociReparto.map((v) =>
                 itemBeingEdited?.id === v.id ? (
-                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--quadretto)" }}>
+                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
                     <AddShoppingItemForm
                       initiallyOpen
                       initialName={v.nome}
@@ -225,7 +225,7 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
               accidental taps on "Start shopping" while entering an item.
               The primary action comes first; secondary tools sit in one compact row, and the
               destructive "Clear list" is kept well away from "Start shopping". */}
-          <div className="px-5 pt-4 pb-6 flex flex-col gap-2 border-t" style={{ borderColor: "var(--quadretto)" }}>
+          <div className="px-5 pt-4 pb-6 flex flex-col gap-2 border-t" style={{ borderColor: "var(--border-quiet)" }}>
             <Button onClick={() => void closeAndStartShopping()}>Inizia la spesa</Button>
             <div className="grid grid-cols-3 gap-2">
               <Button
@@ -387,7 +387,7 @@ function AddShoppingItemForm({
     );
   }
 
-  const campo: CSSProperties = { borderColor: "var(--quadretto)", background: "var(--surface-card)" };
+  const campo: CSSProperties = { borderColor: "var(--border-quiet)", background: "var(--surface-card)" };
 
   return (
     <div
@@ -411,7 +411,7 @@ function AddShoppingItemForm({
       {/* How much and where: quantity and unit read as one value ("1 kg"), department beside. */}
       <div className="flex items-stretch gap-2">
         <div
-          className="flex items-stretch flex-none border rounded-lg overflow-hidden border-quadretto focus-within:border-biro"
+          className="flex items-stretch flex-none border rounded-lg overflow-hidden border-border-quiet focus-within:border-biro"
           style={{ background: "var(--surface-card)" }}
         >
           <input
@@ -423,7 +423,7 @@ function AddShoppingItemForm({
             value={quantita}
             onChange={(e) => setQuantita(e.target.value)}
           />
-          <span aria-hidden="true" style={{ width: 1, background: "var(--quadretto)", margin: "8px 0" }} />
+          <span aria-hidden="true" style={{ width: 1, background: "var(--border-quiet)", margin: "8px 0" }} />
           <input
             aria-label="Unità"
             list={idUnita}
@@ -577,7 +577,7 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
   const { unita, nota } = splitUnitFromNote(voce.nota);
 
   return (
-    <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--quadretto)" }}>
+    <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
       <div className="flex-1 min-w-0">
         <div style={{ fontWeight: 600 }}>{voce.nome}</div>
         {nota && (
@@ -599,7 +599,7 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
           inputMode="numeric"
           className="border rounded-lg px-2 text-sm text-right"
           style={{
-            borderColor: "var(--quadretto)",
+            borderColor: "var(--border-quiet)",
             background: "var(--surface-card)",
             width: 56,
             height: AZIONE_RIGA,

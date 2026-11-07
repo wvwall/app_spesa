@@ -23,7 +23,7 @@ export function SearchInput({ placeholder = "Cerca ingrediente…", style, onFoc
         display: "block",
         width: "100%",
         boxSizing: "border-box",
-        border: `1px solid ${focus ? "var(--biro)" : "var(--quadretto)"}`,
+        border: `1px solid ${focus ? "var(--biro)" : "var(--border-quiet)"}`,
         borderRadius: "var(--radius-chip,8px)",
         padding: "12px 14px",
         font: "inherit",

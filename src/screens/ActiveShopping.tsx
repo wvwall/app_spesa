@@ -49,12 +49,12 @@ export function ActiveShopping({ listId, onClose }: Props) {
           color: "var(--inchiostro)",
           // Explicitly pin the shopping aisle colors so they remain consistent in every theme,
           // including the accent color and not just the background (see DESIGN.md §4.1).
-          "--biro": "#2f58d4",
-          "--biro-chiaro": "#e8ecf9",
+          "--biro": "#2140a8",
+          "--biro-chiaro": "#e7ecf9",
           "--on-biro": "#ffffff",
           "--text-body": "var(--inchiostro)",
           "--text-secondary": "var(--inchiostro-70)",
-          "--surface-card": "#ffffff",
+          "--surface-card": "#fffdf8",
           "--border-quiet": "var(--quadretto)",
         } as CSSProperties
       }

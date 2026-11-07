@@ -102,7 +102,7 @@ export function Settings() {
           <Label>Porzioni</Label>
           <div
             className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
-            style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+            style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
           >
             <span style={{ fontWeight: 600 }}>Porzioni predefinite</span>
             <div className="flex items-center gap-3">
@@ -196,7 +196,7 @@ export function Settings() {
           <div className="flex gap-2" style={{ marginTop: 12 }}>
             <input
               className="border rounded-xl px-3 py-2.5 text-sm flex-1"
-              style={{ borderColor: "var(--quadretto)" }}
+              style={{ borderColor: "var(--border-quiet)" }}
               placeholder="Altra allergia…"
               value={nuovoAllergene}
               onChange={(e) => setNuovoAllergene(e.target.value)}
@@ -233,7 +233,7 @@ export function Settings() {
           </p>
           <div
             className="flex items-center justify-between gap-3 border rounded-2xl px-3.5 py-3"
-            style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+            style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
           >
             <div>
               <div style={{ fontWeight: 700 }}>Google Gemini</div>
@@ -426,7 +426,7 @@ function DepartmentOrder({ ordine, onCambia }: { ordine: string[]; onCambia: (nu
           onPointerCancel={handlePointerUp}
           className="flex items-center gap-2.5 px-3 py-2.5 border rounded-xl select-none"
           style={{
-            borderColor: "var(--quadretto)",
+            borderColor: "var(--border-quiet)",
             background: "var(--surface-card)",
             touchAction: "none",
             position: trascinato === reparto ? "relative" : undefined,

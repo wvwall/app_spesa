@@ -23,7 +23,7 @@ export function DishCard({ when = "Pranzo", dish, empty = false, ai = false, onC
         width: "100%",
         boxSizing: "border-box",
         background: empty ? "transparent" : "var(--surface-card,#fff)",
-        border: "1px " + (empty ? "dashed" : "solid") + " var(--quadretto)",
+        border: "1px " + (empty ? "dashed" : "solid") + " var(--border-quiet)",
         borderRadius: "var(--radius-card,14px)",
         padding: "12px 14px",
         font: "inherit",

@@ -147,7 +147,7 @@ export function Dishes() {
           <AddIngredientInline query={query.trim()} reparti={ordine} onConferma={addIngredientInline} />
         )}
 
-        <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
+        <section className="border-t pt-4" style={{ borderColor: "var(--border-quiet)" }}>
           <Label>
             {selezionati.length > 0 ? `Con ${selezionati.length} ingredienti selezionati` : "Nessun ingrediente selezionato"}
           </Label>
@@ -191,7 +191,7 @@ export function Dishes() {
           )}
         </section>
 
-        <section className="border-t pt-4" style={{ borderColor: "var(--quadretto)" }}>
+        <section className="border-t pt-4" style={{ borderColor: "var(--border-quiet)" }}>
           <Label>I tuoi piatti</Label>
           <div className="flex flex-col gap-2">
             {caricamento && (
@@ -204,7 +204,7 @@ export function Dishes() {
               <div
                 key={p.id}
                 className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
-                style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
+                style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
               >
                 <span style={{ fontWeight: 600 }}>{p.nome}</span>
                 <div className="flex items-center gap-2 flex-none">
@@ -402,7 +402,7 @@ function ManualDishForm({
     >
       <input
         className="border rounded-lg px-3 py-2 text-sm"
-        style={{ borderColor: "var(--quadretto)" }}
+        style={{ borderColor: "var(--border-quiet)" }}
         placeholder="Nome del piatto"
         value={nomePiatto}
         onChange={(e) => setNomePiatto(e.target.value)}
@@ -413,7 +413,7 @@ function ManualDishForm({
           type="number"
           min={1}
           className="border rounded-lg px-2 py-1 w-16"
-          style={{ borderColor: "var(--quadretto)" }}
+          style={{ borderColor: "var(--border-quiet)" }}
           value={porzioni}
           onChange={(e) => setPorzioni(Math.max(1, Number(e.target.value) || 1))}
         />
@@ -427,7 +427,7 @@ function ManualDishForm({
               min={0}
               step="any"
               className="border rounded-lg px-2 py-1 w-16 text-sm"
-              style={{ borderColor: "var(--quadretto)" }}
+              style={{ borderColor: "var(--border-quiet)" }}
               value={quantita[ing.id]?.valore ?? 1}
               onChange={(e) =>
                 setQuantita((q) => ({ ...q, [ing.id]: { ...q[ing.id], valore: Number(e.target.value) || 0 } }))
@@ -435,7 +435,7 @@ function ManualDishForm({
             />
             <input
               className="border rounded-lg px-2 py-1 w-20 text-sm"
-              style={{ borderColor: "var(--quadretto)" }}
+              style={{ borderColor: "var(--border-quiet)" }}
               value={quantita[ing.id]?.unita ?? ing.unitaDefault}
               onChange={(e) => setQuantita((q) => ({ ...q, [ing.id]: { ...q[ing.id], unita: e.target.value } }))}
             />
