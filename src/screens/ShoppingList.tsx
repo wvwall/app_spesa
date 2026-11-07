@@ -20,7 +20,7 @@ import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
 import { splitUnitFromNote, joinUnitAndNote, UNITA_SUGGERITE } from "../lib/textImport";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, Chip, CycleNavigator, Skeleton, ShoppingImportSheet } from "../components";
+import { Button, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
 
 /** Secondary list tools: icon over a short label, three per row, still 44px+ tall. */
@@ -569,6 +569,9 @@ async function resizePhoto(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
+/** Row actions share the quantity box height, so the three controls read as one set. */
+const AZIONE_RIGA = 36;
+
 function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdit: () => void }) {
   const [quantita, setQuantita] = useState(voce.quantita);
   const { unita, nota } = splitUnitFromNote(voce.nota);
@@ -581,7 +584,7 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
           <div style={{ fontFamily: "var(--font-hand)", color: "var(--biro)", fontSize: 15 }}>“{nota}”</div>
         )}
       </div>
-      <label className="flex items-center gap-1.5 flex-none" style={{ marginRight: 6 }}>
+      <label className="flex items-center gap-1.5 flex-none" style={{ marginRight: 2 }}>
         {/* Unit sits left of the box, right-aligned: quantity boxes line up against the actions
             on every row, and rows without a unit leave no gap. */}
         {unita && (
@@ -594,11 +597,12 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
         )}
         <input
           inputMode="numeric"
-          className="border rounded-lg px-2 py-1.5 text-sm text-right"
+          className="border rounded-lg px-2 text-sm text-right"
           style={{
             borderColor: "var(--quadretto)",
             background: "var(--surface-card)",
             width: 56,
+            height: AZIONE_RIGA,
             fontVariantNumeric: "tabular-nums",
           }}
           aria-label={`Quantità di ${voce.nome}`}
@@ -608,22 +612,12 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
           onBlur={() => void updateQuantity(voce.id, quantita)}
         />
       </label>
-      <button
-        type="button"
-        aria-label={`Modifica ${voce.nome}`}
-        onClick={onEdit}
-        style={{ color: "var(--biro)", flex: "none", display: "flex", marginRight: 10 }}
-      >
+      <IconButton tone="accent" size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
         <Pencil size={16} strokeWidth={2} />
-      </button>
-      <button
-        type="button"
-        aria-label={`Rimuovi ${voce.nome}`}
-        onClick={() => void deleteItem(voce.id)}
-        style={{ color: "var(--text-secondary)", flex: "none", display: "flex" }}
-      >
+      </IconButton>
+      <IconButton size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void deleteItem(voce.id)}>
         <Trash2 size={16} strokeWidth={2} />
-      </button>
+      </IconButton>
     </div>
   );
 }

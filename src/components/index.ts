@@ -1,4 +1,5 @@
 export { Button } from "./core/Button";
+export { IconButton } from "./core/IconButton";
 export { Chip } from "./core/Chip";
 export { SearchInput } from "./core/SearchInput";
 export { Badge } from "./feedback/Badge";

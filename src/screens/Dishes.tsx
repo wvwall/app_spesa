@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sparkles, X, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
@@ -228,7 +228,7 @@ export function Dishes() {
                     onClick={() => void deleteDish(p.id)}
                     style={{ color: "var(--text-secondary)", display: "flex" }}
                   >
-                    <X size={16} strokeWidth={2} />
+                    <Trash2 size={16} strokeWidth={2} />
                   </button>
                 </div>
               </div>

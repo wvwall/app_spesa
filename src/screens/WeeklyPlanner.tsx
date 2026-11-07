@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sparkles, X, RotateCcw, Plus, Upload } from "lucide-react";
+import { Sparkles, X, RotateCcw, Plus, Upload, Trash2 } from "lucide-react";
 import { db, getOrCreateProfile, nowIso, createId } from "../lib/database";
 import {
   getOrCreateWeeklyPlan,
@@ -29,6 +29,7 @@ import {
 import {
   DishCard,
   Button,
+  IconButton,
   SearchInput,
   Badge,
   CycleNavigator,
@@ -649,7 +650,7 @@ function PlanSlotRow({
                 className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
                 style={{ color: "var(--pomodoro)", fontWeight: 600 }}
                 onClick={() => void assign(undefined)}>
-                <X size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
+                <Trash2 size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
               </button>
             )}
           </div>
@@ -677,18 +678,12 @@ function PlanSlotRow({
             onClick={() => setRicerca(true)}
           />
         </div>
-        <button
-          type="button"
+        <IconButton
           aria-label={`Rimuovi ${piatto.nome} da questo pasto`}
           onClick={() => void assign(undefined)}
-          style={{
-            color: "var(--text-secondary)",
-            padding: "6px 4px",
-            flex: "none",
-            display: "flex",
-          }}>
-          <X size={17} strokeWidth={2} />
-        </button>
+        >
+          <Trash2 size={16} strokeWidth={2} />
+        </IconButton>
       </div>
     );
   }
