@@ -1,12 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sparkles, X, RotateCcw, Plus } from "lucide-react";
+import { Sparkles, X, RotateCcw, Plus, Upload } from "lucide-react";
 import { db, getOrCreateProfile, nowIso, createId } from "../lib/database";
 import {
   getOrCreateWeeklyPlan,
   getOrCreatePlanSlots,
   assignDishToSlot,
+  importMealsIntoPlan,
 } from "../lib/weeklyPlan";
+import type { MealImportAssignment } from "../lib/weeklyPlan";
 import { generateListFromPlan } from "../lib/shoppingList";
 import {
   generateDish,
@@ -32,8 +34,13 @@ import {
   CycleNavigator,
   Skeleton,
   GeminiKeySheet,
+  MealImportSheet,
 } from "../components";
 import type { Ingredient, Dish, Slot } from "../lib/models";
+
+// Disabled for now: the shopping list is imported directly from its own page, so generating it
+// from the menu is no longer the primary flow. The logic below stays available for future use.
+const GENERA_LISTA_ABILITATA = false;
 
 // Meals per AI request: generating the entire week (up to ~14 complete dishes) in one response
 // can easily exceed the function timeout. Smaller parallel batches remain fast and let the
@@ -137,6 +144,27 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
   const [erroreSettimana, setErroreSettimana] = useState<string | null>(null);
   const [generandoLista, setGenerandoLista] = useState(false);
   const [erroreLista, setErroreLista] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [esitoImport, setEsitoImport] = useState<string | null>(null);
+
+  async function importMeals(righe: MealImportAssignment[]) {
+    if (!pianoId) throw new Error("La settimana non è ancora pronta. Riprova tra un istante.");
+    const esito = await importMealsIntoPlan(righe, profilo?.porzioniDefault ?? 4);
+    const parti = [
+      `${esito.assegnati} ${esito.assegnati === 1 ? "pasto importato" : "pasti importati"}`,
+    ];
+    if (esito.piattiCreati > 0) {
+      parti.push(
+        `${esito.piattiCreati} ${esito.piattiCreati === 1 ? "piatto nuovo" : "piatti nuovi"}`,
+      );
+    }
+    if (esito.svuotati > 0) {
+      parti.push(
+        `${esito.svuotati} ${esito.svuotati === 1 ? "slot svuotato" : "slot svuotati"}`,
+      );
+    }
+    setEsitoImport(parti.join(" · "));
+  }
 
   async function generateList() {
     if (!pianoId) return;
@@ -357,12 +385,27 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
         })}
       </div>
 
-      {!tuttiVuoti && (
-        <div className="px-5 pb-3 flex-none">
-          <Button onClick={() => void generateList()} disabled={slotsAssegnati === 0 || generandoLista}>
-            {generandoLista ? "Preparo la lista…" : `Genera lista spesa · ${slotsAssegnati} piatti`}
+      {GENERA_LISTA_ABILITATA ? (
+        !tuttiVuoti && (
+          <div className="px-5 pb-3 flex-none">
+            <Button onClick={() => void generateList()} disabled={slotsAssegnati === 0 || generandoLista}>
+              {generandoLista ? "Preparo la lista…" : `Genera lista spesa · ${slotsAssegnati} piatti`}
+            </Button>
+            {erroreLista && <p style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 6 }}>{erroreLista}</p>}
+          </div>
+        )
+      ) : (
+        <div className="px-5 pb-3 flex-none flex flex-col gap-1.5">
+          <Button onClick={() => setImportOpen(true)}>
+            <span className="inline-flex items-center gap-1.5">
+              <Upload size={16} strokeWidth={2.25} /> Importa menù
+            </span>
           </Button>
-          {erroreLista && <p style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 6 }}>{erroreLista}</p>}
+          {esitoImport && (
+            <p style={{ color: "var(--basilico)", fontSize: 13, margin: 0, textAlign: "center" }}>
+              {esitoImport}
+            </p>
+          )}
         </div>
       )}
 
@@ -432,6 +475,13 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
           </div>
         </div>
       )}
+
+      <MealImportSheet
+        open={importOpen}
+        slots={slots}
+        onClose={() => setImportOpen(false)}
+        onConfirm={importMeals}
+      />
     </div>
   );
 }

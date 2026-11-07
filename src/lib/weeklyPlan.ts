@@ -1,5 +1,5 @@
 import { db, nowIso, createId } from "./database";
-import type { WeeklyPlan, Slot } from "./models";
+import type { WeeklyPlan, Slot, Dish } from "./models";
 import { cycleDays, mealsForDay, toIsoDate } from "./calendar";
 
 // Each function uses a Dexie transaction. Dexie serializes concurrent "rw" transactions on the
@@ -36,4 +36,68 @@ export async function getOrCreatePlanSlots(pianoId: string, cycleStart: Date): P
 
 export async function assignDishToSlot(slotId: string, piattoId: string | undefined): Promise<void> {
   await db.slot.update(slotId, { piattoId });
+}
+
+export interface MealImportAssignment {
+  slotId: string;
+  /** Empty string clears the slot; a name assigns an existing dish or creates a manual one. */
+  nome: string;
+}
+
+export interface MealImportResult {
+  assegnati: number;
+  svuotati: number;
+  piattiCreati: number;
+}
+
+function normalizzaNomePiatto(nome: string): string {
+  return nome.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Applies reviewed meal rows to the plan. Reuses a dish with the same name when possible and
+ * creates a manual dish otherwise. Slots not mentioned in the import stay untouched. */
+export async function importMealsIntoPlan(
+  righe: MealImportAssignment[],
+  porzioni: number,
+): Promise<MealImportResult> {
+  return db.transaction("rw", db.piatti, db.slot, async () => {
+    const piatti = await db.piatti.toArray();
+    const perNome = new Map<string, Dish>();
+    for (const piatto of piatti) {
+      if (!piatto.deletedAt) perNome.set(normalizzaNomePiatto(piatto.nome), piatto);
+    }
+
+    let assegnati = 0;
+    let svuotati = 0;
+    let piattiCreati = 0;
+
+    for (const riga of righe) {
+      const nome = riga.nome.replace(/\s+/g, " ").trim();
+      if (!nome) {
+        await db.slot.update(riga.slotId, { piattoId: undefined });
+        svuotati++;
+        continue;
+      }
+
+      let piatto = perNome.get(normalizzaNomePiatto(nome));
+      if (!piatto) {
+        piatto = {
+          id: createId(),
+          nome,
+          preferito: false,
+          origine: "manuale",
+          porzioni,
+          updatedAt: nowIso(),
+        };
+        await db.piatti.add(piatto);
+        perNome.set(normalizzaNomePiatto(nome), piatto);
+        piattiCreati++;
+      }
+
+      await db.slot.update(riga.slotId, { piattoId: piatto.id });
+      assegnati++;
+    }
+
+    return { assegnati, svuotati, piattiCreati };
+  });
 }

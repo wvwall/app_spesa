@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X } from "lucide-react";
+import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X, Upload } from "lucide-react";
 import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { getOrCreateWeeklyPlan } from "../lib/weeklyPlan";
 import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel } from "../lib/calendar";
@@ -13,10 +13,12 @@ import {
   addFreeItem,
   updateItem,
   sortListByDepartment,
+  importShoppingItems,
 } from "../lib/shoppingList";
+import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, Chip, CycleNavigator, Skeleton } from "../components";
+import { Button, Chip, CycleNavigator, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
 
 interface Props {
@@ -39,6 +41,7 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
   const lista = useLiveQuery(() => (piano ? getListForPlan(piano.id) : undefined), [piano?.id]);
   const voci = useLiveQuery(() => (lista ? db.voci.where("listaId").equals(lista.id).toArray() : []), [lista?.id]) ?? [];
   const ordineReparti = profilo?.ordineReparti ?? DEFAULT_DEPARTMENTS;
+  const ingredientiCatalogo = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
 
   // Alternatives (RF7) come from a local map (src/lib/alternatives.ts), with no AI or network
   // dependency, so no async preparation is needed before entering active shopping.
@@ -71,6 +74,19 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
   const [esitoOrdina, setEsitoOrdina] = useState<string | null>(null);
   const [itemBeingEdited, setItemBeingEdited] = useState<ShoppingListItem | null>(null);
   const [departmentWithForm, setDepartmentWithForm] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [esitoImport, setEsitoImport] = useState<string | null>(null);
+
+  async function importList(righe: ShoppingImportEntry[]) {
+    const pianoCorrente = await getOrCreateWeeklyPlan(cicloIso);
+    const listaAperta = await getOrCreateOpenList(pianoCorrente.id);
+    const esito = await importShoppingItems(listaAperta.id, righe);
+    const parti = [
+      `${esito.aggiunti} ${esito.aggiunti === 1 ? "nuovo" : "nuovi"}`,
+    ];
+    if (esito.aggiornati > 0) parti.push(`${esito.aggiornati} aggiornati`);
+    setEsitoImport(`Importati ${esito.aggiunti + esito.aggiornati} articoli (${parti.join(", ")}).`);
+  }
 
   async function sortByDepartment() {
     if (!lista) return;
@@ -202,6 +218,14 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
             <Button variant="ghost" onClick={exportText}>
               Esporta testo
             </Button>
+            <Button variant="ghost" onClick={() => setImportOpen(true)}>
+              <span className="inline-flex items-center gap-1.5">
+                <Upload size={15} strokeWidth={2.25} /> Importa lista
+              </span>
+            </Button>
+            {esitoImport && (
+              <p style={{ color: "var(--basilico)", fontSize: 13, margin: 0 }}>{esitoImport}</p>
+            )}
             <Button onClick={() => void closeAndStartShopping()}>Inizia la spesa</Button>
             <button
               type="button"
@@ -218,11 +242,24 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
           <p style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>
             Pianifica qualche pasto in Settimana e genera la lista da lì, oppure aggiungi articoli a mano.
           </p>
-          <div className="w-full">
+          <div className="w-full flex flex-col gap-2">
             <AddShoppingItemForm reparti={ordineReparti} onAdd={addItem} />
+            <Button variant="ghost" onClick={() => setImportOpen(true)}>
+              <span className="inline-flex items-center gap-1.5">
+                <Upload size={15} strokeWidth={2.25} /> Importa lista
+              </span>
+            </Button>
           </div>
         </div>
       )}
+
+      <ShoppingImportSheet
+        open={importOpen}
+        catalogo={ingredientiCatalogo}
+        reparti={ordineReparti}
+        onClose={() => setImportOpen(false)}
+        onConfirm={importList}
+      />
     </div>
   );
 }

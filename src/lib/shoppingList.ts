@@ -138,6 +138,75 @@ export async function addFreeItem(
   await db.voci.add(voce);
 }
 
+export interface ShoppingImportEntry {
+  nome: string;
+  quantita: string;
+  reparto: string;
+  nota?: string;
+  ingredienteId?: string;
+}
+
+export interface ShoppingImportResult {
+  aggiunti: number;
+  aggiornati: number;
+}
+
+function normalizzaNomeVoce(nome: string): string {
+  return nome.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Adds reviewed rows to the week's list, or updates a row with the same normalized name.
+ * Imported rows are marked as manual (testoLibero) so a later "Generate list" preserves them.
+ * Checked state, photos and alternatives already on an existing row are left untouched. */
+export async function importShoppingItems(
+  listaId: string,
+  righe: ShoppingImportEntry[],
+): Promise<ShoppingImportResult> {
+  return db.transaction("rw", db.voci, async () => {
+    const esistenti = await db.voci.where("listaId").equals(listaId).toArray();
+    const perNome = new Map(esistenti.map((v) => [normalizzaNomeVoce(v.nome), v]));
+
+    let aggiunti = 0;
+    let aggiornati = 0;
+
+    for (const riga of righe) {
+      const nome = riga.nome.replace(/\s+/g, " ").trim();
+      if (!nome) continue;
+
+      const chiave = normalizzaNomeVoce(nome);
+      const esistente = perNome.get(chiave);
+      if (esistente) {
+        await db.voci.update(esistente.id, {
+          quantita: riga.quantita || esistente.quantita,
+          reparto: riga.reparto || esistente.reparto,
+          nota: riga.nota,
+          ingredienteId: esistente.ingredienteId ?? riga.ingredienteId,
+          testoLibero: nome,
+        });
+        aggiornati++;
+      } else {
+        const voce: ShoppingListItem = {
+          id: createId(),
+          listaId,
+          ingredienteId: riga.ingredienteId,
+          testoLibero: nome,
+          nome,
+          quantita: riga.quantita,
+          reparto: riga.reparto || REPARTO_NON_CATEGORIZZATO,
+          checked: false,
+          alternative: findAlternatives(nome),
+          nota: riga.nota,
+        };
+        await db.voci.add(voce);
+        perNome.set(chiave, voce);
+        aggiunti++;
+      }
+    }
+
+    return { aggiunti, aggiornati };
+  });
+}
+
 export async function toggleItem(voceId: string, checked: boolean): Promise<void> {
   await db.voci.update(voceId, { checked, checkedAt: checked ? nowIso() : undefined });
 }
