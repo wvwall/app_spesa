@@ -31,6 +31,8 @@ export function BottomSheet({ open = false, title, intro, footer, onClose, child
       <div
         role="dialog"
         aria-label={title}
+        aria-hidden={!open}
+        inert={!open}
         style={{
           position: pos,
           left: 0,
