@@ -387,77 +387,85 @@ function AddShoppingItemForm({
     );
   }
 
+  const campo: CSSProperties = { borderColor: "var(--quadretto)", background: "var(--surface-card)" };
+
   return (
     <div
       className="flex flex-col gap-2 border rounded-2xl p-3"
       style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}
     >
-      <div className="flex items-center gap-2">
-        <input
-          autoFocus
-          className="border rounded-lg px-2.5 py-1.5 text-sm flex-1 min-w-0"
-          style={{ borderColor: "var(--quadretto)" }}
-          placeholder="Nome articolo…"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void submit();
-          }}
-        />
-        <input
-          inputMode="numeric"
-          aria-label="Quantità"
-          className="border rounded-lg px-2.5 py-1.5 text-sm text-right"
-          style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)", width: 56 }}
-          placeholder="q.tà"
-          value={quantita}
-          onChange={(e) => setQuantita(e.target.value)}
-        />
-        <input
-          aria-label="Unità"
-          list={idUnita}
-          autoCapitalize="none"
-          className="border rounded-lg px-2.5 py-1.5 text-sm"
-          style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)", width: 76 }}
-          placeholder="unità"
-          value={unita}
-          onChange={(e) => setUnita(e.target.value)}
-        />
-        <datalist id={idUnita}>
-          {UNITA_SUGGERITE.map((u) => (
-            <option key={u} value={u} />
-          ))}
-        </datalist>
-      </div>
+      {/* What */}
       <input
-        aria-label="Nota"
-        className="border rounded-lg px-2.5 py-1.5 text-sm"
-        style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)" }}
-        placeholder="Nota (es. quella in vetro)"
-        value={nota}
-        onChange={(e) => setNota(e.target.value)}
+        autoFocus
+        aria-label="Nome articolo"
+        className="border rounded-lg px-3 py-2.5 text-sm w-full"
+        style={{ ...campo, fontWeight: 600 }}
+        placeholder="Nome articolo…"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void submit();
         }}
       />
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 self-start text-sm"
-        style={{ color: "var(--text-secondary)" }}
-        onClick={() => setRepartiAperti((v) => !v)}
-      >
-        Reparto:{" "}
-        {reparto ? (
-          <span style={{ color: "var(--biro)", fontWeight: 600 }}>{reparto}</span>
-        ) : (
-          <span style={{ fontStyle: "italic" }}>opzionale</span>
-        )}
-        <ChevronDown
-          size={15}
-          strokeWidth={2.25}
-          style={{ transform: departmentsOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }}
-        />
-      </button>
+
+      {/* How much and where: quantity and unit read as one value ("1 kg"), department beside. */}
+      <div className="flex items-stretch gap-2">
+        <div
+          className="flex items-stretch flex-none border rounded-lg overflow-hidden border-quadretto focus-within:border-biro"
+          style={{ background: "var(--surface-card)" }}
+        >
+          <input
+            inputMode="decimal"
+            aria-label="Quantità"
+            className="px-2.5 py-2.5 text-sm text-right"
+            style={{ width: 52, border: 0, outline: "none", background: "transparent", fontVariantNumeric: "tabular-nums" }}
+            placeholder="q.tà"
+            value={quantita}
+            onChange={(e) => setQuantita(e.target.value)}
+          />
+          <span aria-hidden="true" style={{ width: 1, background: "var(--quadretto)", margin: "8px 0" }} />
+          <input
+            aria-label="Unità"
+            list={idUnita}
+            autoCapitalize="none"
+            className="px-2.5 py-2.5 text-sm"
+            style={{ width: 84, border: 0, outline: "none", background: "transparent" }}
+            placeholder="unità"
+            value={unita}
+            onChange={(e) => setUnita(e.target.value)}
+          />
+          <datalist id={idUnita}>
+            {UNITA_SUGGERITE.map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
+        </div>
+        <button
+          type="button"
+          aria-expanded={departmentsOpen}
+          aria-label={reparto ? `Reparto: ${reparto}` : "Scegli reparto (opzionale)"}
+          className="flex-1 min-w-0 inline-flex items-center justify-between gap-1 border rounded-lg px-3 text-sm"
+          style={campo}
+          onClick={() => setRepartiAperti((v) => !v)}
+        >
+          <span
+            className="truncate"
+            style={reparto ? { color: "var(--text-body)", fontWeight: 600 } : { color: "var(--text-secondary)" }}
+          >
+            {reparto ?? "Reparto"}
+          </span>
+          <ChevronDown
+            size={15}
+            strokeWidth={2.25}
+            style={{
+              flex: "none",
+              color: "var(--text-secondary)",
+              transform: departmentsOpen ? "rotate(180deg)" : undefined,
+              transition: "transform .15s",
+            }}
+          />
+        </button>
+      </div>
       {departmentsOpen && (
         <div className="flex flex-wrap gap-2">
           {reparti.map((r) => (
@@ -475,9 +483,31 @@ function AddShoppingItemForm({
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: "var(--biro)" }}>
-          <ImagePlus size={17} /> {fotoDataUrl ? "Cambia foto" : "Aggiungi foto"}
+
+      <input
+        aria-label="Nota"
+        className="border rounded-lg px-3 py-2.5 text-sm"
+        style={campo}
+        placeholder="Nota (es. quella in vetro)"
+        value={nota}
+        onChange={(e) => setNota(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void submit();
+        }}
+      />
+
+      {/* Actions on one row: photo on the left, cancel and confirm on the right. */}
+      <div className="flex items-center gap-1 pt-1">
+        <label
+          className="inline-flex items-center gap-1.5 text-sm cursor-pointer"
+          style={{ color: "var(--biro)", minHeight: 44 }}
+        >
+          {fotoDataUrl ? (
+            <img src={fotoDataUrl} alt="Anteprima" className="h-8 w-8 rounded-md object-cover" />
+          ) : (
+            <ImagePlus size={18} />
+          )}
+          {fotoDataUrl ? "Cambia" : "Foto"}
           <input
             type="file"
             accept="image/*"
@@ -487,31 +517,40 @@ function AddShoppingItemForm({
           />
         </label>
         {fotoDataUrl && (
-          <>
-            <img src={fotoDataUrl} alt="Anteprima" className="h-10 w-10 rounded-md object-cover" />
-            <button type="button" aria-label="Rimuovi foto" onClick={() => setFotoDataUrl(undefined)}>
-              <X size={16} />
-            </button>
-          </>
+          <button
+            type="button"
+            aria-label="Rimuovi foto"
+            onClick={() => setFotoDataUrl(undefined)}
+            style={{ color: "var(--text-secondary)", minWidth: 32, minHeight: 44, display: "grid", placeItems: "center" }}
+          >
+            <X size={16} />
+          </button>
         )}
-        {photoError && <span role="alert" className="text-xs" style={{ color: "var(--pomodoro)" }}>{photoError}</span>}
-      </div>
-      <div className="flex items-center gap-2">
-        <Button onClick={() => void submit()} disabled={!nome.trim() || isSaving} style={{ flex: 1 }}>
-           {confirmLabel}
-        </Button>
         <button
           type="button"
-          className="text-xs px-1"
-          style={{ color: "var(--text-secondary)" }}
-           onClick={() => {
-             if (onCancel) onCancel();
-             else setAperto(false);
-           }}
+          className="ml-auto text-sm px-3"
+          style={{ color: "var(--text-secondary)", minHeight: 44 }}
+          onClick={() => {
+            if (onCancel) onCancel();
+            else setAperto(false);
+          }}
         >
-          chiudi
+          annulla
         </button>
+        <Button
+          fullWidth={false}
+          onClick={() => void submit()}
+          disabled={!nome.trim() || isSaving}
+          style={{ padding: "11px 22px" }}
+        >
+          {confirmLabel}
+        </Button>
       </div>
+      {photoError && (
+        <p role="alert" className="text-xs" style={{ color: "var(--pomodoro)", margin: 0 }}>
+          {photoError}
+        </p>
+      )}
     </div>
   );
 }
