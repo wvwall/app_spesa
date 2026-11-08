@@ -26,7 +26,12 @@ export function IconButton({ tone = "neutral", size = 36, style, children, ...re
         display: "grid",
         placeItems: "center",
         color: tone === "accent" ? "var(--biro)" : tone === "danger" ? "var(--pomodoro)" : "var(--text-secondary)",
-        background: tone === "accent" ? "var(--biro-chiaro)" : "var(--surface-card)",
+        // Neutral/danger: card surface at 50% opacity, so the button is less prominent than the
+        // opaque cards/inputs around it (and works the same in light, dark and any other theme).
+        background:
+          tone === "accent"
+            ? "var(--biro-chiaro)"
+            : "color-mix(in srgb, var(--surface-card) 50%, transparent)",
         ...style,
       }}
       {...rest}
