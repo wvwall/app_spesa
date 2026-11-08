@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GeminiKeySheet, TabBar } from "./components";
+import { GeminiKeySheet, TabBar, UndoToastProvider } from "./components";
 import { WeeklyPlanner } from "./screens/WeeklyPlanner";
 import { ShoppingList } from "./screens/ShoppingList";
 import { ActiveShopping } from "./screens/ActiveShopping";
@@ -61,6 +61,7 @@ export function App() {
   }
 
   return (
+    <UndoToastProvider>
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto bg-quadretti" data-tab={tab}>
         {tab === "settimana" && (
@@ -90,5 +91,6 @@ export function App() {
         onSaved={() => setSetupGeminiOpen(false)}
       />
     </div>
+    </UndoToastProvider>
   );
 }

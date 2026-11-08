@@ -60,6 +60,17 @@ export function formatCycleLabel(inizio: Date): string {
   return `Settimana ${rangeGiorni}`;
 }
 
+/** Compact label for page titles: "6–13 novembre", or "27 nov – 4 dic" across two months. */
+export function formatCycleTitle(inizio: Date): string {
+  const fine = new Date(inizio);
+  fine.setDate(fine.getDate() + 7);
+  if (FORMATTER_MESE.format(inizio) === FORMATTER_MESE.format(fine)) {
+    return `${inizio.getDate()}–${fine.getDate()} ${FORMATTER_MESE.format(fine)}`;
+  }
+  const breve = (d: Date) => `${d.getDate()} ${FORMATTER_MESE.format(d).slice(0, 3)}`;
+  return `${breve(inizio)} – ${breve(fine)}`;
+}
+
 export function isToday(d: Date): boolean {
   const oggi = new Date();
   return d.toDateString() === oggi.toDateString();

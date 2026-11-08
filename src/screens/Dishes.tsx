@@ -4,10 +4,11 @@ import { Sparkles, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
-import { Button, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
+import { Button, PageHeader, useUndoToast, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
 import type { Ingredient, Dish } from "../lib/models";
 
 export function Dishes() {
+  const showUndo = useUndoToast();
   const ingredientiRaw = useLiveQuery(() => db.ingredienti.toArray(), []);
   const piattiRaw = useLiveQuery(() => db.piatti.toArray(), []);
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
@@ -109,23 +110,36 @@ export function Dishes() {
   }
 
   async function deleteDish(piattoId: string) {
+    const piatto = await db.piatti.get(piattoId);
+    if (!piatto) return;
+    const suoiIngredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
+    const slotInteressati = (await db.slot.toArray()).filter((s) => s.piattoId === piattoId).map((s) => s.id);
     await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
       await db.piatti.delete(piattoId);
-      const suoiIngredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
       await db.piattoIngredienti.bulkDelete(suoiIngredienti.map((i) => i.id));
-      const tuttiSlot = await db.slot.toArray();
-      for (const slot of tuttiSlot.filter((s) => s.piattoId === piattoId)) {
+      for (const slotId of slotInteressati) {
         // eslint-disable-next-line no-await-in-loop
-        await db.slot.update(slot.id, { piattoId: undefined });
+        await db.slot.update(slotId, { piattoId: undefined });
       }
+    });
+    showUndo({
+      message: `${piatto.nome} eliminato`,
+      onUndo: async () => {
+        await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
+          await db.piatti.put(piatto);
+          await db.piattoIngredienti.bulkPut(suoiIngredienti);
+          for (const slotId of slotInteressati) {
+            // eslint-disable-next-line no-await-in-loop
+            await db.slot.update(slotId, { piattoId });
+          }
+        });
+      },
     });
   }
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none">
-        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, lineHeight: "44px" }}>Piatti</h1>
-      </header>
+      <PageHeader title="Piatti" />
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
         <SearchInput placeholder="Cerca o aggiungi un ingrediente…" value={query} onChange={(e) => setQuery(e.target.value)} />
 
@@ -226,7 +240,7 @@ export function Dishes() {
                     type="button"
                     aria-label={`Elimina ${p.nome}`}
                     onClick={() => void deleteDish(p.id)}
-                    style={{ color: "var(--text-secondary)", display: "flex" }}
+                    style={{ color: "var(--pomodoro)", display: "flex" }}
                   >
                     <Trash2 size={16} strokeWidth={2} />
                   </button>

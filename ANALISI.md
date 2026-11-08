@@ -190,7 +190,7 @@ Assunzioni fatte dove mancava una risposta esplicita (segnalate come da processo
 
 | # | Assunzione | Impatto se sbagliata |
 |---|------------|----------------------|
-| A1 | ~~Settimana fissa lunedì–domenica~~ **Risolto (19 lug 2026)**: il ciclo è ancorato al giorno in cui si fa la spesa — di solito **venerdì** — non a un lunedì fisso. Copre da cena del giorno di inizio (incluso) a pranzo del giorno di inizio successivo (incluso): 8 giorni, 14 pasti, primo giorno solo cena, ultimo solo pranzo. Configurabile in Altro, default venerdì | — |
+| A1 | ~~Settimana fissa lunedì–domenica~~ **Risolto (19 lug 2026)**: il ciclo è ancorato al giorno in cui si fa la spesa — di solito **venerdì** — non a un lunedì fisso. Copre da cena del giorno di inizio (incluso) a pranzo del giorno di inizio successivo (incluso): 8 giorni, 14 pasti, primo giorno solo cena, ultimo solo pranzo. Configurabile in Opzioni, default venerdì | — |
 | A2 | Solo **pranzo e cena**; il modello dati prevede però `pasto` estensibile (colazione, snack) | Nullo — già previsto |
 | A3 | Piatto = nome + ingredienti con quantità + **procedimento breve opzionale** generato dall'AI | Basso |
 | A4 | Porzioni: default famiglia, override per piatto | Basso |
