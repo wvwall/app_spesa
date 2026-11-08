@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Icona "Sovrastampa", quaderno di notte: lavagna, evidenziatore e biro della dark mode -->
+  <!-- Icona "Sovrastampa", quaderno di notte a ruoli invertiti: cestino nella biro azzurra della dark mode, lista evidenziata in giallo con inchiostro scuro -->
   <rect width="100" height="100" fill="#14171F"/>
   <g style="isolation:isolate">
-    <path d="M17 52H83L76.4 82.8A4 4 0 0 1 72.5 86H27.5A4 4 0 0 1 23.6 82.8Z" fill="#F2DC6B"/>
+    <path d="M17 52H83L76.4 82.8A4 4 0 0 1 72.5 86H27.5A4 4 0 0 1 23.6 82.8Z" fill="#9DB1F7"/>
     <g style="mix-blend-mode:multiply">
       <g transform="rotate(-9 50 36)">
-        <rect x="31" y="13" width="38" height="50" rx="3" fill="#5B78E6"/>
-        <path d="M37 26l2.8 2.8 5-5.6M37 39l2.8 2.8 5-5.6" fill="none" stroke="#F5F2EA" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M50 26.5h12M50 39.5h9" stroke="#F5F2EA" stroke-width="3" stroke-linecap="round"/>
+        <rect x="31" y="13" width="38" height="50" rx="3" fill="#F2DC6B"/>
+        <path d="M37 26l2.8 2.8 5-5.6M37 39l2.8 2.8 5-5.6" fill="none" stroke="#1B1D14" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M50 26.5h12M50 39.5h9" stroke="#1B1D14" stroke-width="3" stroke-linecap="round"/>
       </g>
-      <rect x="36.5" y="66" width="6" height="13" rx="3" fill="#5B78E6"/>
-      <rect x="47" y="66" width="6" height="13" rx="3" fill="#5B78E6"/>
-      <rect x="57.5" y="66" width="6" height="13" rx="3" fill="#5B78E6"/>
+      <rect x="36.5" y="66" width="6" height="13" rx="3" fill="#14171F"/>
+      <rect x="47" y="66" width="6" height="13" rx="3" fill="#14171F"/>
+      <rect x="57.5" y="66" width="6" height="13" rx="3" fill="#14171F"/>
     </g>
   </g>
 </svg>
