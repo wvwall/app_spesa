@@ -9,7 +9,6 @@ import type {
   ShoppingListRecord,
   ShoppingListItem,
   AiSettings,
-  Theme,
 } from "./models";
 
 export const db = new Dexie("LaSpesaDiCasa") as Dexie & {
@@ -61,7 +60,7 @@ export async function getOrCreateProfile(): Promise<Profile> {
     vincoliAlimentari: ["noci"],
     ordineReparti: DEFAULT_DEPARTMENTS,
     giornoSpesa: 5, // Friday.
-    tema: "chiaro",
+    tema: "sistema",
     seedVersion: 0,
     seedVersionPiatti: 0,
     updatedAt: new Date().toISOString(),
@@ -76,16 +75,6 @@ export async function getOrCreateProfile(): Promise<Profile> {
     if (giaCreato) return giaCreato;
     throw new Error("Impossibile creare il profilo.");
   }
-}
-
-const DATA_THEME_PER_TEMA: Record<Theme, string> = {
-  chiaro: "light",
-  scuro: "dark",
-  stitch: "stitch",
-};
-
-export function applyTheme(tema: Theme): void {
-  document.documentElement.setAttribute("data-theme", DATA_THEME_PER_TEMA[tema]);
 }
 
 export function nowIso(): string {

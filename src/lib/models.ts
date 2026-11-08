@@ -1,7 +1,8 @@
 export type Meal = "pranzo" | "cena";
 export type IngredientOrigin = "seed" | "utente";
 export type RecipeOrigin = "manuale" | "ai";
-export type Theme = "chiaro" | "scuro" | "stitch";
+/** "sistema" follows the OS light/dark setting (prefers-color-scheme). */
+export type Theme = "sistema" | "chiaro" | "scuro" | "stitch";
 
 /** Dietary constraints from the profile (see DESIGN.md §8.6 and ANALISI.md RF13). New profiles
  * default to ["noci"]; the list is user-editable, but removing the nuts constraint requires an
