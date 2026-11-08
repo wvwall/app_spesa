@@ -609,7 +609,7 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
           onBlur={() => void updateQuantity(voce.id, quantita)}
         />
       </label>
-      <IconButton tone="accent" size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
+      <IconButton size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
         <Pencil size={16} strokeWidth={2} />
       </IconButton>
       <IconButton tone="danger" size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void deleteItem(voce.id)}>
