@@ -57,9 +57,9 @@ Palette "biro + evidenziatore" (novembre 2026): un solo blu per tutte le azioni,
 | `quadretto` | `#DFE4EE` | Griglia di sfondo (grigio-azzurro, famiglia dell'inchiostro), bordi quieti, divisori |
 | `inchiostro` | `#22252B` | Testo primario |
 | `inchiostro-70` | `#5B5F66` | Testo secondario, label |
-| `biro` | `#2D46E0` | Interattivi: link, bottoni, focus, spunta e tratto in corsia — blu ultramarino (6.1:1 su carta, 6.9:1 con testo bianco) |
-| `biro-chiaro` | `#E8EBFC` | Fondo tenue delle azioni secondarie (modifica), badge AI |
-| `evidenziatore` | `#FFF0A3` | Selezionato/attuale: tab attiva, chip scelte, "Oggi" (testo biro 6.0:1) |
+| `biro` | `#3448C5` | Interattivi: link, bottoni, focus, spunta e tratto in corsia — blu ultramarino smorzato (6.5:1 su carta, 7.3:1 con testo bianco) |
+| `biro-chiaro` | `#E9EBF8` | Fondo tenue delle azioni secondarie (modifica), badge AI |
+| `evidenziatore` | `#FFF0A3` | Selezionato/attuale: tab attiva, chip scelte, "Oggi" (testo biro 6.3:1) |
 | `basilico` | `#39724A` | Check fatto, conferme, badge "in dispensa" |
 | `pomodoro` | `#BE3F27` | "Manca", errori, allergene. Mai decorativo |
 | `lavagna` | `#15181C` | Sfondo dark mode (tempo 1, sera) |

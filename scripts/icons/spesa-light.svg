@@ -5,13 +5,13 @@
     <path d="M17 52H83L76.4 82.8A4 4 0 0 1 72.5 86H27.5A4 4 0 0 1 23.6 82.8Z" fill="#F2DC6B"/>
     <g style="mix-blend-mode:multiply">
       <g transform="rotate(-9 50 36)">
-        <rect x="31" y="13" width="38" height="50" rx="3" fill="#2D46E0"/>
+        <rect x="31" y="13" width="38" height="50" rx="3" fill="#3448C5"/>
         <path d="M37 26l2.8 2.8 5-5.6M37 39l2.8 2.8 5-5.6" fill="none" stroke="#F5F2EA" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M50 26.5h12M50 39.5h9" stroke="#F5F2EA" stroke-width="3" stroke-linecap="round"/>
       </g>
-      <rect x="36.5" y="66" width="6" height="13" rx="3" fill="#2D46E0"/>
-      <rect x="47" y="66" width="6" height="13" rx="3" fill="#2D46E0"/>
-      <rect x="57.5" y="66" width="6" height="13" rx="3" fill="#2D46E0"/>
+      <rect x="36.5" y="66" width="6" height="13" rx="3" fill="#3448C5"/>
+      <rect x="47" y="66" width="6" height="13" rx="3" fill="#3448C5"/>
+      <rect x="57.5" y="66" width="6" height="13" rx="3" fill="#3448C5"/>
     </g>
   </g>
 </svg>
