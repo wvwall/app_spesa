@@ -25,8 +25,8 @@ function resolveTheme(tema: Theme): DataTheme {
   return DATA_THEME_PER_TEMA[tema];
 }
 
-/** Applies the profile theme to <html data-theme> and switches favicon and home-screen icon
- * to the matching variant (dark icons only for the dark theme; Stitch uses the light ones). */
+/** Applies the profile theme to <html data-theme> and switches the favicon to the matching
+ * variant (dark favicon only for the dark theme; Stitch uses the light one). */
 export function applyTheme(tema: Theme): void {
   temaCorrente = tema;
   const dataTheme = resolveTheme(tema);
@@ -43,7 +43,7 @@ function applyAppIcons(scuro: boolean): void {
     link.removeAttribute("media");
     link.href = `/icons/favicon${suffisso}-${lato}.png`;
   });
-  // iOS reads it when the user adds the app to the home screen.
-  const appleTouch = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
-  if (appleTouch) appleTouch.href = `/icons/apple-touch-icon${suffisso}.png`;
+  // The apple-touch-icon is deliberately left alone: iOS snapshots it once, when the app is added
+  // to the home screen, and derives its own dark version from it. Saving our dark icon there
+  // would pin it even after the system goes back to light.
 }

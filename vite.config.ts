@@ -18,7 +18,6 @@ export default defineConfig({
         "icons/favicon-dark-16.png",
         "icons/favicon-dark-32.png",
         "icons/apple-touch-icon.png",
-        "icons/apple-touch-icon-dark.png",
       ],
       manifest: {
         name: "La spesa di casa",

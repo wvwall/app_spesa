@@ -31,7 +31,6 @@ const jobs = [
   ["icon-dark-maskable-192.png", maskable(dark), 192],
   ["icon-dark-maskable-512.png", maskable(dark), 512],
   ["apple-touch-icon.png", light, 180],
-  ["apple-touch-icon-dark.png", dark, 180],
   ["favicon-16.png", src("favicon-light.svg"), 16, true],
   ["favicon-32.png", src("favicon-light.svg"), 32, true],
   ["favicon-dark-16.png", src("favicon-dark.svg"), 16, true],
