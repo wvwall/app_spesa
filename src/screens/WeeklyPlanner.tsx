@@ -29,6 +29,7 @@ import {
 import {
   DishCard,
   PageHeader,
+  useUndoToast,
   Button,
   IconButton,
   SearchInput,
@@ -495,6 +496,7 @@ function PlanSlotRow({
   ingredientiCatalogo: Ingredient[];
   dishesAssignedThisWeek: { slotId: string; nome: string }[];
 }) {
+  const showUndo = useUndoToast();
   const [ricerca, setRicerca] = useState(false);
   const [query, setQuery] = useState("");
   const [rigenerazione, setRigenerazione] = useState(false);
@@ -503,7 +505,14 @@ function PlanSlotRow({
   const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
 
   async function assign(piattoId: string | undefined) {
+    const precedente = slot.piattoId;
     await assignDishToSlot(slot.id, piattoId);
+    if (piattoId === undefined && precedente) {
+      showUndo({
+        message: "Piatto rimosso dal pasto",
+        onUndo: () => assignDishToSlot(slot.id, precedente),
+      });
+    }
     setRicerca(false);
     setQuery("");
   }

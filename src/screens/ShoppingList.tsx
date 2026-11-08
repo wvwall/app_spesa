@@ -20,7 +20,7 @@ import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
 import { splitUnitFromNote, joinUnitAndNote, UNITA_SUGGERITE } from "../lib/textImport";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, PageHeader, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
+import { Button, PageHeader, useUndoToast, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
 
 /** Secondary list tools: icon over a short label, three per row, still 44px+ tall. */
@@ -43,6 +43,7 @@ interface Props {
 
 export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping }: Props) {
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
+  const showUndo = useUndoToast();
   // The displayed week follows the offset selected here with the ‹ today › navigator, rather
   // than being fixed to today. This lets users create or review a list for a specific week.
   const inizio = shiftCycle(cycleStart(new Date(), profilo?.giornoSpesa ?? 5), cycleOffset);
@@ -74,8 +75,8 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   async function clearList() {
     if (!lista) return;
-    if (!window.confirm("Cancellare tutta la lista? Non si può annullare.")) return;
-    await deleteCompleteList(lista.id);
+    const restore = await deleteCompleteList(lista.id);
+    showUndo({ message: "Lista svuotata", onUndo: restore });
   }
 
   async function addItem(nome: string, reparto: string, quantita: string, fotoDataUrl?: string, nota?: string) {
@@ -572,6 +573,12 @@ const AZIONE_RIGA = 36;
 function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdit: () => void }) {
   const [quantita, setQuantita] = useState(voce.quantita);
   const { unita, nota } = splitUnitFromNote(voce.nota);
+  const showUndo = useUndoToast();
+
+  async function removeItem() {
+    const restore = await deleteItem(voce.id);
+    showUndo({ message: `${voce.nome} eliminato`, onUndo: restore });
+  }
 
   return (
     <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
@@ -612,7 +619,7 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
       <IconButton size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
         <Pencil size={16} strokeWidth={2} />
       </IconButton>
-      <IconButton tone="danger" size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void deleteItem(voce.id)}>
+      <IconButton tone="danger" size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void removeItem()}>
         <Trash2 size={16} strokeWidth={2} />
       </IconButton>
     </div>

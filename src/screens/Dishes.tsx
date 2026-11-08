@@ -4,10 +4,11 @@ import { Sparkles, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
-import { Button, PageHeader, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
+import { Button, PageHeader, useUndoToast, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
 import type { Ingredient, Dish } from "../lib/models";
 
 export function Dishes() {
+  const showUndo = useUndoToast();
   const ingredientiRaw = useLiveQuery(() => db.ingredienti.toArray(), []);
   const piattiRaw = useLiveQuery(() => db.piatti.toArray(), []);
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
@@ -109,15 +110,30 @@ export function Dishes() {
   }
 
   async function deleteDish(piattoId: string) {
+    const piatto = await db.piatti.get(piattoId);
+    if (!piatto) return;
+    const suoiIngredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
+    const slotInteressati = (await db.slot.toArray()).filter((s) => s.piattoId === piattoId).map((s) => s.id);
     await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
       await db.piatti.delete(piattoId);
-      const suoiIngredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
       await db.piattoIngredienti.bulkDelete(suoiIngredienti.map((i) => i.id));
-      const tuttiSlot = await db.slot.toArray();
-      for (const slot of tuttiSlot.filter((s) => s.piattoId === piattoId)) {
+      for (const slotId of slotInteressati) {
         // eslint-disable-next-line no-await-in-loop
-        await db.slot.update(slot.id, { piattoId: undefined });
+        await db.slot.update(slotId, { piattoId: undefined });
       }
+    });
+    showUndo({
+      message: `${piatto.nome} eliminato`,
+      onUndo: async () => {
+        await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
+          await db.piatti.put(piatto);
+          await db.piattoIngredienti.bulkPut(suoiIngredienti);
+          for (const slotId of slotInteressati) {
+            // eslint-disable-next-line no-await-in-loop
+            await db.slot.update(slotId, { piattoId });
+          }
+        });
+      },
     });
   }
 
