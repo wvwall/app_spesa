@@ -16,3 +16,4 @@ export { GeminiKeySheet } from "./ai/GeminiKeySheet";
 export { ImportInput } from "./import/ImportInput";
 export { MealImportSheet } from "./import/MealImportSheet";
 export { ShoppingImportSheet } from "./import/ShoppingImportSheet";
+export { PageHeader } from "./navigation/PageHeader";

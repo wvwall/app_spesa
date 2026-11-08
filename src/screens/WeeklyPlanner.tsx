@@ -28,6 +28,7 @@ import {
 } from "../lib/calendar";
 import {
   DishCard,
+  PageHeader,
   Button,
   IconButton,
   SearchInput,
@@ -256,37 +257,16 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-2 flex-none">
-        {/* Navigator on the first row, at the same height as in "Lista", so switching tabs
-            does not make it jump; the handwritten week label gets the full width below. */}
-        <div className="flex items-center justify-between gap-2">
-          <div
-            className="text-xs"
-            style={{
-              letterSpacing: ".14em",
-              textTransform: "uppercase",
-              color: "var(--text-secondary)",
-            }}>
-            La spesa di casa
-          </div>
+      <PageHeader
+        title={formatCycleLabel(inizio)}
+        actions={
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
             onOggi={() => onCycleOffsetChange(0)}
             onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
-        </div>
-        <h1
-          style={{
-            fontFamily: "var(--font-hand)",
-            fontWeight: 800,
-            fontSize: 28,
-            lineHeight: 1.1,
-            letterSpacing: "-0.02em",
-            color: "var(--biro)",
-          }}>
-          {formatCycleLabel(inizio)}
-        </h1>
-      </header>
+        }
+      />
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
         {/* pianoId is null only until getOrCreateWeeklyPlan/getOrCreatePlanSlots finish. The day

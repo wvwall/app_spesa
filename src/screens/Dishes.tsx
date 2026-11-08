@@ -4,7 +4,7 @@ import { Sparkles, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
-import { Button, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
+import { Button, PageHeader, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
 import type { Ingredient, Dish } from "../lib/models";
 
 export function Dishes() {
@@ -123,9 +123,7 @@ export function Dishes() {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none">
-        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, lineHeight: "44px" }}>Piatti</h1>
-      </header>
+      <PageHeader title="Piatti" />
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
         <SearchInput placeholder="Cerca o aggiungi un ingrediente…" value={query} onChange={(e) => setQuery(e.target.value)} />
 

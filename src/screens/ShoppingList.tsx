@@ -20,7 +20,7 @@ import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
 import { splitUnitFromNote, joinUnitAndNote, UNITA_SUGGERITE } from "../lib/textImport";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
+import { Button, PageHeader, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
 
 /** Secondary list tools: icon over a short label, three per row, still 44px+ tall. */
@@ -136,20 +136,22 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--border-quiet)" }}>
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="truncate min-w-0" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22 }}>Lista della spesa</h1>
+      <PageHeader
+        title="Lista della spesa"
+        actions={
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
             onOggi={() => onCycleOffsetChange(0)}
             onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
-        </div>
-        <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 2 }}>
-          {formatCycleLabel(inizio)}
-          {haVoci && ` · ${voci.length} articoli`}
-        </div>
-      </header>
+        }
+        subtitle={
+          <>
+            {formatCycleLabel(inizio)}
+            {haVoci && ` · ${voci.length} articoli`}
+          </>
+        }
+      />
 
       {profilo === undefined ? (
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3.5 flex flex-col gap-2" aria-hidden="true">
