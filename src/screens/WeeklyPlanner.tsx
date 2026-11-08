@@ -423,7 +423,7 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
       {propostaSettimana && (
         <div
           className="fixed inset-0 flex flex-col justify-end"
-          style={{ background: "rgba(35,38,30,.35)", zIndex: 20 }}
+          style={{ background: "var(--scrim)", zIndex: 20 }}
         >
           <div
             className="flex flex-col gap-3 p-4"

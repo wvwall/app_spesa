@@ -145,7 +145,7 @@ export function MealImportSheet({ open, slots, onClose, onConfirm }: Props) {
                 <div
                   key={riga.slotId}
                   className="flex items-start gap-2 py-2.5 border-b"
-                  style={{ borderColor: "var(--quadretto)", opacity: riga.includi ? 1 : 0.55 }}
+                  style={{ borderColor: "var(--border-quiet)", opacity: riga.includi ? 1 : 0.55 }}
                 >
                   <label
                     className="flex items-center justify-center flex-none"
@@ -169,7 +169,7 @@ export function MealImportSheet({ open, slots, onClose, onConfirm }: Props) {
                     <input
                       className="w-full rounded-lg border px-2.5 py-2 text-sm"
                       style={{
-                        borderColor: "var(--quadretto)",
+                        borderColor: "var(--border-quiet)",
                         background: "var(--surface-card)",
                         color: "var(--text-body)",
                       }}

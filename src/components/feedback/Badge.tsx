@@ -50,7 +50,7 @@ const KIND_STYLES: Record<BadgeKind, CSSProperties> = {
     display: "inline-block",
     fontSize: 11,
     color: "var(--on-biro, #fff)",
-    background: "var(--biro)",
+    background: "var(--biro-pieno)",
     borderRadius: 99,
     padding: "2px 8px",
   },

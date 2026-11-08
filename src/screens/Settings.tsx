@@ -298,7 +298,7 @@ export function Settings() {
           </div>
         </section>
 
-        <section>
+        <section className="relative">
           <Label>Tema</Label>
           {profilo.tema === "stitch" && <StitchIllustration />}
           <div className="flex gap-2">
@@ -333,18 +333,23 @@ export function Settings() {
 function StitchIllustration() {
   const [visibile, setVisibile] = useState(true);
   if (!visibile) return null;
+  // A die-cut sticker (transparent art with a baked white outline) stuck on the page corner,
+  // slightly tilted, instead of a framed picture.
   return (
     <img
-      src="/stitch/stitch2.webp"
-      alt="Stitch"
+      src="/stitch/stitch-sticker-3.webp"
+      alt=""
+      aria-hidden="true"
       onError={() => setVisibile(false)}
       style={{
-        display: "block",
-        margin: "0 auto 12px",
-        maxWidth: 140,
+        position: "absolute",
+        right: -4,
+        top: -10,
+        width: 78,
         height: "auto",
-        boxShadow: "0 0 0 2px #ff9ec4, 0 8px 20px rgba(0, 0, 0, 0.25)",
-        borderRadius: "var(--radius-card)",
+        transform: "rotate(9deg)",
+        filter: "drop-shadow(0 4px 6px rgba(20, 33, 61, 0.22))",
+        pointerEvents: "none",
       }}
     />
   );

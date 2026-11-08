@@ -32,7 +32,7 @@ export function ImportInput({ value, onChange, placeholder }: Props) {
         placeholder={placeholder}
         className="w-full rounded-xl border px-3 py-2.5 text-sm"
         style={{
-          borderColor: "var(--quadretto)",
+          borderColor: "var(--border-quiet)",
           background: "var(--surface-card)",
           color: "var(--text-body)",
           resize: "vertical",
