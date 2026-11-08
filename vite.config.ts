@@ -28,7 +28,7 @@ export default defineConfig({
         start_url: "/",
         display: "standalone",
         background_color: "#F5F2EA",
-        theme_color: "#2140A8",
+        theme_color: "#2D46E0",
         icons: [
           { src: "icons/icon-notebook-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "icons/icon-notebook-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
