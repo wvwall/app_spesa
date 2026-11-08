@@ -66,9 +66,9 @@ Palette "biro + evidenziatore" (novembre 2026): un solo blu per tutte le azioni,
 
 Le card usano un bianco caldo `#FFFDF8`, come un foglietto appoggiato sul quaderno.
 
-**Dark mode** — "quaderno di notte" (pianificazione serale): pagina blu-nera `#14171F` della stessa famiglia dell'inchiostro, quadretti tracciati nel blu della biro al 7%, testo `#E8EAF0`. La biro diventa azzurra `#9DB1F7` per testi e contorni (8.6:1), mentre i bottoni pieni usano un blu inchiostro più profondo `#3A56C8` con testo bianco, per non abbagliare. L'evidenziatore è un giallo fluo vero `#F2DC6B` con testo scuro (12:1), come sulla carta; pomodoro e basilico sono schiariti (`#F08A74`, `#7CC493`) per restare leggibili. Bottom sheet e toast seguono il tema. Il tema predefinito è **Automatico**: segue `prefers-color-scheme` del sistema e cambia al volo quando il telefono passa da chiaro a scuro; Chiaro e Scuro restano scelte forzate in Impostazioni. Favicon e apple-touch-icon seguono il tema applicato (variante scura solo col tema scuro). La **modalità corsia resta sempre chiara** anche col tema scuro attivo (classe `.sempre-chiaro`): sotto i neon del supermercato il contrasto positivo (scuro su chiaro) è più leggibile — è una scelta funzionale, il design deve dichiararla nell'UI (nessun "bug del tema").
+**Dark mode** — "quaderno di notte" (pianificazione serale): pagina blu-nera `#14171F` della stessa famiglia dell'inchiostro, quadretti tracciati nel blu della biro al 7%, testo `#E8EAF0`. La biro diventa azzurra `#9DB1F7` per testi e contorni (8.6:1), mentre i bottoni pieni usano un blu inchiostro più profondo `#3A56C8` con testo bianco, per non abbagliare. L'evidenziatore è un giallo fluo vero `#F2DC6B` con testo scuro (12:1), come sulla carta; pomodoro e basilico sono schiariti (`#F08A74`, `#7CC493`) per restare leggibili. Bottom sheet e toast seguono il tema. Il tema predefinito è **Automatico**: segue `prefers-color-scheme` del sistema e cambia al volo quando il telefono passa da chiaro a scuro; Chiaro e Scuro restano scelte forzate in Opzioni. Favicon e apple-touch-icon seguono il tema applicato (variante scura solo col tema scuro). La **modalità corsia resta sempre chiara** anche col tema scuro attivo (classe `.sempre-chiaro`): sotto i neon del supermercato il contrasto positivo (scuro su chiaro) è più leggibile — è una scelta funzionale, il design deve dichiararla nell'UI (nessun "bug del tema").
 
-**Tema Stitch** — il quaderno decorato con gli adesivi di Stitch, colori campionati dalle illustrazioni in `/public/stitch`: carta azzurrina `#EEF5F9` con quadretti nel blu della sua pancia, inchiostro navy `#14213D` (il suo contorno), azioni nel suo blu `#2A63A3` (5.6:1), evidenziatore rosa come l'interno delle orecchie `#FFD3E6` con testo prugna `#7A2A55` (6.9:1), card bianche. Le filigrane stanno piccole nell'angolo sotto la griglia; in Impostazioni Stitch è un adesivo fustellato con bordo bianco.
+**Tema Stitch** — il quaderno decorato con gli adesivi di Stitch, colori campionati dalle illustrazioni in `/public/stitch`: carta azzurrina `#EEF5F9` con quadretti nel blu della sua pancia, inchiostro navy `#14213D` (il suo contorno), azioni nel suo blu `#2A63A3` (5.6:1), evidenziatore rosa come l'interno delle orecchie `#FFD3E6` con testo prugna `#7A2A55` (6.9:1), card bianche. Le filigrane stanno piccole nell'angolo sotto la griglia; in Opzioni Stitch è un adesivo fustellato con bordo bianco.
 
 Tutte le coppie testo/sfondo ≥ 4.5:1 (AA); in modalità corsia puntare a ≥ 7:1 (AAA) per il testo delle voci.
 
@@ -99,14 +99,14 @@ Navigazione a **tab bar inferiore** (zona pollice), 4 voci:
 ┌──────────────────────────────────────┐
 │              (contenuto)             │
 ├──────────────────────────────────────┤
-│  Settimana │ Lista │ Piatti │ Impostazioni │
+│  Settimana │ Lista │ Piatti │ Opzioni │
 └──────────────────────────────────────┘
 ```
 
 - **Settimana** (home): il piano Lun–Dom, pranzo/cena.
 - **Lista**: la lista della spesa della settimana corrente; da qui si entra in **spesa attiva** (che è a schermo pieno, senza tab bar).
 - **Piatti**: ricettario personale + catalogo ingredienti.
-- **Impostazioni**: profilo (porzioni, vincoli), backup/ripristino, tema.
+- **Opzioni**: profilo (porzioni, vincoli), backup/ripristino, tema.
 
 La **generazione AI** non è una tab: è un'azione contestuale che compare dove serve (slot vuoto, selezione ingredienti, "riempi la settimana").
 
@@ -198,7 +198,7 @@ Raggruppata per reparto nell'ordine del negozio; quantità aggregate dai piatti;
 
 Due segmenti: **Ricettario** (card compatte: nome, tempo, ★ preferito, origine ✨AI/manuale) e **Ingredienti** (catalogo seed + propri, raggruppati per reparto, ricerca con alias). Azioni CRUD leggere, swipe per eliminare con conferma.
 
-### 6.6 Impostazioni / Profilo
+### 6.6 Opzioni / Profilo
 
 Porzioni default, **vincoli alimentari** (vedi §8.6), ordine reparti personalizzabile (drag), backup (esporta/importa JSON), tema, info versione seed.
 
