@@ -668,6 +668,7 @@ function PlanSlotRow({
           />
         </div>
         <IconButton
+          tone="danger"
           aria-label={`Rimuovi ${piatto.nome} da questo pasto`}
           onClick={() => void assign(undefined)}
         >

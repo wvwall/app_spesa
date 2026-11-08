@@ -224,7 +224,7 @@ export function Dishes() {
                     type="button"
                     aria-label={`Elimina ${p.nome}`}
                     onClick={() => void deleteDish(p.id)}
-                    style={{ color: "var(--text-secondary)", display: "flex" }}
+                    style={{ color: "var(--pomodoro)", display: "flex" }}
                   >
                     <Trash2 size={16} strokeWidth={2} />
                   </button>
