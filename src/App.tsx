@@ -5,7 +5,8 @@ import { ShoppingList } from "./screens/ShoppingList";
 import { ActiveShopping } from "./screens/ActiveShopping";
 import { Dishes } from "./screens/Dishes";
 import { Settings } from "./screens/Settings";
-import { getOrCreateProfile, applyTheme } from "./lib/database";
+import { getOrCreateProfile } from "./lib/database";
+import { applyTheme } from "./lib/theme";
 import {
   dismissGeminiSetupPrompt,
   getGeminiApiKey,
