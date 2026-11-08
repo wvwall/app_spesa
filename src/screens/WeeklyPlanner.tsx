@@ -23,7 +23,7 @@ import {
   cycleDays,
   toIsoDate,
   formatDayLabel,
-  formatCycleLabel,
+  formatCycleTitle,
   isToday,
 } from "../lib/calendar";
 import {
@@ -258,7 +258,7 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
   return (
     <div className="flex flex-col h-full">
       <PageHeader
-        title={formatCycleLabel(inizio)}
+        title={formatCycleTitle(inizio)}
         actions={
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}

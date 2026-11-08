@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X, Upload, Share2, ArrowDownWideNarrow } from "lucide-react";
 import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { getOrCreateWeeklyPlan } from "../lib/weeklyPlan";
-import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel } from "../lib/calendar";
+import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel, formatCycleTitle } from "../lib/calendar";
 import {
   deleteItem,
   updateQuantity,
@@ -137,7 +137,7 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
   return (
     <div className="flex flex-col h-full">
       <PageHeader
-        title="Lista della spesa"
+        title={formatCycleTitle(inizio)}
         actions={
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
@@ -145,12 +145,7 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
             onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
         }
-        subtitle={
-          <>
-            {formatCycleLabel(inizio)}
-            {haVoci && ` · ${voci.length} articoli`}
-          </>
-        }
+        subtitle={haVoci ? `Lista della spesa · ${voci.length} articoli` : "Lista della spesa"}
       />
 
       {profilo === undefined ? (
