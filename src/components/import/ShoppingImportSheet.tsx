@@ -152,7 +152,7 @@ export function ShoppingImportSheet({ open, catalogo, reparti, onClose, onConfir
               <div
                 key={riga.chiave}
                 className="flex items-start gap-2 py-3 border-b"
-                style={{ borderColor: "var(--quadretto)", opacity: riga.includi ? 1 : 0.55 }}
+                style={{ borderColor: "var(--border-quiet)", opacity: riga.includi ? 1 : 0.55 }}
               >
                 <label
                   className="flex items-center justify-center flex-none"
@@ -171,7 +171,7 @@ export function ShoppingImportSheet({ open, catalogo, reparti, onClose, onConfir
                   <input
                     className="w-full rounded-lg border px-2.5 py-2 text-sm"
                     style={{
-                      borderColor: "var(--quadretto)",
+                      borderColor: "var(--border-quiet)",
                       background: "var(--surface-card)",
                       color: "var(--text-body)",
                       fontWeight: 600,
@@ -185,7 +185,7 @@ export function ShoppingImportSheet({ open, catalogo, reparti, onClose, onConfir
                     <input
                       className="rounded-lg border px-2.5 py-2 text-sm"
                       style={{
-                        borderColor: "var(--quadretto)",
+                        borderColor: "var(--border-quiet)",
                         background: "var(--surface-card)",
                         color: "var(--text-body)",
                         width: 116,
@@ -199,7 +199,7 @@ export function ShoppingImportSheet({ open, catalogo, reparti, onClose, onConfir
                     <select
                       className="rounded-lg border px-2 py-2 text-sm flex-1 min-w-0"
                       style={{
-                        borderColor: "var(--quadretto)",
+                        borderColor: "var(--border-quiet)",
                         background: "var(--surface-card)",
                         color: "var(--text-body)",
                       }}
@@ -217,7 +217,7 @@ export function ShoppingImportSheet({ open, catalogo, reparti, onClose, onConfir
                   <input
                     className="w-full rounded-lg border px-2.5 py-1.5 text-sm"
                     style={{
-                      borderColor: "var(--quadretto)",
+                      borderColor: "var(--border-quiet)",
                       background: "var(--surface-card)",
                       color: "var(--text-secondary)",
                     }}

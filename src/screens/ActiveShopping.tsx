@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { X, TriangleAlert, ShieldCheck, Image } from "lucide-react";
 import { db, getOrCreateProfile } from "../lib/database";
@@ -41,23 +41,11 @@ export function ActiveShopping({ listId, onClose }: Props) {
   const gruppiReparto = groupByDepartment(voci, ordine);
 
   return (
+    // `sempre-chiaro` re-declares the whole light palette: under supermarket lights the aisle
+    // stays dark-on-light in every theme (DESIGN.md §4.1), sheets opened from here included.
     <div
-      className="flex flex-col h-full"
-      style={
-        {
-          background: "var(--carta)",
-          color: "var(--inchiostro)",
-          // Explicitly pin the shopping aisle colors so they remain consistent in every theme,
-          // including the accent color and not just the background (see DESIGN.md §4.1).
-          "--biro": "#2140a8",
-          "--biro-chiaro": "#e7ecf9",
-          "--on-biro": "#ffffff",
-          "--text-body": "var(--inchiostro)",
-          "--text-secondary": "var(--inchiostro-70)",
-          "--surface-card": "#fffdf8",
-          "--border-quiet": "var(--quadretto)",
-        } as CSSProperties
-      }
+      className="flex flex-col h-full sempre-chiaro"
+      style={{ background: "var(--surface-page)", color: "var(--text-body)" }}
     >
       <div className="px-5 pt-4 pb-2 flex-none">
         <div className="flex items-center justify-between">

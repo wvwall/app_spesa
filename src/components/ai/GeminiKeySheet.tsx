@@ -67,7 +67,7 @@ export function GeminiKeySheet({ open, onClose, onSaved }: GeminiKeySheetProps) 
           onChange={(event) => setApiKey(event.target.value)}
           placeholder="Incolla la chiave qui"
           className="w-full rounded-xl border px-3 py-3 text-sm"
-          style={{ borderColor: "var(--quadretto)", background: "var(--surface-card)", color: "var(--text-body)" }}
+          style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)", color: "var(--text-body)" }}
         />
         {errore && <p role="alert" style={{ color: "var(--pomodoro)", fontSize: 13 }}>{errore}</p>}
         <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: 12.5, lineHeight: 1.4 }}>

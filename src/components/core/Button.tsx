@@ -21,7 +21,7 @@ export function Button({ variant = "primary", fullWidth = true, children, style,
     fontSize: 16,
     cursor: "pointer",
     textAlign: "center",
-    background: "var(--biro)",
+    background: "var(--biro-pieno)",
     color: "var(--on-biro, #fff)",
     lineHeight: 1.3,
   };

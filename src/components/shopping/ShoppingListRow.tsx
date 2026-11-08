@@ -92,7 +92,7 @@ export function ShoppingListRow({ name, qty, note, checked = false, substituted 
             style={{
               fontSize: 11,
               color: "#fff",
-              background: "var(--biro)",
+              background: "var(--biro-pieno)",
               borderRadius: 99,
               padding: "2px 8px",
               marginLeft: 8,

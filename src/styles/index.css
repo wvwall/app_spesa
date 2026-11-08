@@ -21,21 +21,29 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
+    /* Same values as [data-theme="dark"] in tokens.css: applies before the profile theme loads. */
     --surface-page: var(--lavagna);
-    --surface-card: #1C2025;
-    --text-body: #E9EAE4;
-    --text-secondary: #9AA095;
-    --biro: #98AEF5;
-    --biro-chiaro: rgba(152, 174, 245, .16);
-    --on-biro: #15181C;
-    --evidenziatore: #524E35;
-    --evidenziatore-bordo: #8A7F45;
-    --on-evidenziatore: #E9EAE4;
-    --text-interactive: #98AEF5;
-    --border-quiet: #2A2F36;
-    --grid-line: rgba(255, 255, 255, .06);
+    --surface-card: #1C2130;
+    --text-body: #E8EAF0;
+    --text-secondary: #A3A9B8;
+    --biro: #9DB1F7;
+    --biro-chiaro: rgba(157, 177, 247, .14);
+    --biro-pieno: #3A56C8;
+    --on-biro: #FFFFFF;
+    --evidenziatore: #F2DC6B;
+    --evidenziatore-bordo: #F2DC6B;
+    --on-evidenziatore: #1B1D14;
+    --pomodoro: #F08A74;
+    --pomodoro-chiaro: rgba(240, 138, 116, .14);
+    --basilico: #7CC493;
+    --text-interactive: var(--biro);
+    --border-quiet: #2B3142;
+    --border-interactive: var(--biro);
+    --grid-line: rgba(157, 177, 247, .07);
     --surface-selected: var(--evidenziatore);
-    --border-interactive: #98AEF5;
+    --shadow-float: 0 -8px 30px rgba(0, 0, 0, .5);
+    --scrim: rgba(5, 7, 12, .6);
+    color-scheme: dark;
   }
 }
 
@@ -59,12 +67,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Stitch theme's Hawaiian atmosphere: sunset glow above and ocean glow below,
-   over warm sand. */
+/* Stitch theme: a soft ear-pink glow in the top corner and his belly blue rising from the
+   bottom, over the sky-blue paper — the same three colors as the tokens, nothing extra. */
 [data-theme="stitch"] body {
   background:
-    radial-gradient(ellipse 65% 35% at 100% -5%, rgba(255, 138, 101, 0.28), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(15, 110, 145, 0.16), transparent 60%),
+    radial-gradient(ellipse 70% 32% at 100% -4%, rgba(255, 158, 196, 0.32), transparent 62%),
+    radial-gradient(ellipse 70% 38% at 0% 104%, rgba(140, 211, 233, 0.38), transparent 62%),
     var(--surface-page);
 }
 
@@ -75,8 +83,9 @@ body {
 [data-theme="stitch"] [data-tab="settimana"].bg-quadretti,
 [data-theme="stitch"] [data-tab="lista"].bg-quadretti,
 [data-theme="stitch"] [data-tab="piatti"].bg-quadretti {
-  background-size: var(--bg-quadretti-size), var(--bg-quadretti-size), 320px auto;
-  background-position: 0 0, 0 0, bottom -10px right -16px;
+  /* Small enough to sit in the corner like a sticker under the grid, not behind the content. */
+  background-size: var(--bg-quadretti-size), var(--bg-quadretti-size), 190px auto;
+  background-position: 0 0, 0 0, bottom 6px right -14px;
   background-repeat: repeat, repeat, no-repeat;
 }
 [data-theme="stitch"] [data-tab="settimana"].bg-quadretti {
@@ -108,7 +117,7 @@ input {
 /* Initial-loading skeleton: a shimmer in the graph-paper palette, matching both light paper
    and the dark slate theme. */
 .skeleton-shimmer {
-  background: linear-gradient(90deg, var(--quadretto) 25%, var(--surface-card, #fff) 37%, var(--quadretto) 63%);
+  background: linear-gradient(90deg, var(--border-quiet) 25%, var(--surface-card) 37%, var(--border-quiet) 63%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
 }
