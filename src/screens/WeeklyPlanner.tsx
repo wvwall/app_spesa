@@ -259,6 +259,7 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
     <div className="flex flex-col h-full">
       <PageHeader
         title={formatCycleTitle(inizio)}
+        subtitle="Menu settimanale"
         actions={
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
