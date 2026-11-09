@@ -92,6 +92,29 @@ netlify/functions/ai.ts   proxy AI stateless
 design-system/            token e componenti generati dal design system, riferimento visivo
 ```
 
+## App iOS nativa (`ios/`)
+
+Versione SwiftUI della stessa app, con le stesse funzionalità e la stessa grafica; i controlli di
+sistema (tab bar, sheet, bottoni flottanti, navigatore settimane) usano Liquid Glass di iOS 26.
+
+- **Requisiti**: Xcode 26+ (testato con Xcode 27.2), target iOS 26.0
+- **Dati**: SwiftData sul dispositivo; il backup JSON v1 è lo stesso della PWA (si importa in
+  entrambe le direzioni da *Altro*)
+- **AI**: chiamata diretta a Gemini (`gemini-2.5-flash`) con gli stessi prompt e lo stesso doppio
+  controllo allergeni della Netlify Function; la chiave resta nel Portachiavi e non va nei backup
+- **Font**: istanze statiche (TTF) dei woff2 variabili in `public/fonts`
+- **Seed**: se cambi `src/seed/*.ts`, rigenera i JSON del bundle con `node scripts/export-seed.mjs`
+
+```bash
+open ios/LaSpesaDiCasa.xcodeproj
+```
+
+Test (Swift Testing, stessi casi di `textImport.test.ts` più calendario, allergeni e backup):
+
+```bash
+xcodebuild test -project ios/LaSpesaDiCasa.xcodeproj -scheme LaSpesaDiCasa -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
 ## Deploy
 
 Deploy continuo su Netlify a ogni push su `main`. Non serve configurare `GEMINI_API_KEY` sul sito:

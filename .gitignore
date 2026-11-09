@@ -22,3 +22,9 @@ yarn-error.log*
 
 # Local Netlify folder
 .netlify
+
+# iOS (Xcode)
+ios/**/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
+ios/build/
+ios/DerivedData/
