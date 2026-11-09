@@ -1,10 +1,35 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sparkles, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { db, getOrCreateProfile, nowIso, createId, DEFAULT_DEPARTMENTS } from "../lib/database";
-import { generateDish, GeminiApiKeyRequiredError, type GeneratedDish } from "../lib/ai";
+import {
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import {
+  db,
+  getOrCreateProfile,
+  nowIso,
+  createId,
+  DEFAULT_DEPARTMENTS,
+} from "../lib/database";
+import {
+  generateDish,
+  GeminiApiKeyRequiredError,
+  type GeneratedDish,
+} from "../lib/ai";
 import { saveGeneratedDish } from "../lib/dishes";
-import { Button, PageHeader, useUndoToast, Chip, SearchInput, ProposalCard, Skeleton, GeminiKeySheet } from "../components";
+import {
+  Button,
+  PageHeader,
+  useUndoToast,
+  Chip,
+  SearchInput,
+  ProposalCard,
+  Skeleton,
+  GeminiKeySheet,
+} from "../components";
 import type { Ingredient, Dish } from "../lib/models";
 
 export function Dishes() {
@@ -31,9 +56,14 @@ export function Dishes() {
   const testoRicerca = query.trim().toLowerCase();
   const filtrati = ingredienti.filter((i) => {
     if (!testoRicerca) return true;
-    return i.nome.toLowerCase().includes(testoRicerca) || i.alias.some((a) => a.toLowerCase().includes(testoRicerca));
+    return (
+      i.nome.toLowerCase().includes(testoRicerca) ||
+      i.alias.some((a) => a.toLowerCase().includes(testoRicerca))
+    );
   });
-  const corrispondenzaEsatta = ingredienti.some((i) => i.nome.toLowerCase() === testoRicerca);
+  const corrispondenzaEsatta = ingredienti.some(
+    (i) => i.nome.toLowerCase() === testoRicerca,
+  );
 
   const perReparto = new Map<string, Ingredient[]>();
   for (const i of filtrati) {
@@ -48,10 +78,14 @@ export function Dishes() {
     return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
   });
 
-  const nomiSelezionati = ingredienti.filter((i) => selezionati.includes(i.id)).map((i) => i.nome);
+  const nomiSelezionati = ingredienti
+    .filter((i) => selezionati.includes(i.id))
+    .map((i) => i.nome);
 
   function toggleSelected(id: string) {
-    setSelezionati((sel) => (sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
+    setSelezionati((sel) =>
+      sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id],
+    );
   }
 
   function toggleDepartment(reparto: string) {
@@ -96,7 +130,11 @@ export function Dishes() {
         setRichiestaChiaveAI(true);
         return;
       }
-      setErroreAI(e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova o componilo a mano.");
+      setErroreAI(
+        e instanceof Error
+          ? e.message
+          : "Il piatto non è arrivato. Riprova o componilo a mano.",
+      );
     } finally {
       setCaricamentoAI(false);
     }
@@ -104,7 +142,11 @@ export function Dishes() {
 
   async function saveGenerated() {
     if (!generato) return;
-    await saveGeneratedDish(generato, ingredienti.filter((i) => selezionati.includes(i.id)), ingredienti);
+    await saveGeneratedDish(
+      generato,
+      ingredienti.filter((i) => selezionati.includes(i.id)),
+      ingredienti,
+    );
     setGenerato(null);
     setSelezionati([]);
   }
@@ -112,27 +154,44 @@ export function Dishes() {
   async function deleteDish(piattoId: string) {
     const piatto = await db.piatti.get(piattoId);
     if (!piatto) return;
-    const suoiIngredienti = await db.piattoIngredienti.where("piattoId").equals(piattoId).toArray();
-    const slotInteressati = (await db.slot.toArray()).filter((s) => s.piattoId === piattoId).map((s) => s.id);
-    await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
-      await db.piatti.delete(piattoId);
-      await db.piattoIngredienti.bulkDelete(suoiIngredienti.map((i) => i.id));
-      for (const slotId of slotInteressati) {
-        // eslint-disable-next-line no-await-in-loop
-        await db.slot.update(slotId, { piattoId: undefined });
-      }
-    });
+    const suoiIngredienti = await db.piattoIngredienti
+      .where("piattoId")
+      .equals(piattoId)
+      .toArray();
+    const slotInteressati = (await db.slot.toArray())
+      .filter((s) => s.piattoId === piattoId)
+      .map((s) => s.id);
+    await db.transaction(
+      "rw",
+      db.piatti,
+      db.piattoIngredienti,
+      db.slot,
+      async () => {
+        await db.piatti.delete(piattoId);
+        await db.piattoIngredienti.bulkDelete(suoiIngredienti.map((i) => i.id));
+        for (const slotId of slotInteressati) {
+          // eslint-disable-next-line no-await-in-loop
+          await db.slot.update(slotId, { piattoId: undefined });
+        }
+      },
+    );
     showUndo({
       message: `${piatto.nome} eliminato`,
       onUndo: async () => {
-        await db.transaction("rw", db.piatti, db.piattoIngredienti, db.slot, async () => {
-          await db.piatti.put(piatto);
-          await db.piattoIngredienti.bulkPut(suoiIngredienti);
-          for (const slotId of slotInteressati) {
-            // eslint-disable-next-line no-await-in-loop
-            await db.slot.update(slotId, { piattoId });
-          }
-        });
+        await db.transaction(
+          "rw",
+          db.piatti,
+          db.piattoIngredienti,
+          db.slot,
+          async () => {
+            await db.piatti.put(piatto);
+            await db.piattoIngredienti.bulkPut(suoiIngredienti);
+            for (const slotId of slotInteressati) {
+              // eslint-disable-next-line no-await-in-loop
+              await db.slot.update(slotId, { piattoId });
+            }
+          },
+        );
       },
     });
   }
@@ -141,51 +200,77 @@ export function Dishes() {
     <div className="flex flex-col h-full">
       <PageHeader title="Piatti" />
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
-        <SearchInput placeholder="Cerca o aggiungi un ingrediente…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <SearchInput
+          placeholder="Cerca o aggiungi un ingrediente…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
 
         {caricamento && <DishesSkeleton />}
 
-        {!caricamento && reparti.map((reparto) => (
-          <CollapsibleDepartment
-            key={reparto}
-            nome={reparto}
-            ingredienti={perReparto.get(reparto) ?? []}
-            espanso={testoRicerca !== "" || repartiEspansi.has(reparto)}
-            onToggle={() => toggleDepartment(reparto)}
-            selezionati={selezionati}
-            onToggleIngrediente={toggleSelected}
-          />
-        ))}
+        {!caricamento &&
+          reparti.map((reparto) => (
+            <CollapsibleDepartment
+              key={reparto}
+              nome={reparto}
+              ingredienti={perReparto.get(reparto) ?? []}
+              espanso={testoRicerca !== "" || repartiEspansi.has(reparto)}
+              onToggle={() => toggleDepartment(reparto)}
+              selezionati={selezionati}
+              onToggleIngrediente={toggleSelected}
+            />
+          ))}
 
         {testoRicerca !== "" && !corrispondenzaEsatta && (
-          <AddIngredientInline query={query.trim()} reparti={ordine} onConferma={addIngredientInline} />
+          <AddIngredientInline
+            query={query.trim()}
+            reparti={ordine}
+            onConferma={addIngredientInline}
+          />
         )}
 
-        <section className="border-t pt-4" style={{ borderColor: "var(--border-quiet)" }}>
+        <section
+          className="border-t pt-4"
+          style={{ borderColor: "var(--border-quiet)" }}>
           <Label>
-            {selezionati.length > 0 ? `Con ${selezionati.length} ingredienti selezionati` : "Nessun ingrediente selezionato"}
+            {selezionati.length > 0
+              ? `Con ${selezionati.length} ingredienti selezionati`
+              : "Nessun ingrediente selezionato"}
           </Label>
           <div className="flex gap-2 mb-2">
-            <Button onClick={() => void generateWithAI()} disabled={caricamentoAI}>
+            <Button
+              onClick={() => void generateWithAI()}
+              disabled={caricamentoAI}>
               {caricamentoAI ? (
                 "Sto pensando a un piatto…"
               ) : (
                 <span className="inline-flex items-center gap-1.5">
-                  <Sparkles size={15} strokeWidth={2} /> Genera con AI
+                  <Sparkles size={15} strokeWidth={2} /> Genera
                 </span>
               )}
             </Button>
-            <Button variant="ghost" onClick={() => setComponendo(true)} disabled={selezionati.length === 0}>
+            <Button
+              variant="ghost"
+              onClick={() => setComponendo(true)}
+              disabled={selezionati.length === 0}>
               Componi piatto
             </Button>
           </div>
-          {erroreAI && <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreAI}</p>}
+          {erroreAI && (
+            <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreAI}</p>
+          )}
           {generato && (
             <ProposalCard
               title={generato.nome}
               meta={`${generato.minuti ? generato.minuti + " min · " : ""}${generato.porzioni} porzioni`}
-              have={nomiSelezionati.length > 0 ? nomiSelezionati.join(", ") : "nessuno"}
-              buy={generato.ingredientiDaComprare.map((i) => `${i.nome} ${i.quantita}`).join(", ")}
+              have={
+                nomiSelezionati.length > 0
+                  ? nomiSelezionati.join(", ")
+                  : "nessuno"
+              }
+              buy={generato.ingredientiDaComprare
+                .map((i) => `${i.nome} ${i.quantita}`)
+                .join(", ")}
               allergieVerificate={generato.allergieVerificate}
               allergieNonVerificate={generato.allergieNonVerificate}
               onAccept={() => void saveGenerated()}
@@ -194,7 +279,9 @@ export function Dishes() {
           )}
           {componendo && (
             <ManualDishForm
-              ingredienti={ingredienti.filter((i) => selezionati.includes(i.id))}
+              ingredienti={ingredienti.filter((i) =>
+                selezionati.includes(i.id),
+              )}
               porzioniDefault={profilo?.porzioniDefault ?? 4}
               onCancel={() => setComponendo(false)}
               onSalvato={() => {
@@ -205,7 +292,9 @@ export function Dishes() {
           )}
         </section>
 
-        <section className="border-t pt-4" style={{ borderColor: "var(--border-quiet)" }}>
+        <section
+          className="border-t pt-4"
+          style={{ borderColor: "var(--border-quiet)" }}>
           <Label>I tuoi piatti</Label>
           <div className="flex flex-col gap-2">
             {caricamento && (
@@ -214,41 +303,44 @@ export function Dishes() {
                 <Skeleton height={48} radius={16} />
               </>
             )}
-            {!caricamento && piatti.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
-                style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
-              >
-                <span style={{ fontWeight: 600 }}>{p.nome}</span>
-                <div className="flex items-center gap-2 flex-none">
-                  {p.origine === "ai" && (
-                    <span
-                      className="inline-flex items-center gap-1"
-                      style={{
-                        fontSize: 11,
-                        color: "var(--biro)",
-                        background: "var(--biro-chiaro)",
-                        borderRadius: 99,
-                        padding: "3px 8px",
-                      }}
-                    >
-                      <Sparkles size={11} strokeWidth={2} /> AI
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    aria-label={`Elimina ${p.nome}`}
-                    onClick={() => void deleteDish(p.id)}
-                    style={{ color: "var(--pomodoro)", display: "flex" }}
-                  >
-                    <Trash2 size={16} strokeWidth={2} />
-                  </button>
+            {!caricamento &&
+              piatti.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
+                  style={{
+                    borderColor: "var(--border-quiet)",
+                    background: "var(--surface-card)",
+                  }}>
+                  <span style={{ fontWeight: 600 }}>{p.nome}</span>
+                  <div className="flex items-center gap-2 flex-none">
+                    {p.origine === "ai" && (
+                      <span
+                        className="inline-flex items-center gap-1"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--biro)",
+                          background: "var(--biro-chiaro)",
+                          borderRadius: 99,
+                          padding: "3px 8px",
+                        }}>
+                        <Sparkles size={11} strokeWidth={2} /> AI
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`Elimina ${p.nome}`}
+                      onClick={() => void deleteDish(p.id)}
+                      style={{ color: "var(--pomodoro)", display: "flex" }}>
+                      <Trash2 size={16} strokeWidth={2} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             {!caricamento && piatti.length === 0 && (
-              <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>Nessun piatto salvato.</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
+                Nessun piatto salvato.
+              </p>
             )}
           </div>
         </section>
@@ -298,19 +390,32 @@ function CollapsibleDepartment({
   onToggleIngrediente: (id: string) => void;
 }) {
   if (ingredienti.length === 0) return null;
-  const numSelezionati = ingredienti.filter((i) => selezionati.includes(i.id)).length;
+  const numSelezionati = ingredienti.filter((i) =>
+    selezionati.includes(i.id),
+  ).length;
   return (
     <section>
       <button
         type="button"
         onClick={onToggle}
         className="flex items-center gap-2 w-full text-left mb-2"
-        style={{ letterSpacing: ".12em", textTransform: "uppercase", fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}
-      >
-        {espanso ? <ChevronDown size={15} strokeWidth={2.25} /> : <ChevronRight size={15} strokeWidth={2.25} />}
+        style={{
+          letterSpacing: ".12em",
+          textTransform: "uppercase",
+          fontSize: 12,
+          fontWeight: 700,
+          color: "var(--text-secondary)",
+        }}>
+        {espanso ? (
+          <ChevronDown size={15} strokeWidth={2.25} />
+        ) : (
+          <ChevronRight size={15} strokeWidth={2.25} />
+        )}
         <span>{nome}</span>
-        <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
-          ({ingredienti.length}{numSelezionati > 0 ? ` · ${numSelezionati} selezionati` : ""})
+        <span
+          style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
+          ({ingredienti.length}
+          {numSelezionati > 0 ? ` · ${numSelezionati} selezionati` : ""})
         </span>
       </button>
       {espanso && (
@@ -319,8 +424,7 @@ function CollapsibleDepartment({
             <Chip
               key={ing.id}
               state={selezionati.includes(ing.id) ? "selected" : "default"}
-              onClick={() => onToggleIngrediente(ing.id)}
-            >
+              onClick={() => onToggleIngrediente(ing.id)}>
               {ing.nome}
             </Chip>
           ))}
@@ -343,14 +447,16 @@ function AddIngredientInline({
   return (
     <div
       className="flex flex-col gap-2 border rounded-2xl p-3"
-      style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}
-    >
+      style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}>
       <p style={{ fontSize: 13.5, color: "var(--text-secondary)" }}>
         “{query}” non è nel catalogo. Scegli il reparto per aggiungerlo:
       </p>
       <div className="flex flex-wrap gap-2">
         {reparti.map((r) => (
-          <Chip key={r} state={repartoScelto === r ? "selected" : "default"} onClick={() => setRepartoScelto(r)}>
+          <Chip
+            key={r}
+            state={repartoScelto === r ? "selected" : "default"}
+            onClick={() => setRepartoScelto(r)}>
             {r}
           </Chip>
         ))}
@@ -377,8 +483,12 @@ function ManualDishForm({
 }) {
   const [nomePiatto, setNomePiatto] = useState("");
   const [porzioni, setPorzioni] = useState(porzioniDefault);
-  const [quantita, setQuantita] = useState<Record<string, { valore: number; unita: string }>>(() =>
-    Object.fromEntries(ingredienti.map((i) => [i.id, { valore: 1, unita: i.unitaDefault }]))
+  const [quantita, setQuantita] = useState<
+    Record<string, { valore: number; unita: string }>
+  >(() =>
+    Object.fromEntries(
+      ingredienti.map((i) => [i.id, { valore: 1, unita: i.unitaDefault }]),
+    ),
   );
 
   async function save() {
@@ -412,8 +522,7 @@ function ManualDishForm({
   return (
     <div
       className="flex flex-col gap-3 border rounded-2xl p-3"
-      style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}
-    >
+      style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}>
       <input
         className="border rounded-lg px-3 py-2 text-sm"
         style={{ borderColor: "var(--border-quiet)" }}
@@ -429,13 +538,17 @@ function ManualDishForm({
           className="border rounded-lg px-2 py-1 w-16"
           style={{ borderColor: "var(--border-quiet)" }}
           value={porzioni}
-          onChange={(e) => setPorzioni(Math.max(1, Number(e.target.value) || 1))}
+          onChange={(e) =>
+            setPorzioni(Math.max(1, Number(e.target.value) || 1))
+          }
         />
       </div>
       <div className="flex flex-col gap-1.5">
         {ingredienti.map((ing) => (
           <div key={ing.id} className="flex items-center gap-2">
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{ing.nome}</span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>
+              {ing.nome}
+            </span>
             <input
               type="number"
               min={0}
@@ -444,14 +557,25 @@ function ManualDishForm({
               style={{ borderColor: "var(--border-quiet)" }}
               value={quantita[ing.id]?.valore ?? 1}
               onChange={(e) =>
-                setQuantita((q) => ({ ...q, [ing.id]: { ...q[ing.id], valore: Number(e.target.value) || 0 } }))
+                setQuantita((q) => ({
+                  ...q,
+                  [ing.id]: {
+                    ...q[ing.id],
+                    valore: Number(e.target.value) || 0,
+                  },
+                }))
               }
             />
             <input
               className="border rounded-lg px-2 py-1 w-20 text-sm"
               style={{ borderColor: "var(--border-quiet)" }}
               value={quantita[ing.id]?.unita ?? ing.unitaDefault}
-              onChange={(e) => setQuantita((q) => ({ ...q, [ing.id]: { ...q[ing.id], unita: e.target.value } }))}
+              onChange={(e) =>
+                setQuantita((q) => ({
+                  ...q,
+                  [ing.id]: { ...q[ing.id], unita: e.target.value },
+                }))
+              }
             />
           </div>
         ))}
@@ -470,7 +594,9 @@ function ManualDishForm({
 
 function Label({ children }: { children: string }) {
   return (
-    <div className="text-xs font-bold uppercase mb-2" style={{ letterSpacing: ".12em", color: "var(--text-secondary)" }}>
+    <div
+      className="text-xs font-bold uppercase mb-2"
+      style={{ letterSpacing: ".12em", color: "var(--text-secondary)" }}>
       {children}
     </div>
   );
