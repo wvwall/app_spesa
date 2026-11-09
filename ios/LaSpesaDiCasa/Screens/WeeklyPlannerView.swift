@@ -165,7 +165,7 @@ struct WeeklyPlannerView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 6) {
-            GlassCTA(title: "Importa menù", systemImage: "tray.and.arrow.up") { importOpen = true }
+            GlassCTA(title: "Importa menù") { importOpen = true }
             if let esitoImport {
                 StatusText(text: esitoImport, kind: .success).multilineTextAlignment(.center)
             }

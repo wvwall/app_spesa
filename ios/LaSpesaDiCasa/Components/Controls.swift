@@ -75,7 +75,8 @@ struct GlassCTA: View {
                 if let systemImage { Image(systemName: systemImage).fontWeight(.semibold) }
                 Text(title).font(AppFont.text(16, .bold))
             }
-            .frame(maxWidth: .infinity, minHeight: 30)
+            .frame(maxWidth: .infinity, minHeight: 30, alignment: .center)
+            .multilineTextAlignment(.center)
         }
         .buttonStyle(.glassProminent)
         .tint(palette.biroPieno)

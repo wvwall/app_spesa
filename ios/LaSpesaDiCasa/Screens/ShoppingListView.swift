@@ -143,7 +143,7 @@ struct ShoppingListView: View {
 
     private func actions(_ voci: [VoceLista]) -> some View {
         VStack(spacing: 8) {
-            GlassCTA(title: "Inizia la spesa", systemImage: "cart") { startShopping() }
+            GlassCTA(title: "Inizia la spesa") { startShopping() }
             HStack(spacing: 8) {
                 Button { Task { await sortByDepartment() } } label: {
                     compactLabel(ordinando ? "Ordino…" : "Ordina", "arrow.up.arrow.down")
