@@ -188,7 +188,8 @@ struct FlowLayout: Layout {
 // MARK: - IconButton — components/core/IconButton.tsx
 
 struct IconSquareButton: View {
-    enum Tone { case neutral, accent }
+    /// accent: main row action; neutral: secondary; danger: destructive (pomodoro icon).
+    enum Tone { case neutral, accent, danger }
     @Environment(\.palette) private var palette
     var systemImage: String
     var label: String
@@ -200,9 +201,10 @@ struct IconSquareButton: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(tone == .accent ? palette.biro : palette.textSecondary)
+                .foregroundStyle(tone == .accent ? palette.biro : tone == .danger ? palette.pomodoro : palette.textSecondary)
                 .frame(width: size, height: size)
-                .background(tone == .accent ? palette.biroChiaro : palette.surfaceCard,
+                // Neutral/danger: card surface at 75%, less prominent than the opaque cards around it.
+                .background(tone == .accent ? palette.biroChiaro : palette.surfaceCard.opacity(0.75),
                             in: RoundedRectangle(cornerRadius: Metrics.radiusChip, style: .continuous))
                 .frame(minWidth: Metrics.touchMin, minHeight: Metrics.touchMin)
                 .contentShape(Rectangle())
@@ -346,7 +348,8 @@ struct SkeletonBlock: View {
     }
 }
 
-// MARK: - CycleNavigator — components/navigation/CycleNavigator.tsx (in a glass capsule)
+// MARK: - CycleNavigator — components/navigation/CycleNavigator.tsx
+// Arrows are soft square icon buttons (as in the PWA), rendered as interactive Liquid Glass.
 
 struct CycleNavigator: View {
     @Environment(\.palette) private var palette
@@ -355,28 +358,137 @@ struct CycleNavigator: View {
     var onSuccessivo: () -> Void
 
     var body: some View {
-        GlassEffectContainer {
+        GlassEffectContainer(spacing: 6) {
             HStack(spacing: 0) {
-                Button(action: onPrecedente) {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
-                        .frame(width: 40, height: 40)
-                }
-                .accessibilityLabel("Settimana precedente")
-                .foregroundStyle(palette.textSecondary)
+                arrow("chevron.left", "Settimana precedente", onPrecedente)
                 Button(action: onOggi) {
-                    Text("oggi").font(AppFont.text(14, .semibold)).padding(.horizontal, 4).frame(height: 40)
+                    Text("oggi").font(AppFont.text(14, .semibold)).padding(.horizontal, 10).frame(minHeight: 44)
                 }
+                .buttonStyle(.plain)
                 .foregroundStyle(palette.biro)
-                Button(action: onSuccessivo) {
-                    Image(systemName: "chevron.right").font(.system(size: 17, weight: .semibold))
-                        .frame(width: 40, height: 40)
-                }
-                .accessibilityLabel("Settimana successiva")
-                .foregroundStyle(palette.textSecondary)
+                arrow("chevron.right", "Settimana successiva", onSuccessivo)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 2)
-            .glassEffect(.regular.interactive(), in: Capsule())
+        }
+    }
+
+    private func arrow(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(palette.textSecondary)
+                .frame(width: 40, height: 40)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.tint(palette.surfaceCard.opacity(0.6)).interactive(),
+                     in: RoundedRectangle(cornerRadius: Metrics.radiusChip, style: .continuous))
+        .accessibilityLabel(label)
+    }
+}
+
+// MARK: - PageHeader — components/navigation/PageHeader.tsx
+
+/// Shared header of the four tabs: handwritten biro title on a fixed 44pt row (so it never jumps
+/// between tabs), optional actions on the right and a small subtitle.
+struct PageHeader<Actions: View>: View {
+    @Environment(\.palette) private var palette
+    var title: String
+    var subtitle: String?
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                // Caveat's last glyph overhangs its advance width and would be clipped: a trailing
+                // no-break space keeps it inside the drawn bounds.
+                Text(title + "\u{00A0}")
+                    .font(AppFont.hand(28, .semibold, relativeTo: .title))
+                    .tracking(-0.56)
+                    .foregroundStyle(palette.biro)
+                    .fixedSize()
+                    .accessibilityLabel(title)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityAddTraits(.isHeader)
+                actions
+            }
+            .frame(minHeight: 44)
+            if let subtitle {
+                Text(subtitle).font(AppFont.text(13)).foregroundStyle(palette.textSecondary)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+    }
+}
+
+extension PageHeader where Actions == EmptyView {
+    init(title: String, subtitle: String? = nil) {
+        self.init(title: title, subtitle: subtitle) { EmptyView() }
+    }
+}
+
+// MARK: - Undo toast — components/feedback/UndoToast.tsx
+
+/// Deletes happen immediately; this toast gives 5 seconds to take them back. A newer deletion
+/// replaces the previous toast.
+@Observable
+final class UndoCenter {
+    static let duration: Duration = .seconds(5)
+    struct Request: Identifiable {
+        let id = UUID()
+        var message: String
+        var onUndo: () -> Void
+    }
+    var current: Request?
+
+    func show(_ message: String, onUndo: @escaping () -> Void) {
+        current = Request(message: message, onUndo: onUndo)
+    }
+}
+
+struct UndoToast: View {
+    @Environment(\.palette) private var palette
+    @Bindable var center: UndoCenter
+    @State private var progress: CGFloat = 1
+
+    var body: some View {
+        if let req = center.current {
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    Text(req.message).font(AppFont.text(14)).lineLimit(2)
+                    Spacer(minLength: 0)
+                    Button {
+                        center.current = nil
+                        req.onUndo()
+                    } label: {
+                        Text("Annulla").font(AppFont.text(14, .bold)).underline().padding(.horizontal, 14)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
+                GeometryReader { geo in
+                    Rectangle().fill(palette.surfacePage.opacity(0.55))
+                        .frame(width: geo.size.width * progress)
+                }
+                .frame(height: 3)
+            }
+            // Inverted note: dark on a light page, light on the dark one.
+            .foregroundStyle(palette.surfacePage)
+            .background(palette.textBody, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, 14)
+            .id(req.id)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .task(id: req.id) {
+                progress = 1
+                withAnimation(.linear(duration: 5)) { progress = 0 }
+                try? await Task.sleep(for: UndoCenter.duration)
+                if center.current?.id == req.id { withAnimation { center.current = nil } }
+            }
+            .accessibilityElement(children: .contain)
         }
     }
 }

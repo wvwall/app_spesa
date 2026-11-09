@@ -400,3 +400,58 @@ struct Store {
         }
     }
 }
+
+// MARK: - Undoable deletes (port of the PWA's undo toast)
+
+extension VoceLista {
+    func clone() -> VoceLista {
+        VoceLista(id: id, listaId: listaId, ingredienteId: ingredienteId, testoLibero: testoLibero, nome: nome,
+                  quantita: quantita, reparto: reparto, checked: checked, checkedAt: checkedAt, nota: nota,
+                  alternative: alternative, sostituitoCon: sostituitoCon, mancante: mancante, fotoJPEG: fotoJPEG)
+    }
+}
+
+extension Store {
+    /// Deletes an item and returns a closure that puts it back.
+    func deleteWithUndo(_ v: VoceLista) -> () -> Void {
+        let copia = v.clone()
+        delete(v)
+        return {
+            context.insert(copia.clone())
+            try? context.save()
+        }
+    }
+
+    /// Deletes a list with all its items and returns a closure that restores them.
+    func deleteCompleteListWithUndo(_ lista: ListaSpesa) -> () -> Void {
+        let copiaLista = (lista.id, lista.pianoId, lista.chiusa, lista.updatedAt)
+        let voci = items(lista.id).map { $0.clone() }
+        deleteCompleteList(lista)
+        return {
+            context.insert(ListaSpesa(id: copiaLista.0, pianoId: copiaLista.1, chiusa: copiaLista.2, updatedAt: copiaLista.3))
+            for v in voci { context.insert(v.clone()) }
+            try? context.save()
+        }
+    }
+
+    /// Deletes a dish (with its ingredients, clearing it from the plan) and returns a closure
+    /// that restores all of it.
+    func deleteDishWithUndo(_ piattoId: String) -> (nome: String, restore: () -> Void)? {
+        guard let p = (try? context.fetch(FetchDescriptor<Piatto>(predicate: #Predicate { $0.id == piattoId })))?.first else { return nil }
+        let piatto = (p.nome, p.procedimento, p.preferito, p.origine, p.porzioni, p.allergieVerificate, p.updatedAt, p.deletedAt)
+        let ingredienti = ((try? context.fetch(FetchDescriptor<PiattoIngrediente>(predicate: #Predicate { $0.piattoId == piattoId }))) ?? [])
+            .map { ($0.id, $0.ingredienteId, $0.nome, $0.reparto, $0.quantita, $0.unita) }
+        let slotIds = ((try? context.fetch(FetchDescriptor<SlotPasto>(predicate: #Predicate { $0.piattoId == piattoId }))) ?? []).map(\.id)
+        deleteDish(piattoId)
+        return (piatto.0, {
+            context.insert(Piatto(id: piattoId, nome: piatto.0, procedimento: piatto.1, preferito: piatto.2, origine: piatto.3,
+                                  porzioni: piatto.4, allergieVerificate: piatto.5, updatedAt: piatto.6, deletedAt: piatto.7))
+            for i in ingredienti {
+                context.insert(PiattoIngrediente(id: i.0, piattoId: piattoId, ingredienteId: i.1, nome: i.2, reparto: i.3,
+                                                 quantita: i.4, unita: i.5))
+            }
+            for id in slotIds { assignDish(slotId: id, piattoId: piattoId) }
+            try? context.save()
+        })
+    }
+}

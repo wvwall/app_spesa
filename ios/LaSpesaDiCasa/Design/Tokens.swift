@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The app's three themes, stored in the profile with the same raw values as the PWA.
 enum Tema: String, Codable, CaseIterable, Sendable {
-    case chiaro, scuro, stitch
+    /// "sistema" follows the device light/dark setting.
+    case sistema, chiaro, scuro, stitch
 }
 
 /// Port of `src/styles/tokens.css`: "biro + evidenziatore" notebook palette. Each theme is a
@@ -38,13 +39,13 @@ struct Palette: Equatable, Sendable {
         surfaceCard: Color(hex: 0xFFFDF8),
         textBody: Color(hex: 0x22252B),
         textSecondary: Color(hex: 0x5B5F66),
-        biro: Color(hex: 0x2140A8),
-        biroChiaro: Color(hex: 0xE7ECF9),
-        biroPieno: Color(hex: 0x2140A8),
+        biro: Color(hex: 0x3448C5),
+        biroChiaro: Color(hex: 0xE9EBF8),
+        biroPieno: Color(hex: 0x3448C5),
         onBiro: .white,
         evidenziatore: Color(hex: 0xFFF0A3),
         evidenziatoreBordo: Color(hex: 0xE0C84F),
-        onEvidenziatore: Color(hex: 0x2140A8),
+        onEvidenziatore: Color(hex: 0x3448C5),
         basilico: Color(hex: 0x39724A),
         pomodoro: Color(hex: 0xBE3F27),
         pomodoroChiaro: Color(hex: 0xF7E5E0),
@@ -103,8 +104,10 @@ struct Palette: Equatable, Sendable {
         scrim: Color(red: 35 / 255, green: 38 / 255, blue: 30 / 255).opacity(0.35)
     )
 
-    static func per(_ tema: Tema) -> Palette {
+    /// `sistema` resolves to light or dark following the device appearance.
+    static func per(_ tema: Tema, system: ColorScheme = .light) -> Palette {
         switch tema {
+        case .sistema: system == .dark ? .scuro : .chiaro
         case .chiaro: .chiaro
         case .scuro: .scuro
         case .stitch: .stitch
@@ -163,9 +166,10 @@ extension EnvironmentValues {
 extension View {
     /// Applies a palette to a subtree, including the matching system color scheme so native
     /// controls (glass, keyboards, sheets) follow the notebook theme.
-    func palette(_ palette: Palette) -> some View {
+    /// With `followSystem` the device appearance is left alone (the "Automatico" theme).
+    func palette(_ palette: Palette, followSystem: Bool = false) -> some View {
         environment(\.palette, palette)
-            .preferredColorScheme(palette.colorScheme)
+            .preferredColorScheme(followSystem ? nil : palette.colorScheme)
             .tint(palette.biro)
     }
 

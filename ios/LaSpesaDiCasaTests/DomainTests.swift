@@ -148,6 +148,8 @@ struct CalendarTests {
         #expect(CycleCalendar.formatCycleLabel(inizio) == "Settimana 6–13 novembre")
         let fineMese = CycleCalendar.calendar.date(from: DateComponents(year: 2026, month: 11, day: 27))!
         #expect(CycleCalendar.formatCycleLabel(fineMese) == "Settimana 27 novembre – 4 dicembre")
+        #expect(CycleCalendar.formatCycleTitle(inizio) == "6–13 novembre")
+        #expect(CycleCalendar.formatCycleTitle(fineMese) == "27 nov – 4 dic")
     }
 }
 
@@ -214,6 +216,37 @@ struct StoreTests {
         try altro.importBackup(data)
         #expect(altro.items(lista.id).first?.nome == "Uova")
         #expect(altro.profile().seedVersion == 1)
+    }
+
+    @Test("le eliminazioni si possono annullare")
+    func annulla() throws {
+        let s = try store()
+        s.profile()
+        s.applySeeds()
+        let piano = s.getOrCreateWeeklyPlan("2026-11-06")
+        let slots = s.getOrCreatePlanSlots(pianoId: piano.id, cycleStart: CycleCalendar.fromIsoDate("2026-11-06")!)
+        let lista = s.getOrCreateOpenList(piano.id)
+        s.addFreeItem(listaId: lista.id, nome: "Latte", quantita: "1", reparto: "Banco frigo", foto: nil, nota: "fresco")
+        s.addFreeItem(listaId: lista.id, nome: "Pane", quantita: "1", reparto: "Forno", foto: nil, nota: nil)
+
+        let latte = try #require(s.items(lista.id).first { $0.nome == "Latte" })
+        let ripristinaVoce = s.deleteWithUndo(latte)
+        #expect(s.items(lista.id).count == 1)
+        ripristinaVoce()
+        #expect(s.items(lista.id).first { $0.nome == "Latte" }?.nota == "fresco")
+
+        let ripristinaLista = s.deleteCompleteListWithUndo(lista)
+        #expect(s.listForPlan(piano.id) == nil)
+        ripristinaLista()
+        #expect(s.listForPlan(piano.id)?.id == lista.id)
+        #expect(s.items(lista.id).count == 2)
+
+        let piatto = s.createManualDish(nome: "Prova", porzioni: 2)
+        s.assignDish(slotId: slots[0].id, piattoId: piatto.id)
+        let r = try #require(s.deleteDishWithUndo(piatto.id))
+        #expect(slots[0].piattoId == nil)
+        r.restore()
+        #expect(slots[0].piattoId == piatto.id)
     }
 
     @Test("ordina per reparto usando prima il catalogo locale")

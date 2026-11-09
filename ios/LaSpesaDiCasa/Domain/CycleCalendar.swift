@@ -83,6 +83,17 @@ enum CycleCalendar {
         return "Settimana \(range)"
     }
 
+    /// Compact page title: "6–13 novembre", or "27 nov – 4 dic" across two months.
+    static func formatCycleTitle(_ inizio: Date) -> String {
+        let fine = calendar.date(byAdding: .day, value: 7, to: inizio) ?? inizio
+        let meseInizio = monthFormatter.string(from: inizio)
+        let meseFine = monthFormatter.string(from: fine)
+        let gInizio = calendar.component(.day, from: inizio)
+        let gFine = calendar.component(.day, from: fine)
+        if meseInizio == meseFine { return "\(gInizio)–\(gFine) \(meseFine)" }
+        return "\(gInizio) \(meseInizio.prefix(3)) – \(gFine) \(meseFine.prefix(3))"
+    }
+
     static func isToday(_ d: Date) -> Bool { calendar.isDateInToday(d) }
 
     static func shiftCycle(_ inizio: Date, by delta: Int) -> Date {

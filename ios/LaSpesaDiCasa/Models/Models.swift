@@ -37,7 +37,7 @@ final class Profilo {
         vincoliAlimentari: [String] = ["noci"],
         ordineReparti: [String] = Store.defaultDepartments,
         giornoSpesa: Int = 5,
-        tema: Tema = .chiaro,
+        tema: Tema = .sistema,
         seedVersion: Int = 0,
         seedVersionPiatti: Int = 0,
         updatedAt: String = isoNow()

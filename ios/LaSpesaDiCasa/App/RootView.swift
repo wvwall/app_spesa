@@ -12,30 +12,38 @@ struct RootView: View {
     @State private var activeShoppingListId: String?
     @State private var setupGeminiOpen = false
     @State private var network = NetworkMonitor()
+    @State private var undo = UndoCenter()
     // Each screen remembers its own week, as an offset from the current cycle.
     @State private var weekOffset = 0
     @State private var listOffset = 0
 
-    private var palette: Palette { Palette.per(profili.first?.tema ?? .chiaro) }
+    @Environment(\.colorScheme) private var systemScheme
+    private var tema: Tema { profili.first?.tema ?? .sistema }
+    private var palette: Palette { Palette.per(tema, system: systemScheme) }
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Settimana", systemImage: "calendar", value: AppTab.settimana) {
+            Tab(value: AppTab.settimana) {
                 WeeklyPlannerView(cycleOffset: $weekOffset)
-            }
-            Tab("Lista", systemImage: "checklist", value: AppTab.lista) {
+            } label: { TabLabel("Settimana", "calendar") }
+            Tab(value: AppTab.lista) {
                 ShoppingListView(cycleOffset: $listOffset) { activeShoppingListId = $0 }
-            }
-            Tab("Piatti", systemImage: "fork.knife", value: AppTab.piatti) {
+            } label: { TabLabel("Lista", "checklist") }
+            Tab(value: AppTab.piatti) {
                 DishesView()
-            }
-            Tab("Altro", systemImage: "slider.horizontal.3", value: AppTab.altro) {
+            } label: { TabLabel("Piatti", "fork.knife") }
+            Tab(value: AppTab.altro) {
                 SettingsView()
-            }
+            } label: { TabLabel("Opzioni", "slider.horizontal.3") }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
-        .palette(palette)
+        .overlay(alignment: .bottom) {
+            // Floats above the tab bar.
+            UndoToast(center: undo).padding(.bottom, 64)
+        }
+        .animation(.snappy, value: undo.current?.id)
+        .palette(palette, followSystem: tema == .sistema)
         .environment(network)
+        .environment(undo)
         .fullScreenCover(item: Binding(
             get: { activeShoppingListId.map(IdentifiedString.init) },
             set: { activeShoppingListId = $0?.id }
@@ -60,3 +68,25 @@ struct RootView: View {
 }
 
 struct IdentifiedString: Identifiable { let id: String }
+
+/// Tab item with a slightly smaller SF Symbol than the system default.
+struct TabLabel: View {
+    let title: String
+    let symbol: String
+    init(_ title: String, _ symbol: String) {
+        self.title = title
+        self.symbol = symbol
+    }
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            if let ui = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .regular)) {
+                Image(uiImage: ui.withRenderingMode(.alwaysTemplate))
+            } else {
+                Image(systemName: symbol)
+            }
+        }
+    }
+}

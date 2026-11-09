@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Port of src/screens/Settings.tsx ("Altro").
+/// Port of src/screens/Settings.tsx ("Opzioni").
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
@@ -28,10 +28,7 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("Altro")
-                .font(AppFont.display(22)).foregroundStyle(palette.textBody)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
+            PageHeader(title: "Opzioni")
             if let profilo = profili.first {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -260,10 +257,15 @@ struct SettingsView: View {
     private func tema(_ p: Profilo) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel("Tema")
-            HStack(spacing: 8) {
+            FlowLayout {
+                Chip("Automatico", state: p.tema == .sistema ? .selected : .default) { setTema(.sistema, p) }
                 Chip("Chiaro", state: p.tema == .chiaro ? .selected : .default) { setTema(.chiaro, p) }
                 Chip("Scuro", state: p.tema == .scuro ? .selected : .default) { setTema(.scuro, p) }
                 Chip("Stitch", state: p.tema == .stitch ? .selected : .default) { setTema(.stitch, p) }
+            }
+            if p.tema == .sistema {
+                Text("Chiaro o scuro come il telefono.")
+                    .font(AppFont.text(13)).foregroundStyle(palette.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

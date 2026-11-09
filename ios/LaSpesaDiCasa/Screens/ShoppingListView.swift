@@ -7,6 +7,7 @@ struct ShoppingListView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
     @Environment(NetworkMonitor.self) private var network
+    @Environment(UndoCenter.self) private var undo
     @Binding var cycleOffset: Int
     var onStartShopping: (String) -> Void
 
@@ -22,7 +23,6 @@ struct ShoppingListView: View {
     @State private var departmentWithForm: String?
     @State private var importOpen = false
     @State private var esitoImport: String?
-    @State private var confirmClear = false
 
     private var profilo: Profilo? { profili.first }
     private var ordineReparti: [String] { profilo?.ordineReparti ?? Store.defaultDepartments }
@@ -63,23 +63,12 @@ struct ShoppingListView: View {
     }
 
     private func header(count: Int?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text("Lista della spesa")
-                    .font(AppFont.display(22))
-                    .foregroundStyle(palette.textBody)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer()
-                CycleNavigator(onPrecedente: { cycleOffset -= 1 }, onOggi: { cycleOffset = 0 }, onSuccessivo: { cycleOffset += 1 })
-            }
-            Text(CycleCalendar.formatCycleLabel(inizio) + (count.map { " · \($0) articoli" } ?? ""))
-                .font(AppFont.text(13)).foregroundStyle(palette.textSecondary)
+        PageHeader(
+            title: CycleCalendar.formatCycleTitle(inizio),
+            subtitle: count.map { "Lista della spesa · \($0) \($0 == 1 ? "articolo" : "articoli")" } ?? "Lista della spesa"
+        ) {
+            CycleNavigator(onPrecedente: { cycleOffset -= 1 }, onOggi: { cycleOffset = 0 }, onSuccessivo: { cycleOffset += 1 })
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-        .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
     }
 
     private func list(_ voci: [VoceLista]) -> some View {
@@ -148,16 +137,15 @@ struct ShoppingListView: View {
             }
             if let esitoOrdina { StatusText(text: esitoOrdina).frame(maxWidth: .infinity, alignment: .leading) }
             if let esitoImport { StatusText(text: esitoImport, kind: .success).frame(maxWidth: .infinity, alignment: .leading) }
-            Button("Svuota lista") { confirmClear = true }
-                .font(AppFont.text(13)).foregroundStyle(palette.pomodoro)
-                .buttonStyle(.plain)
-                .frame(minHeight: 44)
-                .padding(.top, 28)
-                .confirmationDialog("Cancellare tutta la lista? Non si può annullare.", isPresented: $confirmClear, titleVisibility: .visible) {
-                    Button("Svuota lista", role: .destructive) {
-                        if let lista { Store(context: context).deleteCompleteList(lista) }
-                    }
-                }
+            Button("Svuota lista") {
+                guard let lista else { return }
+                let restore = Store(context: context).deleteCompleteListWithUndo(lista)
+                undo.show("Lista svuotata", onUndo: restore)
+            }
+            .font(AppFont.text(13)).foregroundStyle(palette.pomodoro)
+            .buttonStyle(.plain)
+            .frame(minHeight: 44)
+            .padding(.top, 28)
         }
         .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
         .overlay(alignment: .top) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
@@ -250,6 +238,7 @@ struct ShoppingListView: View {
 private struct ReviewRow: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
+    @Environment(UndoCenter.self) private var undo
     let voce: VoceLista
     var onEdit: () -> Void
     @State private var quantita = ""
@@ -283,10 +272,14 @@ private struct ReviewRow: View {
                     .onSubmit { Store(context: context).updateQuantity(voce, quantita) }
                     .onChange(of: qtyFocused) { _, f in if !f { Store(context: context).updateQuantity(voce, quantita) } }
             }
-            IconSquareButton(systemImage: "pencil", label: "Modifica \(voce.nome)", tone: .accent, action: onEdit)
+            IconSquareButton(systemImage: "pencil", label: "Modifica \(voce.nome)", action: onEdit)
                 .frame(width: 36)
-            IconSquareButton(systemImage: "trash", label: "Rimuovi \(voce.nome)") { Store(context: context).delete(voce) }
-                .frame(width: 36)
+            IconSquareButton(systemImage: "trash", label: "Rimuovi \(voce.nome)", tone: .danger) {
+                let nome = voce.nome
+                let restore = Store(context: context).deleteWithUndo(voce)
+                undo.show("\(nome) eliminato", onUndo: restore)
+            }
+            .frame(width: 36)
         }
         .padding(.horizontal, 20).padding(.vertical, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }

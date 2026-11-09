@@ -6,6 +6,7 @@ import SwiftUI
 struct DishesView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
+    @Environment(UndoCenter.self) private var undo
     @Query private var ingredienti: [Ingrediente]
     @Query private var piatti: [Piatto]
     @Query private var profili: [Profilo]
@@ -31,10 +32,7 @@ struct DishesView: View {
         let gruppi = Departments.group(filtrati, ordine: ordine, reparto: \.reparto)
 
         VStack(spacing: 0) {
-            Text("Piatti")
-                .font(AppFont.display(22)).foregroundStyle(palette.textBody)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
+            PageHeader(title: "Piatti")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     SearchField(placeholder: "Cerca o aggiungi un ingrediente…", text: $query)
@@ -151,8 +149,12 @@ struct DishesView: View {
                     Text(p.nome).font(AppFont.text(16, .semibold)).foregroundStyle(palette.textBody)
                     Spacer()
                     if p.origine == .ai { AIBadge() }
-                    Button { Store(context: context).deleteDish(p.id) } label: {
-                        Image(systemName: "trash").font(.system(size: 15)).foregroundStyle(palette.textSecondary)
+                    Button {
+                        if let r = Store(context: context).deleteDishWithUndo(p.id) {
+                            undo.show("\(r.nome) eliminato", onUndo: r.restore)
+                        }
+                    } label: {
+                        Image(systemName: "trash").font(.system(size: 15)).foregroundStyle(palette.pomodoro)
                             .frame(width: 32, height: 32)
                     }
                     .buttonStyle(.plain)

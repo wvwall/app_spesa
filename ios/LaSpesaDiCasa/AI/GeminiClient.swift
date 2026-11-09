@@ -252,7 +252,7 @@ struct GeminiClient {
             let messaggio = (err?["message"] as? String) ?? "Il piatto non è arrivato. Riprova o componilo a mano."
             if status == 400 || status == 401 || status == 403,
                messaggio.localizedCaseInsensitiveContains("api key") {
-                throw AIError.message("La chiave Gemini non è valida. Controllala in Altro.")
+                throw AIError.message("La chiave Gemini non è valida. Controllala in Opzioni.")
             }
             throw AIError.message(messaggio.replacingOccurrences(of: key, with: "[redacted]"))
         }

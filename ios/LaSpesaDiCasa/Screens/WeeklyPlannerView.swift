@@ -85,30 +85,13 @@ struct WeeklyPlannerView: View {
     // MARK: Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("La spesa di casa")
-                    .font(AppFont.text(12, relativeTo: .caption))
-                    .textCase(.uppercase)
-                    .tracking(12 * 0.14)
-                    .foregroundStyle(palette.textSecondary)
-                Spacer()
-                CycleNavigator(
-                    onPrecedente: { cycleOffset -= 1 },
-                    onOggi: { cycleOffset = 0 },
-                    onSuccessivo: { cycleOffset += 1 }
-                )
-            }
-            Text(CycleCalendar.formatCycleLabel(inizio))
-                .font(AppFont.hand(28, .semibold, relativeTo: .title))
-                .tracking(-0.56)
-                .foregroundStyle(palette.biro)
-                .contentTransition(.numericText())
-                .animation(.snappy, value: cicloIso)
+        PageHeader(title: CycleCalendar.formatCycleTitle(inizio), subtitle: "Menu settimanale") {
+            CycleNavigator(
+                onPrecedente: { cycleOffset -= 1 },
+                onOggi: { cycleOffset = 0 },
+                onSuccessivo: { cycleOffset += 1 }
+            )
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
     }
 
     // MARK: Day
@@ -208,6 +191,7 @@ struct WeeklyPlannerView: View {
 private struct PlanSlotRow: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
+    @Environment(UndoCenter.self) private var undo
     let slot: SlotPasto
     let piatto: Piatto?
     let piatti: [Piatto]
@@ -229,7 +213,7 @@ private struct PlanSlotRow: View {
         } else if let piatto {
             HStack(spacing: 8) {
                 DishCard(pasto: slot.pasto, dish: piatto.nome, ai: piatto.origine == .ai) { open() }
-                IconSquareButton(systemImage: "trash", label: "Rimuovi \(piatto.nome) da questo pasto") {
+                IconSquareButton(systemImage: "trash", label: "Rimuovi \(piatto.nome) da questo pasto", tone: .danger) {
                     assign(nil)
                 }
             }
@@ -329,7 +313,13 @@ private struct PlanSlotRow: View {
     }
 
     private func assign(_ piattoId: String?) {
-        Store(context: context).assignDish(slotId: slot.id, piattoId: piattoId)
+        let store = Store(context: context)
+        let precedente = slot.piattoId
+        let slotId = slot.id
+        store.assignDish(slotId: slotId, piattoId: piattoId)
+        if piattoId == nil, let precedente {
+            undo.show("Piatto rimosso dal pasto") { store.assignDish(slotId: slotId, piattoId: precedente) }
+        }
         close()
     }
 
