@@ -226,7 +226,7 @@ private struct PlanSlotRow: View {
                 DishCard(pasto: slot.pasto, dish: piatto.nome, ai: piatto.origine == .ai) { open() }
                     .contextMenu {
                         Button(action: open) { Label("Cambia piatto", systemImage: "arrow.triangle.2.circlepath") }
-                        Button { openAndGenerate() } label: { Label("Rigenera con AI", systemImage: "sparkles") }
+                        Button { openAndGenerate() } label: { Label("Rigenera", systemImage: "sparkles") }
                         Button(role: .destructive) { assign(nil) } label: { Label("Rimuovi dal pasto", systemImage: "trash") }
                     }
                 IconSquareButton(systemImage: "trash", label: "Rimuovi \(piatto.nome) da questo pasto", tone: .danger) {
@@ -237,7 +237,7 @@ private struct PlanSlotRow: View {
             DishCard(pasto: slot.pasto, dish: nil) { open() }
                 .contextMenu {
                     Button(action: open) { Label("Scegli un piatto", systemImage: "plus") }
-                    Button { openAndGenerate() } label: { Label("Genera con AI", systemImage: "sparkles") }
+                    Button { openAndGenerate() } label: { Label("Genera", systemImage: "sparkles") }
                 }
         }
     }
@@ -276,7 +276,7 @@ private struct PlanSlotRow: View {
                     if generando {
                         HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Sto pensando a un piatto…") }
                     } else {
-                        Label(piatto == nil ? "Genera con AI" : "Rigenera con AI", systemImage: "sparkles")
+                        Label(piatto == nil ? "Genera" : "Rigenera", systemImage: "sparkles")
                     }
                 }
                 .font(AppFont.text(14, .semibold))

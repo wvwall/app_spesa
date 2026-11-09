@@ -140,7 +140,7 @@ struct DishesView: View {
                     if caricamentoAI {
                         Text("Sto pensando a un piatto…")
                     } else {
-                        Label("Genera con AI", systemImage: "sparkles").lineLimit(1).minimumScaleFactor(0.8)
+                        Label("Genera", systemImage: "sparkles").lineLimit(1).minimumScaleFactor(0.8)
                     }
                 }
                 .buttonStyle(.paper)
