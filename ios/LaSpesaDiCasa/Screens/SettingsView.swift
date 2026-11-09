@@ -107,7 +107,7 @@ struct SettingsView: View {
                     }
                     .padding(.trailing, 10)
                 }
-                .padding(.leading, 14).padding(.vertical, 2)
+                .padding(.leading, 14).padding(.vertical, 10)
             }
         }
     }
