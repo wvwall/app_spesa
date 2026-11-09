@@ -208,23 +208,49 @@ private struct PlanSlotRow: View {
     @FocusState private var searchFocused: Bool
 
     var body: some View {
+        Group { content }
+            .sheet(isPresented: $richiestaChiave) {
+                GeminiKeySheet(onClose: { richiestaChiave = false }, onSaved: {
+                    richiestaChiave = false
+                    Task { await generateWithAI() }
+                })
+                .paperSheet(palette, detents: [.large])
+            }
+    }
+
+    @ViewBuilder private var content: some View {
         if ricerca {
             searchPanel
         } else if let piatto {
             HStack(spacing: 8) {
                 DishCard(pasto: slot.pasto, dish: piatto.nome, ai: piatto.origine == .ai) { open() }
+                    .contextMenu {
+                        Button(action: open) { Label("Cambia piatto", systemImage: "arrow.triangle.2.circlepath") }
+                        Button { openAndGenerate() } label: { Label("Rigenera con AI", systemImage: "sparkles") }
+                        Button(role: .destructive) { assign(nil) } label: { Label("Rimuovi dal pasto", systemImage: "trash") }
+                    }
                 IconSquareButton(systemImage: "trash", label: "Rimuovi \(piatto.nome) da questo pasto", tone: .danger) {
                     assign(nil)
                 }
             }
         } else {
             DishCard(pasto: slot.pasto, dish: nil) { open() }
+                .contextMenu {
+                    Button(action: open) { Label("Scegli un piatto", systemImage: "plus") }
+                    Button { openAndGenerate() } label: { Label("Genera con AI", systemImage: "sparkles") }
+                }
         }
     }
 
     private func open() {
         withAnimation(Motion.ui) { ricerca = true }
         searchFocused = true
+    }
+
+    /// From the context menu: open the panel (so progress and errors are visible) and generate.
+    private func openAndGenerate() {
+        withAnimation(Motion.ui) { ricerca = true }
+        Task { await generateWithAI() }
     }
 
     private var searchPanel: some View {
@@ -298,13 +324,6 @@ private struct PlanSlotRow: View {
         .padding(10)
         .background(palette.surfaceCard, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(palette.biro))
-        .sheet(isPresented: $richiestaChiave) {
-            GeminiKeySheet(onClose: { richiestaChiave = false }, onSaved: {
-                richiestaChiave = false
-                Task { await generateWithAI() }
-            })
-            .paperSheet(palette, detents: [.large])
-        }
     }
 
     private func close() {

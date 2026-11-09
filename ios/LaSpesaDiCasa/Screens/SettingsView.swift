@@ -91,29 +91,25 @@ struct SettingsView: View {
                 HStack {
                     Text("Porzioni predefinite").font(AppFont.text(16, .semibold)).foregroundStyle(palette.textBody)
                     Spacer()
-                    HStack(spacing: 4) {
-                        stepButton("minus", "Diminuisci") { p.porzioniDefault = max(1, p.porzioniDefault - 1) }
+                    HStack(spacing: 10) {
                         Text("\(p.porzioniDefault) persone").font(AppFont.text(16, .bold)).foregroundStyle(palette.biro)
                             .monospacedDigit().contentTransition(.numericText())
                             .lineLimit(1).fixedSize()
-                        stepButton("plus", "Aumenta") { p.porzioniDefault += 1 }
+                        Stepper("Porzioni predefinite", value: Binding(
+                            get: { p.porzioniDefault },
+                            set: { v in
+                                withAnimation(.snappy) { p.porzioniDefault = v }
+                                try? context.save()
+                            }
+                        ), in: 1...20)
+                        .labelsHidden()
+                        .sensoryFeedback(.selection, trigger: p.porzioniDefault)
                     }
+                    .padding(.trailing, 10)
                 }
                 .padding(.leading, 14).padding(.vertical, 2)
             }
         }
-    }
-
-    private func stepButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
-        Button {
-            withAnimation(.snappy) { action() }
-            try? context.save()
-        } label: {
-            Image(systemName: icon).font(.system(size: 14, weight: .bold)).foregroundStyle(palette.textBody)
-                .frame(width: 44, height: 44)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
     }
 
     private func giornoSpesa(_ p: Profilo) -> some View {

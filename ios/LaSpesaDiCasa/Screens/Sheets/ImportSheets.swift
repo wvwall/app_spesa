@@ -192,6 +192,7 @@ struct MealImportSheet: View {
         guard !incluse.isEmpty else { return }
         do {
             try onConfirm(incluse.map { ($0.draft.slotId, $0.draft.nome) })
+            Haptics.success()
             onClose()
         } catch {
             errore = error.localizedDescription
@@ -219,6 +220,7 @@ struct ShoppingImportSheet: View {
     private var incluse: Int { righe?.filter(\.includi).count ?? 0 }
 
     var body: some View {
+        NavigationStack {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 SheetHeader(title: "Importa la lista della spesa",
@@ -237,6 +239,9 @@ struct ShoppingImportSheet: View {
             .padding(.vertical, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .toolbarVisibility(.hidden, for: .navigationBar)
+        .keyboardDoneButton()
+        }
     }
 
     @ViewBuilder private var review: some View {
@@ -325,6 +330,7 @@ struct ShoppingImportSheet: View {
                 Store.ShoppingImportEntry(nome: $0.draft.nome, quantita: $0.draft.quantita, reparto: $0.draft.reparto,
                                           nota: $0.draft.nota, ingredienteId: $0.draft.ingredienteId)
             })
+            Haptics.success()
             onClose()
         } catch {
             errore = error.localizedDescription

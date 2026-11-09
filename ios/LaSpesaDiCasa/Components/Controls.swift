@@ -442,7 +442,11 @@ final class UndoCenter {
     var current: Request?
 
     func show(_ message: String, onUndo: @escaping () -> Void) {
-        current = Request(message: message, onUndo: onUndo)
+        Haptics.light()
+        current = Request(message: message, onUndo: {
+            onUndo()
+            Haptics.success()
+        })
     }
 }
 
@@ -595,5 +599,47 @@ struct StatusText: View {
             .foregroundStyle(kind == .error ? palette.pomodoro : kind == .success ? palette.basilico : palette.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(kind == .error ? .isStaticText : [])
+    }
+}
+
+// MARK: - Notebook-styled List
+
+extension View {
+    /// A row of a notebook `List`: no insets, separator or background (the page grid shows through).
+    func paperRow() -> some View {
+        self.listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    /// A plain `List` whose chrome disappears, so rows read like the rest of the notebook.
+    func paperList() -> some View {
+        self.listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .environment(\.defaultMinListRowHeight, 0)
+    }
+}
+
+// MARK: - Haptics
+
+enum Haptics {
+    static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+    static func light() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+}
+
+/// Dismisses the keyboard (used by the "Fine" key above numeric keypads, which have no return).
+func dismissKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+}
+
+extension View {
+    /// Adds a "Fine" button above the keyboard. Needs an enclosing NavigationStack.
+    func keyboardDoneButton() -> some View {
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Fine", action: dismissKeyboard).fontWeight(.semibold)
+            }
+        }
     }
 }

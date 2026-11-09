@@ -32,30 +32,64 @@ struct DishesView: View {
         let gruppi = Departments.group(filtrati, ordine: ordine, reparto: \.reparto)
 
         VStack(spacing: 0) {
-            PageHeader(title: "Piatti")
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    SearchField(placeholder: "Cerca o aggiungi un ingrediente…", text: $query)
-
-                    ForEach(gruppi, id: \.reparto) { gruppo in
-                        department(gruppo.reparto, gruppo.voci, espanso: !testo.isEmpty || repartiEspansi.contains(gruppo.reparto))
-                    }
-
-                    if !testo.isEmpty && !esatto {
-                        AddIngredientInline(query: query.trimmingCharacters(in: .whitespaces), reparti: ordine) { reparto in
-                            let ing = Store(context: context).addIngredient(nome: query.trimmingCharacters(in: .whitespaces), reparto: reparto)
-                            selezionati.append(ing.id)
-                            query = ""
-                        }
-                    }
-
-                    generationSection
-                    savedSection
+            // A notebook-styled List, so saved dishes get native swipe-to-delete.
+            List {
+                ForEach(gruppi, id: \.reparto) { gruppo in
+                    department(gruppo.reparto, gruppo.voci, espanso: !testo.isEmpty || repartiEspansi.contains(gruppo.reparto))
+                        .dishRow(top: 8)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+
+                if !testo.isEmpty && !esatto {
+                    AddIngredientInline(query: query.trimmingCharacters(in: .whitespaces), reparti: ordine) { reparto in
+                        let ing = Store(context: context).addIngredient(nome: query.trimmingCharacters(in: .whitespaces), reparto: reparto)
+                        selezionati.append(ing.id)
+                        query = ""
+                    }
+                    .dishRow(top: 8)
+                }
+
+                generationSection.dishRow(top: 16)
+                SectionLabel("I tuoi piatti").padding(.top, 16)
+                    .overlay(alignment: .top) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
+                    .dishRow(top: 0)
+                ForEach(piatti) { p in
+                    savedRow(p)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) { deleteDish(p) } label: { Label("Elimina", systemImage: "trash") }
+                                .tint(palette.pomodoro)
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) { deleteDish(p) } label: { Label("Elimina", systemImage: "trash") }
+                        }
+                        .dishRow(top: 8)
+                }
+                if piatti.isEmpty {
+                    Text("Nessun piatto salvato.").font(AppFont.text(14)).foregroundStyle(palette.textSecondary)
+                        .dishRow(top: 8)
+                }
+                Color.clear.frame(height: 24).dishRow(top: 0)
             }
+            .paperList()
             .scrollDismissesKeyboard(.interactively)
+            .searchable(text: $query, placement: .toolbar, prompt: "Cerca o aggiungi un ingrediente…")
+            .toolbarVisibility(.visible, for: .navigationBar)
+            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // Same handwritten title as the other tabs, placed in the bar so the native search
+                // field sits right under it.
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Piatti\u{00A0}")
+                        .font(AppFont.hand(28, .semibold, relativeTo: .title))
+                        .tracking(-0.56)
+                        .foregroundStyle(palette.biro)
+                        .fixedSize()
+                        .padding(.leading, -4)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                .sharedBackgroundVisibility(.hidden)
+            }
+            .textInputAutocapitalization(.never)
         }
         .background { NotebookBackground(watermark: .piatti) }
         .sheet(isPresented: $richiestaChiave) {
@@ -106,7 +140,7 @@ struct DishesView: View {
                     if caricamentoAI {
                         Text("Sto pensando a un piatto…")
                     } else {
-                        Label("Genera con AI", systemImage: "sparkles")
+                        Label("Genera con AI", systemImage: "sparkles").lineLimit(1).minimumScaleFactor(0.8)
                     }
                 }
                 .buttonStyle(.paper)
@@ -141,36 +175,29 @@ struct DishesView: View {
         .overlay(alignment: .top) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
     }
 
-    private var savedSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SectionLabel("I tuoi piatti")
-            ForEach(piatti) { p in
-                HStack {
-                    Text(p.nome).font(AppFont.text(16, .semibold)).foregroundStyle(palette.textBody)
-                    Spacer()
-                    if p.origine == .ai { AIBadge() }
-                    Button {
-                        if let r = Store(context: context).deleteDishWithUndo(p.id) {
-                            undo.show("\(r.nome) eliminato", onUndo: r.restore)
-                        }
-                    } label: {
-                        Image(systemName: "trash").font(.system(size: 15)).foregroundStyle(palette.pomodoro)
-                            .frame(width: 32, height: 32)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Elimina \(p.nome)")
-                }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .frame(minHeight: 48)
-                .background(palette.surfaceCard, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(palette.borderQuiet))
+    private func savedRow(_ p: Piatto) -> some View {
+        HStack {
+            Text(p.nome).font(AppFont.text(16, .semibold)).foregroundStyle(palette.textBody)
+            Spacer()
+            if p.origine == .ai { AIBadge() }
+            Button { deleteDish(p) } label: {
+                Image(systemName: "trash").font(.system(size: 15)).foregroundStyle(palette.pomodoro)
+                    .frame(width: 32, height: 32)
             }
-            if piatti.isEmpty {
-                Text("Nessun piatto salvato.").font(AppFont.text(14)).foregroundStyle(palette.textSecondary)
-            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Elimina \(p.nome)")
         }
-        .padding(.top, 16)
-        .overlay(alignment: .top) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .frame(minHeight: 48)
+        .background(palette.surfaceCard, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(palette.borderQuiet))
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func deleteDish(_ p: Piatto) {
+        if let r = Store(context: context).deleteDishWithUndo(p.id) {
+            undo.show("\(r.nome) eliminato", onUndo: r.restore)
+        }
     }
 
     private func generateWithAI() async {
@@ -289,5 +316,15 @@ private struct ManualDishForm: View {
         }
         Store(context: context).createManualDish(nome: n, porzioni: porzioni, ingredienti: righe)
         onSalvato()
+    }
+}
+
+private extension View {
+    /// A Piatti row: page gutter of 20pt and a top gap, notebook-styled.
+    func dishRow(top: CGFloat) -> some View {
+        self.frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, top)
+            .paperRow()
     }
 }

@@ -71,14 +71,16 @@ struct ShoppingListView: View {
         }
     }
 
+    /// A `List` (for native swipe actions) styled as the notebook: no separators, clear rows.
     private func list(_ voci: [VoceLista]) -> some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(Departments.group(voci, ordine: ordineReparti, reparto: \.reparto), id: \.reparto) { gruppo in
-                    Text(gruppo.reparto).sectionLabelStyle(palette, tracking: 0.14)
-                        .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 4)
-                        .accessibilityAddTraits(.isHeader)
-                    ForEach(gruppo.voci) { v in
+        List {
+            ForEach(Departments.group(voci, ordine: ordineReparti, reparto: \.reparto), id: \.reparto) { gruppo in
+                Text(gruppo.reparto).sectionLabelStyle(palette, tracking: 0.14)
+                    .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 4)
+                    .accessibilityAddTraits(.isHeader)
+                    .paperRow()
+                ForEach(gruppo.voci) { v in
+                    Group {
                         if editingId == v.id {
                             AddShoppingItemForm(
                                 reparti: ordineReparti, initiallyOpen: true, initialName: v.nome, initialQuantity: v.quantita,
@@ -91,32 +93,52 @@ struct ShoppingListView: View {
                             .padding(.horizontal, 20).padding(.vertical, 12)
                             .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
                         } else {
-                            ReviewRow(voce: v) { editingId = v.id }
+                            ReviewRow(voce: v, onEdit: { editingId = v.id }, onDelete: { deleteItem(v) })
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) { deleteItem(v) } label: { Label("Elimina", systemImage: "trash") }
+                                        .tint(palette.pomodoro)
+                                }
+                                .swipeActions(edge: .leading) {
+                                    Button { editingId = v.id } label: { Label("Modifica", systemImage: "pencil") }
+                                        .tint(palette.textSecondary)
+                                }
                         }
                     }
-                    Group {
-                        if departmentWithForm == gruppo.reparto {
-                            AddShoppingItemForm(reparti: ordineReparti, initiallyOpen: true, initialDepartment: gruppo.reparto,
-                                                onCancel: { departmentWithForm = nil }) { n, r, q, f, nota in
-                                addItem(n, r, q, f, nota)
-                                departmentWithForm = nil
-                            }
-                        } else {
-                            Button { departmentWithForm = gruppo.reparto } label: {
-                                Label("Aggiungi in \(gruppo.reparto)", systemImage: "plus")
-                                    .font(AppFont.text(12)).foregroundStyle(palette.biro).frame(minHeight: 36)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 8)
+                    .paperRow()
                 }
-                AddShoppingItemForm(reparti: ordineReparti) { n, r, q, f, nota in addItem(n, r, q, f, nota) }
-                    .padding(.horizontal, 20).padding(.vertical, 12)
-                actions(voci)
+                Group {
+                    if departmentWithForm == gruppo.reparto {
+                        AddShoppingItemForm(reparti: ordineReparti, initiallyOpen: true, initialDepartment: gruppo.reparto,
+                                            onCancel: { departmentWithForm = nil }) { n, r, q, f, nota in
+                            addItem(n, r, q, f, nota)
+                            departmentWithForm = nil
+                        }
+                    } else {
+                        Button { departmentWithForm = gruppo.reparto } label: {
+                            Label("Aggiungi in \(gruppo.reparto)", systemImage: "plus")
+                                .labelStyle(TightLabelStyle(spacing: 6))
+                                .font(AppFont.text(12)).foregroundStyle(palette.biro).frame(minHeight: 36)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .paperRow()
             }
+            AddShoppingItemForm(reparti: ordineReparti) { n, r, q, f, nota in addItem(n, r, q, f, nota) }
+                .padding(.horizontal, 20).padding(.vertical, 12)
+                .paperRow()
+            actions(voci).paperRow()
         }
+        .paperList()
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    private func deleteItem(_ v: VoceLista) {
+        let nome = v.nome
+        let restore = Store(context: context).deleteWithUndo(v)
+        undo.show("\(nome) eliminato", onUndo: restore)
     }
 
     private func actions(_ voci: [VoceLista]) -> some View {
@@ -238,9 +260,9 @@ struct ShoppingListView: View {
 private struct ReviewRow: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
-    @Environment(UndoCenter.self) private var undo
     let voce: VoceLista
     var onEdit: () -> Void
+    var onDelete: () -> Void
     @State private var quantita = ""
     @FocusState private var qtyFocused: Bool
 
@@ -274,15 +296,16 @@ private struct ReviewRow: View {
             }
             IconSquareButton(systemImage: "pencil", label: "Modifica \(voce.nome)", action: onEdit)
                 .frame(width: 36)
-            IconSquareButton(systemImage: "trash", label: "Rimuovi \(voce.nome)", tone: .danger) {
-                let nome = voce.nome
-                let restore = Store(context: context).deleteWithUndo(voce)
-                undo.show("\(nome) eliminato", onUndo: restore)
-            }
+            IconSquareButton(systemImage: "trash", label: "Rimuovi \(voce.nome)", tone: .danger, action: onDelete)
             .frame(width: 36)
         }
         .padding(.horizontal, 20).padding(.vertical, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button(action: onEdit) { Label("Modifica", systemImage: "pencil") }
+            Button(role: .destructive, action: onDelete) { Label("Elimina", systemImage: "trash") }
+        }
         .onAppear { quantita = voce.quantita }
         .onChange(of: voce.quantita) { _, q in if !qtyFocused { quantita = q } }
     }
@@ -346,6 +369,7 @@ struct AddShoppingItemForm: View {
             focus = .nome
         } label: {
             Label("Aggiungi articolo", systemImage: "plus")
+                .labelStyle(TightLabelStyle(spacing: 6))
                 .font(AppFont.text(14, .semibold)).foregroundStyle(palette.biro).frame(minHeight: 44)
         }
         .buttonStyle(.plain)

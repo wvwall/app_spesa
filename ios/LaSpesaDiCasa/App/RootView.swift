@@ -24,16 +24,16 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             Tab(value: AppTab.settimana) {
-                WeeklyPlannerView(cycleOffset: $weekOffset)
+                WeeklyPlannerView(cycleOffset: $weekOffset).inTabStack()
             } label: { TabLabel("Settimana", "calendar") }
             Tab(value: AppTab.lista) {
-                ShoppingListView(cycleOffset: $listOffset) { activeShoppingListId = $0 }
+                ShoppingListView(cycleOffset: $listOffset) { activeShoppingListId = $0 }.inTabStack()
             } label: { TabLabel("Lista", "checklist") }
             Tab(value: AppTab.piatti) {
-                DishesView()
+                DishesView().inTabStack(showsBar: true)
             } label: { TabLabel("Piatti", "fork.knife") }
             Tab(value: AppTab.altro) {
-                SettingsView()
+                SettingsView().inTabStack()
             } label: { TabLabel("Opzioni", "slider.horizontal.3") }
         }
         .overlay(alignment: .bottom) {
@@ -87,6 +87,17 @@ struct TabLabel: View {
             } else {
                 Image(systemName: symbol)
             }
+        }
+    }
+}
+
+extension View {
+    /// Each tab lives in a NavigationStack (for native search and the keyboard "Fine" button),
+    /// with the navigation bar hidden: the notebook PageHeader stays the visible title.
+    func inTabStack(showsBar: Bool = false) -> some View {
+        NavigationStack {
+            self.toolbarVisibility(showsBar ? .automatic : .hidden, for: .navigationBar)
+                .keyboardDoneButton()
         }
     }
 }
