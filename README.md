@@ -114,6 +114,13 @@ sistema (tab bar, sheet, bottoni flottanti, navigatore settimane) usano Liquid G
 open ios/LaSpesaDiCasa.xcodeproj
 ```
 
+Installare sul proprio iPhone con un Apple ID gratuito (l'app scade ogni 7 giorni, basta
+reinstallarla): in Xcode aggiungi l'Apple ID (Impostazioni → Account), scegli lo schema
+**LaSpesaDiCasa (account gratuito)**, imposta il tuo *Personal Team* in Signing & Capabilities sui
+target `LaSpesaDiCasa` e `LaSpesaWidgetsExtension`, attiva la Modalità sviluppatore sull'iPhone e
+premi Run. Lo schema usa la configurazione `Free`, senza App Group (non firmabile con un account
+gratuito): l'app funziona per intero, Live Activity compresa, ma il widget "Oggi" resta vuoto.
+
 Test (Swift Testing, stessi casi di `textImport.test.ts` più calendario, allergeni e backup):
 
 ```bash
