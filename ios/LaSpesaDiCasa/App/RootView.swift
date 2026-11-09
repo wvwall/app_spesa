@@ -36,11 +36,6 @@ struct RootView: View {
                 SettingsView().inTabStack()
             } label: { TabLabel("Opzioni", "slider.horizontal.3") }
         }
-        .overlay(alignment: .bottom) {
-            // Floats above the tab bar.
-            UndoToast(center: undo).padding(.bottom, 64)
-        }
-        .animation(.snappy, value: undo.current?.id)
         .palette(palette, followSystem: tema == .sistema)
         .environment(network)
         .environment(undo)
@@ -98,6 +93,21 @@ extension View {
         NavigationStack {
             self.toolbarVisibility(showsBar ? .automatic : .hidden, for: .navigationBar)
                 .keyboardDoneButton()
+                // The undo toast lives inside each tab's content: an overlay on the native
+                // TabView is drawn but does not receive touches (taps fell through to the row
+                // underneath).
+                .modifier(UndoToastHost())
         }
+    }
+}
+
+private struct UndoToastHost: ViewModifier {
+    @Environment(UndoCenter.self) private var undo
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottom) {
+            UndoToast(center: undo).padding(.bottom, 64) // Above the floating tab bar.
+        }
+        .animation(.snappy, value: undo.current?.id)
     }
 }

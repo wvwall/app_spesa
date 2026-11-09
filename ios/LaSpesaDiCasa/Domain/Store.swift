@@ -402,10 +402,24 @@ struct Store {
 }
 
 // MARK: - Undoable deletes (port of the PWA's undo toast)
+//
+// Restores re-create rows with NEW ids: on the on-disk store SwiftData does not reliably accept a
+// fresh insert reusing the unique id of a row deleted moments before (the row silently vanished).
+// References (list → items, dish → ingredients and slots) are re-pointed to the new ids.
 
-extension VoceLista {
-    func clone() -> VoceLista {
-        VoceLista(id: id, listaId: listaId, ingredienteId: ingredienteId, testoLibero: testoLibero, nome: nome,
+private struct VoceSnapshot {
+    var ingredienteId: String?, testoLibero: String?, nome: String, quantita: String, reparto: String
+    var checked: Bool, checkedAt: String?, nota: String?, alternative: [String]
+    var sostituitoCon: String?, mancante: Bool?, fotoJPEG: Data?
+
+    init(_ v: VoceLista) {
+        ingredienteId = v.ingredienteId; testoLibero = v.testoLibero; nome = v.nome; quantita = v.quantita
+        reparto = v.reparto; checked = v.checked; checkedAt = v.checkedAt; nota = v.nota
+        alternative = v.alternative; sostituitoCon = v.sostituitoCon; mancante = v.mancante; fotoJPEG = v.fotoJPEG
+    }
+
+    func make(listaId: String) -> VoceLista {
+        VoceLista(listaId: listaId, ingredienteId: ingredienteId, testoLibero: testoLibero, nome: nome,
                   quantita: quantita, reparto: reparto, checked: checked, checkedAt: checkedAt, nota: nota,
                   alternative: alternative, sostituitoCon: sostituitoCon, mancante: mancante, fotoJPEG: fotoJPEG)
     }
@@ -414,22 +428,24 @@ extension VoceLista {
 extension Store {
     /// Deletes an item and returns a closure that puts it back.
     func deleteWithUndo(_ v: VoceLista) -> () -> Void {
-        let copia = v.clone()
+        let snap = VoceSnapshot(v)
+        let listaId = v.listaId
         delete(v)
         return {
-            context.insert(copia.clone())
+            context.insert(snap.make(listaId: listaId))
             try? context.save()
         }
     }
 
     /// Deletes a list with all its items and returns a closure that restores them.
     func deleteCompleteListWithUndo(_ lista: ListaSpesa) -> () -> Void {
-        let copiaLista = (lista.id, lista.pianoId, lista.chiusa, lista.updatedAt)
-        let voci = items(lista.id).map { $0.clone() }
+        let pianoId = lista.pianoId, chiusa = lista.chiusa
+        let voci = items(lista.id).map(VoceSnapshot.init)
         deleteCompleteList(lista)
         return {
-            context.insert(ListaSpesa(id: copiaLista.0, pianoId: copiaLista.1, chiusa: copiaLista.2, updatedAt: copiaLista.3))
-            for v in voci { context.insert(v.clone()) }
+            let nuova = ListaSpesa(pianoId: pianoId, chiusa: chiusa)
+            context.insert(nuova)
+            for v in voci { context.insert(v.make(listaId: nuova.id)) }
             try? context.save()
         }
     }
@@ -438,19 +454,20 @@ extension Store {
     /// that restores all of it.
     func deleteDishWithUndo(_ piattoId: String) -> (nome: String, restore: () -> Void)? {
         guard let p = (try? context.fetch(FetchDescriptor<Piatto>(predicate: #Predicate { $0.id == piattoId })))?.first else { return nil }
-        let piatto = (p.nome, p.procedimento, p.preferito, p.origine, p.porzioni, p.allergieVerificate, p.updatedAt, p.deletedAt)
+        let piatto = (p.nome, p.procedimento, p.preferito, p.origine, p.porzioni, p.allergieVerificate, p.deletedAt)
         let ingredienti = ((try? context.fetch(FetchDescriptor<PiattoIngrediente>(predicate: #Predicate { $0.piattoId == piattoId }))) ?? [])
-            .map { ($0.id, $0.ingredienteId, $0.nome, $0.reparto, $0.quantita, $0.unita) }
+            .map { ($0.ingredienteId, $0.nome, $0.reparto, $0.quantita, $0.unita) }
         let slotIds = ((try? context.fetch(FetchDescriptor<SlotPasto>(predicate: #Predicate { $0.piattoId == piattoId }))) ?? []).map(\.id)
         deleteDish(piattoId)
         return (piatto.0, {
-            context.insert(Piatto(id: piattoId, nome: piatto.0, procedimento: piatto.1, preferito: piatto.2, origine: piatto.3,
-                                  porzioni: piatto.4, allergieVerificate: piatto.5, updatedAt: piatto.6, deletedAt: piatto.7))
+            let nuovo = Piatto(nome: piatto.0, procedimento: piatto.1, preferito: piatto.2, origine: piatto.3,
+                               porzioni: piatto.4, allergieVerificate: piatto.5, deletedAt: piatto.6)
+            context.insert(nuovo)
             for i in ingredienti {
-                context.insert(PiattoIngrediente(id: i.0, piattoId: piattoId, ingredienteId: i.1, nome: i.2, reparto: i.3,
-                                                 quantita: i.4, unita: i.5))
+                context.insert(PiattoIngrediente(piattoId: nuovo.id, ingredienteId: i.0, nome: i.1, reparto: i.2,
+                                                 quantita: i.3, unita: i.4))
             }
-            for id in slotIds { assignDish(slotId: id, piattoId: piattoId) }
+            for id in slotIds { assignDish(slotId: id, piattoId: nuovo.id) }
             try? context.save()
         })
     }

@@ -238,15 +238,51 @@ struct StoreTests {
         let ripristinaLista = s.deleteCompleteListWithUndo(lista)
         #expect(s.listForPlan(piano.id) == nil)
         ripristinaLista()
-        #expect(s.listForPlan(piano.id)?.id == lista.id)
-        #expect(s.items(lista.id).count == 2)
+        let ripristinata = try #require(s.listForPlan(piano.id))
+        #expect(s.items(ripristinata.id).count == 2)
 
         let piatto = s.createManualDish(nome: "Prova", porzioni: 2)
         s.assignDish(slotId: slots[0].id, piattoId: piatto.id)
         let r = try #require(s.deleteDishWithUndo(piatto.id))
         #expect(slots[0].piattoId == nil)
         r.restore()
-        #expect(slots[0].piattoId == piatto.id)
+        #expect(slots[0].piattoId != nil)
+    }
+
+    @Test("annulla funziona anche con il database su disco, come nell'app")
+    func annullaSuDisco() throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "undo-\(UUID().uuidString).store")
+        let container = try ModelContainer(for: Schema(AppSchema.models), configurations: ModelConfiguration(url: url))
+        let s = Store(context: container.mainContext)
+        s.profile()
+        let lista = s.getOrCreateOpenList(s.getOrCreateWeeklyPlan("2026-11-06").id)
+        let listaId = lista.id
+        s.addFreeItem(listaId: listaId, nome: "Latte", quantita: "1", reparto: "Banco frigo", foto: nil, nota: nil)
+        s.addFreeItem(listaId: listaId, nome: "Pane", quantita: "1", reparto: "Forno", foto: nil, nota: nil)
+        let latte = try #require(s.items(listaId).first { $0.nome == "Latte" })
+        let ripristina = s.deleteWithUndo(latte)
+        ripristina()
+        // A fresh context reads what is really on disk.
+        let fresco = Store(context: ModelContext(container))
+        #expect(Set(fresco.items(listaId).map(\.nome)) == ["Latte", "Pane"])
+    }
+
+    @Test("svuota e ripristina una lista con molte voci")
+    func svuotaRipristinaMolte() throws {
+        let s = try store()
+        s.profile()
+        let pianoId = s.getOrCreateWeeklyPlan("2026-11-06").id
+        let lista = s.getOrCreateOpenList(pianoId)
+        let nomi = ["zucchine", "spinaci", "uova", "gamberi", "cosa strana", "detersivo lavatrice"]
+        for (i, n) in nomi.enumerated() {
+            s.addFreeItem(listaId: lista.id, nome: n, quantita: "\(i + 1)", reparto: i == 4 ? "Dispensa" : "Ortofrutta", foto: nil, nota: nil)
+        }
+        let listaId = lista.id
+        let ripristina = s.deleteCompleteListWithUndo(lista)
+        #expect(s.items(listaId).isEmpty)
+        ripristina()
+        let nuova = try #require(s.listForPlan(pianoId))
+        #expect(Set(s.items(nuova.id).map(\.nome)) == Set(nomi))
     }
 
     @Test("ordina per reparto usando prima il catalogo locale")

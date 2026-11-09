@@ -490,7 +490,8 @@ struct UndoToast: View {
             .task(id: req.id) {
                 progress = 1
                 withAnimation(.linear(duration: 5)) { progress = 0 }
-                try? await Task.sleep(for: UndoCenter.duration)
+                // A cancelled sleep (e.g. the copy of the toast in a hidden tab) must not dismiss it.
+                guard (try? await Task.sleep(for: UndoCenter.duration)) != nil else { return }
                 if center.current?.id == req.id { withAnimation { center.current = nil } }
             }
             .accessibilityElement(children: .contain)
@@ -633,14 +634,36 @@ func dismissKeyboard() {
     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }
 
-extension View {
-    /// Adds a "Fine" button above the keyboard. Needs an enclosing NavigationStack.
-    func keyboardDoneButton() -> some View {
-        toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Fine", action: dismissKeyboard).fontWeight(.semibold)
+/// A "Fine" button that rides just above the keyboard (numeric keypads have no return key).
+/// The system keyboard toolbar is not shown while the navigation bar is hidden, so this is
+/// drawn as a bottom inset that only exists while the keyboard is up.
+private struct KeyboardDoneBar: ViewModifier {
+    @State private var visible = false
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if visible {
+                    HStack {
+                        Spacer()
+                        Button("Fine", action: dismissKeyboard)
+                            .font(.body.weight(.semibold))
+                            .buttonStyle(.glass)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .transition(.opacity)
+                }
             }
-        }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                withAnimation(.easeOut(duration: 0.2)) { visible = true }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                withAnimation(.easeOut(duration: 0.2)) { visible = false }
+            }
     }
+}
+
+extension View {
+    func keyboardDoneButton() -> some View { modifier(KeyboardDoneBar()) }
 }

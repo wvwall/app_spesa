@@ -366,7 +366,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "La spesa";
+				INFOPLIST_KEY_CFBundleDisplayName = "Cosamangiamo";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Per fotografare un articolo della lista e ritrovarlo facilmente in negozio.";
@@ -402,7 +402,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "La spesa";
+				INFOPLIST_KEY_CFBundleDisplayName = "Cosamangiamo";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Per fotografare un articolo della lista e ritrovarlo facilmente in negozio.";
@@ -472,7 +472,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LaSpesaWidgets/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "La spesa";
+				INFOPLIST_KEY_CFBundleDisplayName = "Cosamangiamo";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -499,7 +499,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LaSpesaWidgets/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "La spesa";
+				INFOPLIST_KEY_CFBundleDisplayName = "Cosamangiamo";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

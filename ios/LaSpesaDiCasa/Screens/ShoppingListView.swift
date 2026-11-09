@@ -75,10 +75,36 @@ struct ShoppingListView: View {
     private func list(_ voci: [VoceLista]) -> some View {
         List {
             ForEach(Departments.group(voci, ordine: ordineReparti, reparto: \.reparto), id: \.reparto) { gruppo in
-                Text(gruppo.reparto).sectionLabelStyle(palette, tracking: 0.14)
-                    .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 4)
-                    .accessibilityAddTraits(.isHeader)
+                // Department header with a "+" to add an item straight into this department.
+                HStack {
+                    Text(gruppo.reparto).sectionLabelStyle(palette, tracking: 0.14)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Button {
+                        withAnimation(Motion.ui) {
+                            departmentWithForm = departmentWithForm == gruppo.reparto ? nil : gruppo.reparto
+                        }
+                    } label: {
+                        Image(systemName: departmentWithForm == gruppo.reparto ? "xmark" : "plus")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(palette.biro)
+                            .frame(width: 44, height: 36)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(departmentWithForm == gruppo.reparto ? "Chiudi" : "Aggiungi in \(gruppo.reparto)")
+                }
+                .padding(.leading, 20).padding(.trailing, 8).padding(.top, 8)
+                .paperRow()
+                if departmentWithForm == gruppo.reparto {
+                    AddShoppingItemForm(reparti: ordineReparti, initiallyOpen: true, initialDepartment: gruppo.reparto,
+                                        onCancel: { departmentWithForm = nil }) { n, r, q, f, nota in
+                        addItem(n, r, q, f, nota)
+                        departmentWithForm = nil
+                    }
+                    .padding(.horizontal, 20).padding(.vertical, 8)
                     .paperRow()
+                }
                 ForEach(gruppo.voci) { v in
                     Group {
                         if editingId == v.id {
@@ -106,25 +132,6 @@ struct ShoppingListView: View {
                     }
                     .paperRow()
                 }
-                Group {
-                    if departmentWithForm == gruppo.reparto {
-                        AddShoppingItemForm(reparti: ordineReparti, initiallyOpen: true, initialDepartment: gruppo.reparto,
-                                            onCancel: { departmentWithForm = nil }) { n, r, q, f, nota in
-                            addItem(n, r, q, f, nota)
-                            departmentWithForm = nil
-                        }
-                    } else {
-                        Button { departmentWithForm = gruppo.reparto } label: {
-                            Label("Aggiungi in \(gruppo.reparto)", systemImage: "plus")
-                                .labelStyle(TightLabelStyle(spacing: 6))
-                                .font(AppFont.text(12)).foregroundStyle(palette.biro).frame(minHeight: 36)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .paperRow()
             }
             AddShoppingItemForm(reparti: ordineReparti) { n, r, q, f, nota in addItem(n, r, q, f, nota) }
                 .padding(.horizontal, 20).padding(.vertical, 12)
@@ -141,44 +148,45 @@ struct ShoppingListView: View {
         undo.show("\(nome) eliminato", onUndo: restore)
     }
 
+    /// "Inizia la spesa" plus a native "…" menu with the secondary list tools.
     private func actions(_ voci: [VoceLista]) -> some View {
         VStack(spacing: 8) {
-            GlassCTA(title: "Inizia la spesa") { startShopping() }
-            HStack(spacing: 8) {
-                Button { Task { await sortByDepartment() } } label: {
-                    compactLabel(ordinando ? "Ordino…" : "Ordina", "arrow.up.arrow.down")
+            HStack(spacing: 10) {
+                GlassCTA(title: "Inizia la spesa") { startShopping() }
+                Menu {
+                    // Fixed order with the destructive action first: the menu opens above the
+                    // button, so "Svuota lista" ends up farthest from the finger.
+                    Button(role: .destructive) {
+                        guard let lista else { return }
+                        let restore = Store(context: context).deleteCompleteListWithUndo(lista)
+                        undo.show("Lista svuotata", onUndo: restore)
+                    } label: { Label("Svuota lista", systemImage: "trash") }
+                    Divider()
+                    Button { Task { await sortByDepartment() } } label: {
+                        Label(ordinando ? "Ordino…" : "Ordina per reparto", systemImage: "arrow.up.arrow.down")
+                    }
+                    .disabled(ordinando)
+                    ShareLink(item: exportText(voci), subject: Text("lista-spesa.txt")) {
+                        Label("Esporta testo", systemImage: "square.and.arrow.up")
+                    }
+                    Button { importOpen = true } label: { Label("Importa lista", systemImage: "tray.and.arrow.down") }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(palette.biro)
+                        .frame(width: 30, height: 30)
                 }
-                .buttonStyle(.paper(.ghost, fontSize: 13, vertical: 9, horizontal: 4))
-                .disabled(ordinando)
-                ShareLink(item: exportText(voci), subject: Text("lista-spesa.txt")) {
-                    compactLabel("Esporta", "square.and.arrow.up")
-                }
-                .buttonStyle(.paper(.ghost, fontSize: 13, vertical: 9, horizontal: 4))
-                Button { importOpen = true } label: { compactLabel("Importa", "tray.and.arrow.up") }
-                    .buttonStyle(.paper(.ghost, fontSize: 13, vertical: 9, horizontal: 4))
+                .menuOrder(.fixed)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .controlSize(.large)
+                .accessibilityLabel("Altre azioni sulla lista")
             }
             if let esitoOrdina { StatusText(text: esitoOrdina).frame(maxWidth: .infinity, alignment: .leading) }
             if let esitoImport { StatusText(text: esitoImport, kind: .success).frame(maxWidth: .infinity, alignment: .leading) }
-            Button("Svuota lista") {
-                guard let lista else { return }
-                let restore = Store(context: context).deleteCompleteListWithUndo(lista)
-                undo.show("Lista svuotata", onUndo: restore)
-            }
-            .font(AppFont.text(13)).foregroundStyle(palette.pomodoro)
-            .buttonStyle(.plain)
-            .frame(minHeight: 44)
-            .padding(.top, 28)
         }
         .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
         .overlay(alignment: .top) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
-    }
-
-    private func compactLabel(_ title: String, _ icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 16, weight: .medium)).frame(height: 20)
-            Text(title).lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, minHeight: 42)
     }
 
     private var emptyState: some View {
