@@ -24,7 +24,7 @@ const DEFAULT_TABS: TabItem[] = [
   { id: "settimana", icon: CalendarDays, label: "Settimana" },
   { id: "lista", icon: ListChecks, label: "Lista" },
   { id: "piatti", icon: UtensilsCrossed, label: "Piatti" },
-  { id: "altro", icon: Settings2, label: "Altro" },
+  { id: "altro", icon: Settings2, label: "Opzioni" },
 ];
 
 export function TabBar({

@@ -222,8 +222,13 @@ export async function setItemMissing(voceId: string, mancante: boolean): Promise
   await db.voci.update(voceId, { mancante });
 }
 
-export async function deleteItem(voceId: string): Promise<void> {
+/** Deletes an item and returns a function that puts it back (used by the undo toast). */
+export async function deleteItem(voceId: string): Promise<() => Promise<void>> {
+  const voce = await db.voci.get(voceId);
   await db.voci.delete(voceId);
+  return async () => {
+    if (voce) await db.voci.put(voce);
+  };
 }
 
 export async function updateQuantity(voceId: string, quantita: string): Promise<void> {
@@ -250,12 +255,20 @@ export async function replaceItem(voceId: string, sostitutoNome: string): Promis
 }
 
 /** Deletes the list and all its items, returning to the "no list yet" state. */
-export async function deleteCompleteList(listaId: string): Promise<void> {
+/** Deletes a list with all its items and returns a function that restores them. */
+export async function deleteCompleteList(listaId: string): Promise<() => Promise<void>> {
+  const lista = await db.liste.get(listaId);
+  const voci = await db.voci.where("listaId").equals(listaId).toArray();
   await db.transaction("rw", db.liste, db.voci, async () => {
-    const voci = await db.voci.where("listaId").equals(listaId).toArray();
     await db.voci.bulkDelete(voci.map((v) => v.id));
     await db.liste.delete(listaId);
   });
+  return async () => {
+    await db.transaction("rw", db.liste, db.voci, async () => {
+      if (lista) await db.liste.put(lista);
+      await db.voci.bulkPut(voci);
+    });
+  };
 }
 
 export interface DepartmentSortResult {

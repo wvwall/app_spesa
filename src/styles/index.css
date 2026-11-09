@@ -140,3 +140,16 @@ input {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Countdown bar of the undo toast: drains over the undo window. */
+.undo-progress {
+  height: 3px;
+  background: currentColor;
+  opacity: 0.55;
+  transform-origin: left;
+  animation: undo-drain linear forwards;
+}
+@keyframes undo-drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}

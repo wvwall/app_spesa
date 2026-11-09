@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X, Upload, Share2, ArrowDownWideNarrow } from "lucide-react";
 import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { getOrCreateWeeklyPlan } from "../lib/weeklyPlan";
-import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel } from "../lib/calendar";
+import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel, formatCycleTitle } from "../lib/calendar";
 import {
   deleteItem,
   updateQuantity,
@@ -20,7 +20,7 @@ import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
 import { splitUnitFromNote, joinUnitAndNote, UNITA_SUGGERITE } from "../lib/textImport";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
+import { Button, PageHeader, useUndoToast, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
 
 /** Secondary list tools: icon over a short label, three per row, still 44px+ tall. */
@@ -43,6 +43,7 @@ interface Props {
 
 export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping }: Props) {
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
+  const showUndo = useUndoToast();
   // The displayed week follows the offset selected here with the ‹ today › navigator, rather
   // than being fixed to today. This lets users create or review a list for a specific week.
   const inizio = shiftCycle(cycleStart(new Date(), profilo?.giornoSpesa ?? 5), cycleOffset);
@@ -74,8 +75,8 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   async function clearList() {
     if (!lista) return;
-    if (!window.confirm("Cancellare tutta la lista? Non si può annullare.")) return;
-    await deleteCompleteList(lista.id);
+    const restore = await deleteCompleteList(lista.id);
+    showUndo({ message: "Lista svuotata", onUndo: restore });
   }
 
   async function addItem(nome: string, reparto: string, quantita: string, fotoDataUrl?: string, nota?: string) {
@@ -136,20 +137,17 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none border-b" style={{ borderColor: "var(--border-quiet)" }}>
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="truncate min-w-0" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22 }}>Lista della spesa</h1>
+      <PageHeader
+        title={formatCycleTitle(inizio)}
+        actions={
           <CycleNavigator
             onPrecedente={() => onCycleOffsetChange(cycleOffset - 1)}
             onOggi={() => onCycleOffsetChange(0)}
             onSuccessivo={() => onCycleOffsetChange(cycleOffset + 1)}
           />
-        </div>
-        <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 2 }}>
-          {formatCycleLabel(inizio)}
-          {haVoci && ` · ${voci.length} articoli`}
-        </div>
-      </header>
+        }
+        subtitle={haVoci ? `Lista della spesa · ${voci.length} ${voci.length === 1 ? "articolo" : "articoli"}` : "Lista della spesa"}
+      />
 
       {profilo === undefined ? (
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3.5 flex flex-col gap-2" aria-hidden="true">
@@ -575,6 +573,12 @@ const AZIONE_RIGA = 36;
 function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdit: () => void }) {
   const [quantita, setQuantita] = useState(voce.quantita);
   const { unita, nota } = splitUnitFromNote(voce.nota);
+  const showUndo = useUndoToast();
+
+  async function removeItem() {
+    const restore = await deleteItem(voce.id);
+    showUndo({ message: `${voce.nome} eliminato`, onUndo: restore });
+  }
 
   return (
     <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
@@ -612,10 +616,10 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
           onBlur={() => void updateQuantity(voce.id, quantita)}
         />
       </label>
-      <IconButton tone="accent" size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
+      <IconButton size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
         <Pencil size={16} strokeWidth={2} />
       </IconButton>
-      <IconButton size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void deleteItem(voce.id)}>
+      <IconButton tone="danger" size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void removeItem()}>
         <Trash2 size={16} strokeWidth={2} />
       </IconButton>
     </div>

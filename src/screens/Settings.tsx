@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Minus, Plus, GripVertical } from "lucide-react";
-import { db, getOrCreateProfile, applyTheme } from "../lib/database";
+import { db, getOrCreateProfile } from "../lib/database";
+import { applyTheme } from "../lib/theme";
 import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
-import { Button, Chip, GeminiKeySheet } from "../components";
+import { Button, PageHeader, Chip, GeminiKeySheet } from "../components";
 import type { Theme } from "../lib/models";
 import { CATALOGO_ALLERGENI, trovaAllergene } from "../lib/allergens";
 import packageJson from "../../package.json";
@@ -94,9 +95,7 @@ export function Settings() {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-5 pt-5 pb-3 flex-none">
-        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, lineHeight: "44px" }}>Altro</h1>
-      </header>
+      <PageHeader title="Opzioni" />
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-6">
         <section>
           <Label>Porzioni</Label>
@@ -301,7 +300,10 @@ export function Settings() {
         <section className="relative">
           <Label>Tema</Label>
           {profilo.tema === "stitch" && <StitchIllustration />}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Chip state={profilo.tema === "sistema" ? "selected" : "default"} onClick={() => void changeTheme("sistema")}>
+              Automatico
+            </Chip>
             <Chip state={profilo.tema === "chiaro" ? "selected" : "default"} onClick={() => void changeTheme("chiaro")}>
               Chiaro
             </Chip>
@@ -312,6 +314,11 @@ export function Settings() {
               Stitch
             </Chip>
           </div>
+          {profilo.tema === "sistema" && (
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 8 }}>
+              Chiaro o scuro come il telefono, anche per l'icona nella scheda del browser.
+            </p>
+          )}
         </section>
 
         <p style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "center", marginTop: 4 }}>

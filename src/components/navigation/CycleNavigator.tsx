@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconButton } from "../core/IconButton";
 
 /** Control for navigating shopping cycles (weeks). Extracted from WeeklyPlanner so both it and
- * ShoppingList use the same navigator. Each page keeps its own offset, while behavior and the
- * 44px tap targets remain consistent. */
+ * ShoppingList use the same navigator. Each page keeps its own offset, while behavior stays
+ * consistent. The arrows are IconButtons (soft background) like the other icon actions in the app. */
 export function CycleNavigator({
   onPrecedente,
   onOggi,
@@ -13,20 +14,10 @@ export function CycleNavigator({
   onSuccessivo: () => void;
 }) {
   return (
-    <div className="flex items-center text-sm" style={{ color: "var(--text-secondary)" }}>
-      <button
-        type="button"
-        onClick={onPrecedente}
-        aria-label="Settimana precedente"
-        style={{
-          minWidth: 44,
-          minHeight: 44,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
+    <div className="flex items-center text-sm">
+      <IconButton size={40} aria-label="Settimana precedente" onClick={onPrecedente}>
         <ChevronLeft size={22} strokeWidth={2} />
-      </button>
+      </IconButton>
       <button
         type="button"
         onClick={onOggi}
@@ -34,23 +25,13 @@ export function CycleNavigator({
           color: "var(--biro)",
           fontWeight: 600,
           minHeight: 44,
-          padding: "0 8px",
+          padding: "0 10px",
         }}>
         oggi
       </button>
-      <button
-        type="button"
-        onClick={onSuccessivo}
-        aria-label="Settimana successiva"
-        style={{
-          minWidth: 44,
-          minHeight: 44,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
+      <IconButton size={40} aria-label="Settimana successiva" onClick={onSuccessivo}>
         <ChevronRight size={22} strokeWidth={2} />
-      </button>
+      </IconButton>
     </div>
   );
 }
