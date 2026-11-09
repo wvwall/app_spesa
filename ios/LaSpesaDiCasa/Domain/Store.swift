@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import WidgetKit
 
 /// Data operations ported from src/lib/{database,weeklyPlan,shoppingList,dishes}.ts and
 /// src/seed/apply*.ts. Views read with @Query and mutate through these helpers.
@@ -7,16 +8,15 @@ import SwiftData
 struct Store {
     let context: ModelContext
 
-    nonisolated static let profileID = "profilo"
-    nonisolated static let defaultDepartments = [
-        "Ortofrutta", "Banco frigo", "Macelleria e pesce", "Surgelati",
-        "Dispensa", "Forno", "Bevande", "Casa e igiene",
-    ]
+    nonisolated static let profileID = AppConstants.profileID
+    nonisolated static let defaultDepartments = AppConstants.defaultDepartments
     /// Catch-all department for items whose department is unknown.
     nonisolated static let repartoRipiego = "Dispensa"
 
     private func save() {
         try? context.save()
+        // The "Oggi" widget reads the same store through the App Group.
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func fetch<T: PersistentModel>(_ predicate: Predicate<T>? = nil) -> [T] {

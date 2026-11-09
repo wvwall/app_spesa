@@ -70,10 +70,10 @@ struct GlassCTA: View {
 
     var body: some View {
         Button(action: action) {
-            Label {
-                Text(title).font(AppFont.text(16, .bold))
-            } icon: {
+            // HStack rather than Label: inside a List, Label styles can hide the icon.
+            HStack(spacing: 8) {
                 if let systemImage { Image(systemName: systemImage).fontWeight(.semibold) }
+                Text(title).font(AppFont.text(16, .bold))
             }
             .frame(maxWidth: .infinity, minHeight: 30)
         }

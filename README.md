@@ -104,6 +104,11 @@ sistema (tab bar, sheet, bottoni flottanti, navigatore settimane) usano Liquid G
   controllo allergeni della Netlify Function; la chiave resta nel Portachiavi e non va nei backup
 - **Font**: istanze statiche (TTF) dei woff2 variabili in `public/fonts`
 - **Seed**: se cambi `src/seed/*.ts`, rigenera i JSON del bundle con `node scripts/export-seed.mjs`
+- **Solo iOS**: widget "Oggi" (pranzo e cena di oggi + avanzamento lista) e Live Activity della
+  spesa attiva (schermata di blocco e Dynamic Island), nel target `LaSpesaWidgetsExtension`. App e
+  widget condividono il database tramite l'App Group `group.it.waltervelardo.laspesadicasa`
+  (`ios/Shared/`); per installarli su un iPhone serve abilitare l'App Group per il proprio team in
+  Xcode (Signing & Capabilities). Senza App Group l'app funziona, ma il widget resta vuoto
 
 ```bash
 open ios/LaSpesaDiCasa.xcodeproj

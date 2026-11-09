@@ -11,6 +11,8 @@ struct ActiveShoppingView: View {
 
     @Query private var tutteVoci: [VoceLista]
     @Query private var profili: [Profilo]
+    @Query private var liste: [ListaSpesa]
+    @Query private var piani: [PianoSettimanale]
     @State private var missingItem: VoceLista?
     @State private var openPhoto: VoceLista?
 
@@ -22,7 +24,10 @@ struct ActiveShoppingView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    Button(action: onClose) {
+                    Button {
+                        ShoppingLiveActivityController.end(activityState)
+                        onClose()
+                    } label: {
                         Image(systemName: "xmark").font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(palette.textBody)
                             .frame(width: 22, height: 22)
@@ -60,6 +65,8 @@ struct ActiveShoppingView: View {
         }
         .background(palette.surfacePage.ignoresSafeArea())
         .sempreChiaro()
+        .task { ShoppingLiveActivityController.start(weekLabel: weekLabel, state: activityState) }
+        .onChange(of: activityState) { _, nuovo in ShoppingLiveActivityController.update(nuovo) }
         .sheet(item: $missingItem) { voce in
             MissingSheet(voce: voce) { missingItem = nil }
                 .sempreChiaro()
@@ -69,6 +76,18 @@ struct ActiveShoppingView: View {
         .fullScreenCover(item: $openPhoto) { voce in
             PhotoViewer(voce: voce) { openPhoto = nil }
         }
+    }
+
+    private var activityState: ShoppingActivityAttributes.ContentState {
+        ShoppingLiveActivityController.state(voci: tutteVoci.filter { $0.listaId == listId },
+                                             ordine: profili.first?.ordineReparti ?? [])
+    }
+
+    private var weekLabel: String {
+        guard let lista = liste.first(where: { $0.id == listId }),
+              let piano = piani.first(where: { $0.id == lista.pianoId }),
+              let inizio = CycleCalendar.fromIsoDate(piano.settimanaIso) else { return "" }
+        return CycleCalendar.formatCycleTitle(inizio)
     }
 
     private func row(_ v: VoceLista) -> some View {

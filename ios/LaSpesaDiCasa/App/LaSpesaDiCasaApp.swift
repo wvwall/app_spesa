@@ -9,7 +9,7 @@ struct LaSpesaDiCasaApp: App {
     init() {
         AppFont.register()
         do {
-            container = try ModelContainer(for: Schema(AppSchema.models))
+            container = try SharedStore.makeContainer()
         } catch {
             fatalError("Impossibile aprire il database locale: \(error)")
         }

@@ -32,10 +32,10 @@ final class Profilo {
     }
 
     init(
-        id: String = Store.profileID,
+        id: String = AppConstants.profileID,
         porzioniDefault: Int = 2,
         vincoliAlimentari: [String] = ["noci"],
-        ordineReparti: [String] = Store.defaultDepartments,
+        ordineReparti: [String] = AppConstants.defaultDepartments,
         giornoSpesa: Int = 5,
         tema: Tema = .sistema,
         seedVersion: Int = 0,
