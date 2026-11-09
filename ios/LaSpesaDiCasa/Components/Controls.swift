@@ -349,7 +349,7 @@ struct SkeletonBlock: View {
 }
 
 // MARK: - CycleNavigator — components/navigation/CycleNavigator.tsx
-// Arrows are soft square icon buttons (as in the PWA), rendered as interactive Liquid Glass.
+// Native iOS 26 grouping: the three controls share a single Liquid Glass capsule.
 
 struct CycleNavigator: View {
     @Environment(\.palette) private var palette
@@ -358,30 +358,30 @@ struct CycleNavigator: View {
     var onSuccessivo: () -> Void
 
     var body: some View {
-        GlassEffectContainer(spacing: 6) {
-            HStack(spacing: 0) {
-                arrow("chevron.left", "Settimana precedente", onPrecedente)
-                Button(action: onOggi) {
-                    Text("oggi").font(AppFont.text(14, .semibold)).padding(.horizontal, 10).frame(minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(palette.biro)
-                arrow("chevron.right", "Settimana successiva", onSuccessivo)
+        HStack(spacing: 0) {
+            Button(action: onPrecedente) {
+                Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
             }
-        }
-    }
-
-    private func arrow(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(palette.textSecondary)
-                .frame(width: 40, height: 40)
-                .contentShape(Rectangle())
+            .accessibilityLabel("Settimana precedente")
+            .foregroundStyle(palette.textSecondary)
+            Button(action: onOggi) {
+                Text("oggi").font(AppFont.text(14, .semibold)).padding(.horizontal, 4).frame(height: 40)
+                    .contentShape(Rectangle())
+            }
+            .foregroundStyle(palette.biro)
+            Button(action: onSuccessivo) {
+                Image(systemName: "chevron.right").font(.system(size: 17, weight: .semibold))
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Settimana successiva")
+            .foregroundStyle(palette.textSecondary)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(palette.surfaceCard.opacity(0.6)).interactive(),
-                     in: RoundedRectangle(cornerRadius: Metrics.radiusChip, style: .continuous))
-        .accessibilityLabel(label)
+        .padding(.horizontal, 2)
+        .glassEffect(.regular.interactive(), in: Capsule())
     }
 }
 
