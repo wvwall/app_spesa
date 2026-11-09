@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Button (primary / ghost / warn) — port of components/core/Button.tsx
+// MARK: - Button (primary / ghost / warn) — port of components/core/Button.tsx, in capsule shape
 
 struct PaperButtonStyle: ButtonStyle {
     enum Variant { case primary, ghost, warn }
@@ -22,7 +22,8 @@ struct PaperButtonStyle: ButtonStyle {
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
-            let shape = RoundedRectangle(cornerRadius: style.radius, style: .continuous)
+            // Capsule, like the native iOS 26 buttons (Inizia la spesa, the "…" menu, the navigator).
+            let shape = Capsule()
             configuration.label
                 .font(AppFont.text(style.fontSize, .bold))
                 .multilineTextAlignment(.center)
