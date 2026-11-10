@@ -8,9 +8,12 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
     @Query private var profili: [Profilo]
+    @Query private var ingredienti: [Ingrediente]
     @State private var chiaveConfigurata = KeychainStore.geminiApiKey() != nil
 
-    enum Pagina: Hashable { case giorno, tema, allergie, reparti, gemini, backup }
+    private var ingredientiAttivi: Int { ingredienti.filter { $0.deletedAt == nil }.count }
+
+    enum Pagina: Hashable { case giorno, tema, allergie, reparti, ingredienti, gemini, backup }
 
     static let giorni: [(label: String, nome: String, valore: Int)] = [
         ("Lun", "Lunedì", 1), ("Mar", "Martedì", 2), ("Mer", "Mercoledì", 3), ("Gio", "Giovedì", 4),
@@ -65,6 +68,8 @@ struct SettingsView: View {
                             }
                             SettingsDivider()
                             SettingsLink(.reparti, "Ordine reparti") { Text("\(p.ordineReparti.count)") }
+                            SettingsDivider()
+                            SettingsLink(.ingredienti, "Ingredienti") { Text("\(ingredientiAttivi)") }
                         }
 
                         SectionLabel("App").padding(.top, 16).padding(.leading, 4)
@@ -99,6 +104,7 @@ struct SettingsView: View {
                 case .tema: TemaPage()
                 case .allergie: AllergiePage()
                 case .reparti: RepartiPage()
+                case .ingredienti: IngredientiPage()
                 case .gemini: GeminiPage()
                 case .backup: BackupPage()
                 }
@@ -400,6 +406,136 @@ private struct RepartiPage: View {
                 }
             }
         }
+    }
+}
+
+/// The ingredient catalog: add, rename, change department or unit, delete (soft, with undo).
+private struct IngredientiPage: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.palette) private var palette
+    @Environment(UndoCenter.self) private var undo
+    @Query(sort: \Ingrediente.nome) private var ingredienti: [Ingrediente]
+    @Query private var profili: [Profilo]
+    @State private var query = ""
+    @State private var editing: Ingrediente?
+    @State private var nuovo = false
+
+    private var ordine: [String] { profili.first?.ordineReparti ?? Store.defaultDepartments }
+
+    var body: some View {
+        let testo = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let visibili = ingredienti.filter {
+            $0.deletedAt == nil && (testo.isEmpty || $0.nome.lowercased().contains(testo) || $0.alias.contains { $0.lowercased().contains(testo) })
+        }
+        DetailPage(title: "Ingredienti") {
+            Hint("Il catalogo da cui scegli gli ingredienti dei piatti. Il reparto decide dove finiscono in lista.")
+            SearchField(placeholder: "Cerca un ingrediente…", text: $query).padding(.top, 4)
+            Button { nuovo = true } label: { Label("Nuovo ingrediente", systemImage: "plus") }
+                .buttonStyle(.paperGhost)
+                .padding(.top, 4)
+            ForEach(Departments.group(visibili, ordine: ordine, reparto: \.reparto), id: \.reparto) { gruppo in
+                SectionLabel("\(gruppo.reparto) (\(gruppo.voci.count))").padding(.top, 14).padding(.leading, 4)
+                SettingsGroup {
+                    ForEach(Array(gruppo.voci.enumerated()), id: \.element.id) { i, ing in
+                        if i > 0 { SettingsDivider() }
+                        Button { editing = ing } label: {
+                            HStack {
+                                Text(ing.nome).settingsRowTitle(palette)
+                                Spacer()
+                                Text(ing.unitaDefault).font(AppFont.text(14)).foregroundStyle(palette.textSecondary)
+                                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(palette.textSecondary.opacity(0.6))
+                            }
+                            .settingsRowPadding()
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) { delete(ing) } label: { Label("Elimina", systemImage: "trash") }
+                        }
+                    }
+                }
+            }
+            if visibili.isEmpty {
+                Hint("Nessun ingrediente trovato.").padding(.top, 12)
+            }
+        }
+        .sheet(item: $editing) { ing in
+            IngredientEditSheet(ingrediente: ing, reparti: ordine, onDelete: { delete(ing) }) { editing = nil }
+                .paperSheet(palette, detents: [.medium, .large])
+        }
+        .sheet(isPresented: $nuovo) {
+            IngredientEditSheet(ingrediente: nil, reparti: ordine, initialName: query) { nuovo = false }
+                .paperSheet(palette, detents: [.medium, .large])
+        }
+    }
+
+    private func delete(_ ing: Ingrediente) {
+        let nome = ing.nome
+        let restore = Store(context: context).deleteIngredientWithUndo(ing)
+        editing = nil
+        undo.show("\(nome) eliminato", onUndo: restore)
+    }
+}
+
+private struct IngredientEditSheet: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.palette) private var palette
+    let ingrediente: Ingrediente?
+    let reparti: [String]
+    var initialName = ""
+    var onDelete: (() -> Void)?
+    var onClose: () -> Void
+
+    @State private var nome = ""
+    @State private var unita = ""
+    @State private var reparto = Store.repartoRipiego
+    @State private var loaded = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                SheetHeader(title: ingrediente == nil ? "Nuovo ingrediente" : "Modifica ingrediente")
+                PaperField(placeholder: "Nome", text: $nome, weight: .semibold)
+                PaperField(placeholder: "Unità predefinita (es. 500 g, 1 pz)", text: $unita, autocapitalization: .never)
+                SectionLabel("Reparto").padding(.top, 6)
+                FlowLayout {
+                    ForEach(reparti, id: \.self) { r in
+                        Chip(r, state: reparto == r ? .selected : .default) { reparto = r }
+                    }
+                }
+                Button("Salva", action: save)
+                    .buttonStyle(.paper)
+                    .disabled(nome.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .padding(.top, 8)
+                if let onDelete {
+                    Button("Elimina ingrediente", action: onDelete).buttonStyle(.paperWarn)
+                }
+                Hint("I piatti che lo usano lo tengono con il nome e il reparto che avevano.")
+            }
+            .padding(.horizontal, 20).padding(.vertical, 24)
+        }
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            nome = ingrediente?.nome ?? initialName
+            unita = ingrediente?.unitaDefault ?? "1 pz"
+            reparto = ingrediente?.reparto ?? (reparti.contains(Store.repartoRipiego) ? Store.repartoRipiego : reparti.first ?? Store.repartoRipiego)
+        }
+    }
+
+    private func save() {
+        let n = nome.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { return }
+        let store = Store(context: context)
+        if let ingrediente {
+            store.updateIngredient(ingrediente, nome: n, reparto: reparto, unita: unita.trimmingCharacters(in: .whitespaces))
+        } else {
+            let ing = store.addIngredient(nome: n, reparto: reparto)
+            store.updateIngredient(ing, nome: n, reparto: reparto, unita: unita.trimmingCharacters(in: .whitespaces))
+        }
+        Haptics.success()
+        onClose()
     }
 }
 

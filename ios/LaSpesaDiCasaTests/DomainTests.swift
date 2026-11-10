@@ -285,6 +285,31 @@ struct StoreTests {
         #expect(Set(s.items(nuova.id).map(\.nome)) == Set(nomi))
     }
 
+    @Test("ricettario: modifica, preferito e catalogo")
+    func ricettario() throws {
+        let s = try store()
+        s.profile()
+        let p = s.saveDish(nil, nome: "Frittata", porzioni: 2, procedimento: "Sbatti le uova\nCuoci",
+                           righe: [RigaPiatto(nome: "Uova", reparto: "Banco frigo", quantita: "4", unita: "pz")])
+        #expect(s.ingredients(of: p.id).count == 1)
+        s.saveDish(p, nome: "Frittata di zucchine", porzioni: 3, procedimento: "Cuoci",
+                   righe: [RigaPiatto(nome: "Uova", reparto: "Banco frigo", quantita: "4", unita: "pz"),
+                           RigaPiatto(nome: "Zucchine", reparto: "Ortofrutta", quantita: "0,5", unita: "kg")])
+        #expect(p.nome == "Frittata di zucchine" && p.porzioni == 3)
+        #expect(s.ingredients(of: p.id).count == 2)
+        #expect(s.ingredients(of: p.id).first { $0.nome == "Zucchine" }?.quantita == 0.5)
+        s.toggleFavorite(p)
+        #expect(p.preferito)
+
+        let ing = s.addIngredient(nome: "Tofu", reparto: "Banco frigo")
+        let restore = s.deleteIngredientWithUndo(ing)
+        #expect(ing.deletedAt != nil)
+        restore()
+        #expect(ing.deletedAt == nil)
+        #expect(formatQuantita(4, "pz") == "4 pz")
+        #expect(formatQuantita(1, "500 g") == "500 g")
+    }
+
     @Test("ordina per reparto usando prima il catalogo locale")
     func ordina() async throws {
         let s = try store()

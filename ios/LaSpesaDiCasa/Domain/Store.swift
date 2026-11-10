@@ -472,3 +472,80 @@ extension Store {
         })
     }
 }
+
+// MARK: - Recipe book (detail, edit, favorites) and ingredient catalog
+
+/// One editable ingredient row of a dish (used by the dish editor).
+struct RigaPiatto: Identifiable, Equatable {
+    var id = newID()
+    var ingredienteId: String?
+    var nome: String
+    var reparto: String
+    var quantita: String
+    var unita: String
+}
+
+extension Store {
+    func ingredients(of piattoId: String) -> [PiattoIngrediente] {
+        (try? context.fetch(FetchDescriptor<PiattoIngrediente>(predicate: #Predicate { $0.piattoId == piattoId }))) ?? []
+    }
+
+    func toggleFavorite(_ p: Piatto) {
+        p.preferito.toggle()
+        p.updatedAt = isoNow()
+        try? context.save()
+    }
+
+    /// Creates or updates a dish with its full ingredient list (rows are replaced).
+    @discardableResult
+    func saveDish(_ existing: Piatto?, nome: String, porzioni: Int, procedimento: String, righe: [RigaPiatto]) -> Piatto {
+        let piatto: Piatto
+        if let existing {
+            piatto = existing
+            piatto.nome = nome
+            piatto.porzioni = porzioni
+            piatto.procedimento = procedimento.isEmpty ? nil : procedimento
+            piatto.updatedAt = isoNow()
+            for old in ingredients(of: piatto.id) { context.delete(old) }
+        } else {
+            piatto = Piatto(nome: nome, procedimento: procedimento.isEmpty ? nil : procedimento, origine: .manuale, porzioni: porzioni)
+            context.insert(piatto)
+        }
+        for r in righe where !r.nome.trimmingCharacters(in: .whitespaces).isEmpty {
+            let q = Double(r.quantita.replacingOccurrences(of: ",", with: ".")) ?? 1
+            context.insert(PiattoIngrediente(piattoId: piatto.id, ingredienteId: r.ingredienteId,
+                                             nome: r.nome.trimmingCharacters(in: .whitespaces),
+                                             reparto: r.reparto, quantita: q, unita: r.unita))
+        }
+        try? context.save()
+        return piatto
+    }
+
+    func updateIngredient(_ ing: Ingrediente, nome: String, reparto: String, unita: String) {
+        ing.nome = nome
+        ing.reparto = reparto
+        ing.unitaDefault = unita
+        ing.updatedAt = isoNow()
+        try? context.save()
+    }
+
+    /// Soft delete (deletedAt), like the PWA model: dishes keep their name/department snapshot.
+    func deleteIngredientWithUndo(_ ing: Ingrediente) -> () -> Void {
+        ing.deletedAt = isoNow()
+        try? context.save()
+        return {
+            ing.deletedAt = nil
+            try? context.save()
+        }
+    }
+}
+
+/// Formats a dish ingredient quantity: "500 g", "1 confezione", "2".
+func formatQuantita(_ q: Double, _ unita: String) -> String {
+    let n = q.rounded() == q ? String(Int(q)) : String(q).replacingOccurrences(of: ".", with: ",")
+    let u = unita.trimmingCharacters(in: .whitespaces)
+    if u.isEmpty { return n }
+    // Catalog units often already carry a number ("1 kg"): do not prefix "1 ".
+    if u.first?.isNumber == true { return q == 1 ? u : "\(n) × \(u)" }
+    return "\(n) \(u)"
+}
