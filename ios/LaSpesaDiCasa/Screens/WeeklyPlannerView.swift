@@ -138,8 +138,9 @@ struct WeeklyPlannerView: View {
         .padding(.horizontal, oggi ? 16 : 0)
         .padding(.top, oggi ? 16 : 0)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { y in
-            if oggi { todayFrame.top = y }
+            if oggi { todayFrame.setTop(y) }
         }
+        .onAppear { if oggi { todayFrame.restoreTop() } }
         .onDisappear { if oggi { todayFrame.top = nil } }
         // List-row traits must stay outermost, after the geometry readers.
         .weekRow(outerTop: 12)
@@ -162,8 +163,9 @@ struct WeeklyPlannerView: View {
             .padding(.top, 8)
             .padding(.bottom, oggi && i == slotGiorno.count - 1 ? 16 : 0)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { y in
-                if oggi && i == slotGiorno.count - 1 { todayFrame.bottom = y }
+                if oggi && i == slotGiorno.count - 1 { todayFrame.setBottom(y) }
             }
+            .onAppear { if oggi && i == slotGiorno.count - 1 { todayFrame.restoreBottom() } }
             .onDisappear { if oggi && i == slotGiorno.count - 1 { todayFrame.bottom = nil } }
             .weekRow()
         }
@@ -427,10 +429,21 @@ private extension View {
 }
 
 /// Top and bottom of today's block, in screen coordinates (nil when that row is off screen).
+///
+/// A row that disappears clears its edge; when it appears again the last known edge comes back
+/// at once. Switching tabs hides and shows the rows without moving them, so no geometry change
+/// would arrive to redraw the frame until the next scroll.
 @Observable
 final class TodayFrameModel {
     var top: CGFloat?
     var bottom: CGFloat?
+    @ObservationIgnored private var lastTop: CGFloat?
+    @ObservationIgnored private var lastBottom: CGFloat?
+
+    func setTop(_ y: CGFloat) { top = y; lastTop = y }
+    func setBottom(_ y: CGFloat) { bottom = y; lastBottom = y }
+    func restoreTop() { if top == nil { top = lastTop } }
+    func restoreBottom() { if bottom == nil { bottom = lastBottom } }
 }
 
 /// Today's biro frame, drawn once over the list so swipe actions never bend it. When one end
