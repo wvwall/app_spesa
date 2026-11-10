@@ -1,13 +1,12 @@
 import { useId, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { CSSProperties } from "react";
-import { Plus, ChevronDown, Pencil, Trash2, ImagePlus, X, Upload, Share2, ArrowDownWideNarrow } from "lucide-react";
+import { Plus, ChevronDown, Trash2, ImagePlus, X, Upload, Share2, ArrowDownWideNarrow } from "lucide-react";
 import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { getOrCreateWeeklyPlan } from "../lib/weeklyPlan";
 import { cycleStart, shiftCycle, toIsoDate, formatCycleLabel, formatCycleTitle } from "../lib/calendar";
 import {
   deleteItem,
-  updateQuantity,
   deleteCompleteList,
   getListForPlan,
   getOrCreateOpenList,
@@ -20,7 +19,8 @@ import type { ShoppingImportEntry } from "../lib/shoppingList";
 import { groupByDepartment } from "../lib/departments";
 import { splitUnitFromNote, joinUnitAndNote, UNITA_SUGGERITE } from "../lib/textImport";
 import { buildListText, shareOrDownloadText } from "../lib/listExport";
-import { Button, PageHeader, useUndoToast, Chip, CycleNavigator, IconButton, Skeleton, ShoppingImportSheet } from "../components";
+import { formatQuantita } from "../lib/dishes";
+import { Button, PageHeader, useUndoToast, Chip, CycleNavigator, Skeleton, ShoppingImportSheet } from "../components";
 import type { ShoppingListItem } from "../lib/models";
 
 /** Secondary list tools: icon over a short label, three per row, still 44px+ tall. */
@@ -167,9 +167,18 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
               >
                 {reparto}
               </div>
-              {vociReparto.map((v) =>
+              {/* One card per department, rows separated by hairlines. */}
+              <div
+                className="mx-5 border rounded-2xl overflow-hidden"
+                style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
+              >
+              {vociReparto.map((v, i) =>
                 itemBeingEdited?.id === v.id ? (
-                  <div key={v.id} className="px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
+                  <div
+                    key={v.id}
+                    className="px-3.5 py-3"
+                    style={{ borderTop: i > 0 ? "1px solid var(--border-quiet)" : undefined }}
+                  >
                     <AddShoppingItemForm
                       initiallyOpen
                       initialName={v.nome}
@@ -187,9 +196,10 @@ export function ShoppingList({ cycleOffset, onCycleOffsetChange, onStartShopping
                     />
                   </div>
                 ) : (
-                  <ShoppingListReviewRow key={v.id} voce={v} onEdit={() => setItemBeingEdited(v)} />
+                  <ShoppingListReviewRow key={v.id} voce={v} first={i === 0} onEdit={() => setItemBeingEdited(v)} />
                 ),
               )}
+              </div>
               <div className="px-5 pt-1 pb-2">
                 {departmentWithForm === reparto ? (
                   <AddShoppingItemForm
@@ -567,11 +577,17 @@ async function resizePhoto(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
-/** Row actions share the quantity box height, so the three controls read as one set. */
-const AZIONE_RIGA = 36;
+/** Quantity read-only next to the unit: "500 g", "2 × 1 kg", "3". */
+function quantitaLeggibile(q: string, unita?: string): string {
+  const t = q.trim();
+  if (!unita) return t || "—";
+  const n = Number(t.replace(",", "."));
+  if (t && Number.isFinite(n)) return formatQuantita(n, unita);
+  return t ? `${t} ${unita}` : unita;
+}
 
-function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdit: () => void }) {
-  const [quantita, setQuantita] = useState(voce.quantita);
+/** A light row: name and note, quantity as text; tap to edit, small trash to remove (undo). */
+function ShoppingListReviewRow({ voce, first, onEdit }: { voce: ShoppingListItem; first: boolean; onEdit: () => void }) {
   const { unita, nota } = splitUnitFromNote(voce.nota);
   const showUndo = useUndoToast();
 
@@ -581,47 +597,35 @@ function ShoppingListReviewRow({ voce, onEdit }: { voce: ShoppingListItem; onEdi
   }
 
   return (
-    <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "var(--border-quiet)" }}>
-      <div className="flex-1 min-w-0">
-        <div style={{ fontWeight: 600 }}>{voce.nome}</div>
-        {nota && (
-          <div style={{ fontFamily: "var(--font-hand)", color: "var(--biro)", fontSize: 15 }}>“{nota}”</div>
-        )}
-      </div>
-      <label className="flex items-center gap-1.5 flex-none" style={{ marginRight: 2 }}>
-        {/* Unit sits left of the box, right-aligned: quantity boxes line up against the actions
-            on every row, and rows without a unit leave no gap. */}
-        {unita && (
-          <span
-            className="truncate text-right"
-            style={{ color: "var(--text-secondary)", fontSize: 13, maxWidth: 76 }}
-          >
-            {unita}
-          </span>
-        )}
-        <input
-          inputMode="numeric"
-          className="border rounded-lg px-2 text-sm text-right"
-          style={{
-            borderColor: "var(--border-quiet)",
-            background: "var(--surface-card)",
-            width: 56,
-            height: AZIONE_RIGA,
-            fontVariantNumeric: "tabular-nums",
-          }}
-          aria-label={`Quantità di ${voce.nome}`}
-          placeholder="—"
-          value={quantita}
-          onChange={(e) => setQuantita(e.target.value)}
-          onBlur={() => void updateQuantity(voce.id, quantita)}
-        />
-      </label>
-      <IconButton size={AZIONE_RIGA} aria-label={`Modifica ${voce.nome}`} onClick={onEdit}>
-        <Pencil size={16} strokeWidth={2} />
-      </IconButton>
-      <IconButton tone="danger" size={AZIONE_RIGA} aria-label={`Rimuovi ${voce.nome}`} onClick={() => void removeItem()}>
-        <Trash2 size={16} strokeWidth={2} />
-      </IconButton>
+    <div className="flex items-center" style={{ borderTop: first ? undefined : "1px solid var(--border-quiet)" }}>
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Modifica ${voce.nome}`}
+        className="flex-1 min-w-0 flex items-center gap-2.5 text-left pl-3.5 py-2.5"
+        style={{ minHeight: 48 }}
+      >
+        <span className="flex-1 min-w-0">
+          <span style={{ display: "block", fontWeight: 500 }}>{voce.nome}</span>
+          {nota && (
+            <span style={{ display: "block", fontFamily: "var(--font-hand)", color: "var(--biro)", fontSize: 15 }}>“{nota}”</span>
+          )}
+        </span>
+        <span
+          className="flex-none"
+          style={{ color: "var(--text-secondary)", fontSize: 14, fontVariantNumeric: "tabular-nums" }}
+        >
+          {quantitaLeggibile(voce.quantita, unita)}
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label={`Rimuovi ${voce.nome}`}
+        onClick={() => void removeItem()}
+        style={{ color: "var(--pomodoro)", minWidth: 42, minHeight: 44, display: "grid", placeItems: "center", flex: "none" }}
+      >
+        <Trash2 size={15} strokeWidth={2} />
+      </button>
     </div>
   );
 }

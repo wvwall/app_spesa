@@ -76,17 +76,18 @@ interface Props {
   onListGenerated: (cycleOffset: number) => void;
 }
 
-export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerated }: Props) {
+export function WeeklyPlanner({
+  cycleOffset,
+  onCycleOffsetChange,
+  onListGenerated,
+}: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [todayEl, setTodayEl] = useState<HTMLDivElement | null>(null);
 
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
   const giornoSpesa = profilo?.giornoSpesa ?? 5;
 
-  const inizio = shiftCycle(
-    cycleStart(new Date(), giornoSpesa),
-    cycleOffset,
-  );
+  const inizio = shiftCycle(cycleStart(new Date(), giornoSpesa), cycleOffset);
   const cicloIso = toIsoDate(inizio);
   const giorni = cycleDays(inizio);
 
@@ -132,7 +133,8 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
       [pianoId],
     ) ?? [];
   const piatti = useLiveQuery(() => db.piatti.toArray(), []) ?? [];
-  const ingredientiCatalogo = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
+  const ingredientiCatalogo =
+    useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
   const dishById = (id?: string) => piatti.find((p) => p.id === id);
   const dishesAssignedThisWeek = slots
     .filter((s) => s.piattoId)
@@ -143,7 +145,9 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
   const slotsAssegnati = slots.filter((s) => s.piattoId).length;
 
   const [generandoSettimana, setGenerandoSettimana] = useState(false);
-  const [propostaSettimana, setPropostaSettimana] = useState<WeekProposal[] | null>(null);
+  const [propostaSettimana, setPropostaSettimana] = useState<
+    WeekProposal[] | null
+  >(null);
   const [erroreSettimana, setErroreSettimana] = useState<string | null>(null);
   const [generandoLista, setGenerandoLista] = useState(false);
   const [erroreLista, setErroreLista] = useState<string | null>(null);
@@ -151,8 +155,14 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
   const [esitoImport, setEsitoImport] = useState<string | null>(null);
 
   async function importMeals(righe: MealImportAssignment[]) {
-    if (!pianoId) throw new Error("La settimana non è ancora pronta. Riprova tra un istante.");
-    const esito = await importMealsIntoPlan(righe, profilo?.porzioniDefault ?? 4);
+    if (!pianoId)
+      throw new Error(
+        "La settimana non è ancora pronta. Riprova tra un istante.",
+      );
+    const esito = await importMealsIntoPlan(
+      righe,
+      profilo?.porzioniDefault ?? 4,
+    );
     const parti = [
       `${esito.assegnati} ${esito.assegnati === 1 ? "pasto importato" : "pasti importati"}`,
     ];
@@ -179,7 +189,11 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
     } catch (e) {
       // Without this try/catch, errors were silently ignored: the button appeared to do nothing
       // because the app neither opened the Shopping List screen nor explained why.
-      setErroreLista(e instanceof Error ? e.message : "Non sono riuscito a generare la lista. Riprova.");
+      setErroreLista(
+        e instanceof Error
+          ? e.message
+          : "Non sono riuscito a generare la lista. Riprova.",
+      );
     } finally {
       setGenerandoLista(false);
     }
@@ -201,8 +215,8 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
             pasti: blocco.map((s) => ({ id: s.id, pasto: s.pasto })),
             vincoli: profilo?.vincoliAlimentari ?? ["noci"],
             porzioni: profilo?.porzioniDefault ?? 4,
-          })
-        )
+          }),
+        ),
       );
 
       const proposte: WeekProposal[] = [];
@@ -215,7 +229,9 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
           const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
           proposte.push({
             slotId: slot.id,
-            dayAndMeal: giorno ? `${formatDayLabel(giorno)} · ${etichettaPasto}` : etichettaPasto,
+            dayAndMeal: giorno
+              ? `${formatDayLabel(giorno)} · ${etichettaPasto}`
+              : etichettaPasto,
             generato,
             esclusa: false,
           });
@@ -223,16 +239,24 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
       }
 
       if (proposte.length === 0) {
-        setErroreSettimana("Non sono riuscito a generare nessun piatto. Riprova.");
+        setErroreSettimana(
+          "Non sono riuscito a generare nessun piatto. Riprova.",
+        );
         return;
       }
       const mancanti = slotVuoti.length - proposte.length;
       if (mancanti > 0) {
-        setErroreSettimana(`${mancanti} piatti non sono arrivati, riprova più tardi solo per quei giorni.`);
+        setErroreSettimana(
+          `${mancanti} piatti non sono arrivati, riprova più tardi solo per quei giorni.`,
+        );
       }
       setPropostaSettimana(proposte);
     } catch (e) {
-      setErroreSettimana(e instanceof Error ? e.message : "Non sono riuscito a generare la settimana. Riprova.");
+      setErroreSettimana(
+        e instanceof Error
+          ? e.message
+          : "Non sono riuscito a generare la settimana. Riprova.",
+      );
     } finally {
       setGenerandoSettimana(false);
     }
@@ -240,7 +264,11 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
 
   function toggleProposalExclusion(slotId: string) {
     setPropostaSettimana((proposte) =>
-      proposte ? proposte.map((p) => (p.slotId === slotId ? { ...p, esclusa: !p.esclusa } : p)) : proposte
+      proposte
+        ? proposte.map((p) =>
+            p.slotId === slotId ? { ...p, esclusa: !p.esclusa } : p,
+          )
+        : proposte,
     );
   }
 
@@ -248,7 +276,11 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
     if (!propostaSettimana) return;
     for (const p of propostaSettimana.filter((p) => !p.esclusa)) {
       // eslint-disable-next-line no-await-in-loop
-      const piattoId = await saveGeneratedDish(p.generato, [], ingredientiCatalogo);
+      const piattoId = await saveGeneratedDish(
+        p.generato,
+        [],
+        ingredientiCatalogo,
+      );
       // eslint-disable-next-line no-await-in-loop
       await assignDishToSlot(p.slotId, piattoId);
     }
@@ -270,7 +302,9 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
         }
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4" ref={scrollContainerRef}>
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-5 pb-4"
+        ref={scrollContainerRef}>
         {/* pianoId is null only until getOrCreateWeeklyPlan/getOrCreatePlanSlots finish. The day
             skeleton prevents a brief flash of the "empty menu" message. */}
         {!pianoId && <WeeklyPlannerSkeleton />}
@@ -291,100 +325,119 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
                 fontSize: 15,
                 lineHeight: 1.5,
               }}>
-              Scegli un piatto per un giorno qui sotto, o fatti proporre l'intera settimana.
+              Scegli un piatto per un giorno qui sotto, o fatti proporre
+              l'intera settimana.
             </p>
             {GENERA_SETTIMANA_ABILITATO && (
               <div className="w-full px-4">
-                <Button onClick={() => void generateFullWeek()} disabled={generandoSettimana}>
+                <Button
+                  onClick={() => void generateFullWeek()}
+                  disabled={generandoSettimana}>
                   {generandoSettimana ? (
                     "Sto pensando alla settimana…"
                   ) : (
                     <span className="inline-flex items-center gap-1.5">
-                      <Sparkles size={15} strokeWidth={2} /> Genera l'intera settimana
+                      <Sparkles size={15} strokeWidth={2} /> Genera l'intera
+                      settimana
                     </span>
                   )}
                 </Button>
               </div>
             )}
             {erroreSettimana && !propostaSettimana && (
-              <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreSettimana}</p>
+              <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>
+                {erroreSettimana}
+              </p>
             )}
           </div>
         )}
-        {pianoId && giorni.map((giorno) => {
-          const dataIso = toIsoDate(giorno);
-          const slotGiorno = slots
-            .filter((s) => s.data === dataIso)
-            .sort(
-              (a, b) =>
-                (a.pasto === "pranzo" ? 0 : 1) - (b.pasto === "pranzo" ? 0 : 1),
-            );
-          if (slotGiorno.length === 0) return null;
-          return (
-            <div
-              key={dataIso}
-              className="mb-3"
-              ref={isToday(giorno) ? setTodayEl : undefined}
-              style={
-                isToday(giorno)
-                  ? {
-                      border: "2px solid var(--biro)",
-                      borderRadius: "var(--radius-card)",
-                      padding: "var(--sp-4)",
-                    }
-                  : undefined
-              }
-            >
+        {pianoId &&
+          giorni.map((giorno) => {
+            const dataIso = toIsoDate(giorno);
+            const slotGiorno = slots
+              .filter((s) => s.data === dataIso)
+              .sort(
+                (a, b) =>
+                  (a.pasto === "pranzo" ? 0 : 1) -
+                  (b.pasto === "pranzo" ? 0 : 1),
+              );
+            if (slotGiorno.length === 0) return null;
+            return (
               <div
-                className="text-xs font-bold mb-2 flex items-center gap-2"
-                style={{
-                  letterSpacing: ".12em",
-                  textTransform: "uppercase",
-                  color: isToday(giorno)
-                    ? "var(--biro)"
-                    : "var(--text-secondary)",
-                }}>
-                {formatDayLabel(giorno)}
-                {isToday(giorno) && (
-                  <Badge
-                    kind="sostituito"
-                    style={{
-                      fontWeight: 700,
-                      letterSpacing: ".04em",
-                      background: "var(--evidenziatore)",
-                      color: "var(--on-evidenziatore)",
-                    }}
-                  >
-                    Oggi
-                  </Badge>
-                )}
+                key={dataIso}
+                className="mb-3"
+                ref={isToday(giorno) ? setTodayEl : undefined}
+                style={
+                  isToday(giorno)
+                    ? {
+                        border: "2px solid var(--biro)",
+                        borderRadius: "var(--radius-card)",
+                        padding: "var(--sp-4)",
+                      }
+                    : undefined
+                }>
+                <div
+                  className="text-xs font-bold mb-2 flex items-center gap-2"
+                  style={{
+                    letterSpacing: ".12em",
+                    textTransform: "uppercase",
+                    color: isToday(giorno)
+                      ? "var(--biro)"
+                      : "var(--text-secondary)",
+                  }}>
+                  {formatDayLabel(giorno)}
+                  {isToday(giorno) && (
+                    <Badge
+                      kind="sostituito"
+                      style={{
+                        fontWeight: 700,
+                        letterSpacing: ".04em",
+                        background: "var(--evidenziatore)",
+                        color: "var(--on-evidenziatore)",
+                      }}>
+                      Oggi
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {slotGiorno.map((slot) => (
+                    <PlanSlotRow
+                      key={slot.id}
+                      slot={slot}
+                      piatto={dishById(slot.piattoId)}
+                      piattiDisponibili={piatti}
+                      porzioniDefault={profilo?.porzioniDefault ?? 4}
+                      vincoliAlimentari={profilo?.vincoliAlimentari ?? ["noci"]}
+                      ingredientiCatalogo={ingredientiCatalogo}
+                      dishesAssignedThisWeek={dishesAssignedThisWeek}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                {slotGiorno.map((slot) => (
-                  <PlanSlotRow
-                    key={slot.id}
-                    slot={slot}
-                    piatto={dishById(slot.piattoId)}
-                    piattiDisponibili={piatti}
-                    porzioniDefault={profilo?.porzioniDefault ?? 4}
-                    vincoliAlimentari={profilo?.vincoliAlimentari ?? ["noci"]}
-                    ingredientiCatalogo={ingredientiCatalogo}
-                    dishesAssignedThisWeek={dishesAssignedThisWeek}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
       {GENERA_LISTA_ABILITATA ? (
         !tuttiVuoti && (
           <div className="px-5 pb-3 flex-none">
-            <Button onClick={() => void generateList()} disabled={slotsAssegnati === 0 || generandoLista}>
-              {generandoLista ? "Preparo la lista…" : `Genera lista spesa · ${slotsAssegnati} piatti`}
+            <Button
+              onClick={() => void generateList()}
+              disabled={slotsAssegnati === 0 || generandoLista}>
+              {generandoLista
+                ? "Preparo la lista…"
+                : `Genera lista spesa · ${slotsAssegnati} piatti`}
             </Button>
-            {erroreLista && <p style={{ color: "var(--pomodoro)", fontSize: 13, marginTop: 6 }}>{erroreLista}</p>}
+            {erroreLista && (
+              <p
+                style={{
+                  color: "var(--pomodoro)",
+                  fontSize: 13,
+                  marginTop: 6,
+                }}>
+                {erroreLista}
+              </p>
+            )}
           </div>
         )
       ) : (
@@ -395,7 +448,13 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
             </span>
           </Button>
           {esitoImport && (
-            <p style={{ color: "var(--basilico)", fontSize: 13, margin: 0, textAlign: "center" }}>
+            <p
+              style={{
+                color: "var(--basilico)",
+                fontSize: 13,
+                margin: 0,
+                textAlign: "center",
+              }}>
               {esitoImport}
             </p>
           )}
@@ -405,39 +464,62 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
       {propostaSettimana && (
         <div
           className="fixed inset-0 flex flex-col justify-end"
-          style={{ background: "var(--scrim)", zIndex: 20 }}
-        >
+          style={{ background: "var(--scrim)", zIndex: 20 }}>
           <div
             className="flex flex-col gap-3 p-4"
             style={{
               background: "var(--surface-card)",
               borderRadius: "20px 20px 0 0",
               maxHeight: "80vh",
-            }}
-          >
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>
+            }}>
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 18,
+              }}>
               Proposta per la settimana
             </div>
-            {erroreSettimana && <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreSettimana}</p>}
+            {erroreSettimana && (
+              <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>
+                {erroreSettimana}
+              </p>
+            )}
             <div className="flex flex-col gap-1.5 overflow-y-auto">
               {propostaSettimana.map((p) => (
                 <div
                   key={p.slotId}
                   className="flex items-center justify-between gap-2 px-3 py-2.5 border rounded-xl"
-                  style={{ borderColor: "var(--border-quiet)", opacity: p.esclusa ? 0.5 : 1 }}
-                >
+                  style={{
+                    borderColor: "var(--border-quiet)",
+                    opacity: p.esclusa ? 0.5 : 1,
+                  }}>
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: ".08em", textTransform: "uppercase" }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--text-secondary)",
+                        letterSpacing: ".08em",
+                        textTransform: "uppercase",
+                      }}>
                       {p.dayAndMeal}
                     </div>
-                    <div style={{ fontWeight: 600, textDecoration: p.esclusa ? "line-through" : "none" }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        textDecoration: p.esclusa ? "line-through" : "none",
+                      }}>
                       {p.generato.nome}
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => toggleProposalExclusion(p.slotId)}
-                    aria-label={p.esclusa ? `Includi ${p.generato.nome}` : `Escludi ${p.generato.nome}`}
+                    aria-label={
+                      p.esclusa
+                        ? `Includi ${p.generato.nome}`
+                        : `Escludi ${p.generato.nome}`
+                    }
                     style={{
                       color: p.esclusa ? "var(--basilico)" : "var(--pomodoro)",
                       flex: "none",
@@ -446,23 +528,26 @@ export function WeeklyPlanner({ cycleOffset, onCycleOffsetChange, onListGenerate
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                    }}
-                  >
-                    {p.esclusa ? <RotateCcw size={18} strokeWidth={2} /> : <X size={18} strokeWidth={2} />}
+                    }}>
+                    {p.esclusa ? (
+                      <RotateCcw size={18} strokeWidth={2} />
+                    ) : (
+                      <X size={18} strokeWidth={2} />
+                    )}
                   </button>
                 </div>
               ))}
             </div>
             <Button onClick={() => void confirmWeekProposal()}>
-              Conferma {propostaSettimana.filter((p) => !p.esclusa).length} piatti
+              Conferma {propostaSettimana.filter((p) => !p.esclusa).length}{" "}
+              piatti
             </Button>
             <Button
               variant="ghost"
               onClick={() => {
                 setPropostaSettimana(null);
                 setErroreSettimana(null);
-              }}
-            >
+              }}>
               Annulla tutto
             </Button>
           </div>
@@ -500,7 +585,9 @@ function PlanSlotRow({
   const [ricerca, setRicerca] = useState(false);
   const [query, setQuery] = useState("");
   const [rigenerazione, setRigenerazione] = useState(false);
-  const [erroreRigenerazione, setErroreRigenerazione] = useState<string | null>(null);
+  const [erroreRigenerazione, setErroreRigenerazione] = useState<string | null>(
+    null,
+  );
   const [richiestaChiaveAI, setRichiestaChiaveAI] = useState(false);
   const etichettaPasto = slot.pasto === "pranzo" ? "Pranzo" : "Cena";
 
@@ -545,14 +632,20 @@ function PlanSlotRow({
         pasto: slot.pasto,
         evitaPiatti,
       });
-      const nuovoPiattoId = await saveGeneratedDish(generato, [], ingredientiCatalogo);
+      const nuovoPiattoId = await saveGeneratedDish(
+        generato,
+        [],
+        ingredientiCatalogo,
+      );
       await assign(nuovoPiattoId);
     } catch (e) {
       if (e instanceof GeminiApiKeyRequiredError) {
         setRichiestaChiaveAI(true);
         return;
       }
-      setErroreRigenerazione(e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova.");
+      setErroreRigenerazione(
+        e instanceof Error ? e.message : "Il piatto non è arrivato. Riprova.",
+      );
     } finally {
       setRigenerazione(false);
     }
@@ -599,18 +692,20 @@ function PlanSlotRow({
             className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
             style={{ color: "var(--biro)", fontWeight: 600 }}
             onClick={() => void generateWithAI()}
-            disabled={rigenerazione}
-          >
+            disabled={rigenerazione}>
             {rigenerazione ? (
               "Sto pensando a un piatto…"
             ) : (
               <>
-                <Sparkles size={15} strokeWidth={2} /> {piatto ? "Rigenera con AI" : "Genera con AI"}
+                <Sparkles size={15} strokeWidth={2} />{" "}
+                {piatto ? "Rigenera" : "Genera"}
               </>
             )}
           </button>
           {erroreRigenerazione && (
-            <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreRigenerazione}</p>
+            <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>
+              {erroreRigenerazione}
+            </p>
           )}
           <div className="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
             {risultati.map((p) => (
@@ -639,7 +734,8 @@ function PlanSlotRow({
                 className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
                 style={{ color: "var(--biro)", fontWeight: 600 }}
                 onClick={() => void createCustomAndAssign(testoRicerca)}>
-                <Plus size={15} strokeWidth={2.25} /> Usa “{testoRicerca}” così com'è
+                <Plus size={15} strokeWidth={2.25} /> Usa “{testoRicerca}” così
+                com'è
               </button>
             )}
             {piatto && (
@@ -648,7 +744,8 @@ function PlanSlotRow({
                 className="text-left px-2.5 py-2 rounded-lg text-sm inline-flex items-center gap-1.5"
                 style={{ color: "var(--pomodoro)", fontWeight: 600 }}
                 onClick={() => void assign(undefined)}>
-                <Trash2 size={15} strokeWidth={2.25} /> Rimuovi piatto da questo pasto
+                <Trash2 size={15} strokeWidth={2.25} /> Rimuovi piatto da questo
+                pasto
               </button>
             )}
           </div>
@@ -679,8 +776,7 @@ function PlanSlotRow({
         <IconButton
           tone="danger"
           aria-label={`Rimuovi ${piatto.nome} da questo pasto`}
-          onClick={() => void assign(undefined)}
-        >
+          onClick={() => void assign(undefined)}>
           <Trash2 size={16} strokeWidth={2} />
         </IconButton>
       </div>

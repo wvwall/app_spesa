@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Minus, Plus, GripVertical } from "lucide-react";
-import { db, getOrCreateProfile } from "../lib/database";
+import { Minus, Plus, GripVertical, ChevronRight } from "lucide-react";
+import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
 import { applyTheme } from "../lib/theme";
 import { removeGeminiApiKey, GEMINI_SETTINGS_ID } from "../lib/aiSettings";
 import { downloadBackup, importBackup } from "../lib/backup";
-import { Button, PageHeader, Chip, GeminiKeySheet } from "../components";
+import { Button, PageHeader, Chip, GeminiKeySheet, IngredientsSheet } from "../components";
 import type { Theme } from "../lib/models";
 import { CATALOGO_ALLERGENI, trovaAllergene } from "../lib/allergens";
 import packageJson from "../../package.json";
@@ -32,6 +32,8 @@ export function Settings() {
   const [dialogChiaveAI, setDialogChiaveAI] = useState(false);
   const [confermaRimozioneChiave, setConfermaRimozioneChiave] = useState(false);
   const [nuovoAllergene, setNuovoAllergene] = useState("");
+  const [catalogoAperto, setCatalogoAperto] = useState(false);
+  const nIngredienti = useLiveQuery(() => db.ingredienti.filter((i) => !i.deletedAt).count(), []) ?? 0;
   const [confermaRimozioneAllergene, setConfermaRimozioneAllergene] = useState<string | null>(null);
 
   if (!profilo) return null;
@@ -272,6 +274,26 @@ export function Settings() {
               </div>
             </div>
           )}
+        </section>
+
+        <section>
+          <Label>Ingredienti</Label>
+          <button
+            type="button"
+            onClick={() => setCatalogoAperto(true)}
+            className="w-full flex items-center justify-between border rounded-2xl px-3.5 py-3 text-left"
+            style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}
+          >
+            <span style={{ fontWeight: 600 }}>Catalogo ingredienti</span>
+            <span className="inline-flex items-center gap-1" style={{ color: "var(--text-secondary)", fontSize: 14 }}>
+              {nIngredienti} <ChevronRight size={15} />
+            </span>
+          </button>
+          <IngredientsSheet
+            open={catalogoAperto}
+            reparti={profilo.ordineReparti ?? DEFAULT_DEPARTMENTS}
+            onClose={() => setCatalogoAperto(false)}
+          />
         </section>
 
         <section>

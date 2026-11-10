@@ -92,6 +92,41 @@ netlify/functions/ai.ts   proxy AI stateless
 design-system/            token e componenti generati dal design system, riferimento visivo
 ```
 
+## App iOS nativa (`ios/`)
+
+Versione SwiftUI della stessa app, con le stesse funzionalità e la stessa grafica; i controlli di
+sistema (tab bar, sheet, bottoni flottanti, navigatore settimane) usano Liquid Glass di iOS 26.
+
+- **Requisiti**: Xcode 26+ (testato con Xcode 27.2), target iOS 26.0
+- **Dati**: SwiftData sul dispositivo; il backup JSON v1 è lo stesso della PWA (si importa in
+  entrambe le direzioni da *Altro*)
+- **AI**: chiamata diretta a Gemini (`gemini-2.5-flash`) con gli stessi prompt e lo stesso doppio
+  controllo allergeni della Netlify Function; la chiave resta nel Portachiavi e non va nei backup
+- **Font**: istanze statiche (TTF) dei woff2 variabili in `public/fonts`
+- **Seed**: se cambi `src/seed/*.ts`, rigenera i JSON del bundle con `node scripts/export-seed.mjs`
+- **Solo iOS**: widget "Oggi" (pranzo e cena di oggi + avanzamento lista) e Live Activity della
+  spesa attiva (schermata di blocco e Dynamic Island), nel target `LaSpesaWidgetsExtension`. App e
+  widget condividono il database tramite l'App Group `group.it.waltervelardo.laspesadicasa`
+  (`ios/Shared/`); per installarli su un iPhone serve abilitare l'App Group per il proprio team in
+  Xcode (Signing & Capabilities). Senza App Group l'app funziona, ma il widget resta vuoto
+
+```bash
+open ios/LaSpesaDiCasa.xcodeproj
+```
+
+Installare sul proprio iPhone con un Apple ID gratuito (l'app scade ogni 7 giorni, basta
+reinstallarla): in Xcode aggiungi l'Apple ID (Impostazioni → Account), scegli lo schema
+**LaSpesaDiCasa (account gratuito)**, imposta il tuo *Personal Team* in Signing & Capabilities sui
+target `LaSpesaDiCasa` e `LaSpesaWidgetsExtension`, attiva la Modalità sviluppatore sull'iPhone e
+premi Run. Lo schema usa la configurazione `Free`, senza App Group (non firmabile con un account
+gratuito): l'app funziona per intero, Live Activity compresa, ma il widget "Oggi" resta vuoto.
+
+Test (Swift Testing, stessi casi di `textImport.test.ts` più calendario, allergeni e backup):
+
+```bash
+xcodebuild test -project ios/LaSpesaDiCasa.xcodeproj -scheme LaSpesaDiCasa -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
 ## Deploy
 
 Deploy continuo su Netlify a ogni push su `main`. Non serve configurare `GEMINI_API_KEY` sul sito:

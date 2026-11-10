@@ -18,3 +18,7 @@ export { MealImportSheet } from "./import/MealImportSheet";
 export { ShoppingImportSheet } from "./import/ShoppingImportSheet";
 export { PageHeader } from "./navigation/PageHeader";
 export { UndoToastProvider, useUndoToast } from "./feedback/UndoToast";
+export { DishEditor } from "./dishes/DishEditor";
+export { NewDishSheet } from "./dishes/NewDishSheet";
+export { UseInMealSheet } from "./dishes/UseInMealSheet";
+export { IngredientsSheet } from "./dishes/IngredientsSheet";
