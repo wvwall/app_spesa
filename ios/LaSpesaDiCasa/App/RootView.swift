@@ -36,10 +36,6 @@ struct RootView: View {
                 SettingsView().inTabStack()
             } label: { TabLabel("Opzioni", "slider.horizontal.3") }
         }
-        // The tab bar's selected item follows the tint: highlighter color there, while each
-        // tab's content gets the biro tint back (see inTabStack). It must sit inside .palette,
-        // whose own biro tint would otherwise win.
-        .tint(palette.tabSelected)
         .palette(palette, followSystem: tema == .sistema)
         .environment(network)
         .environment(undo)
@@ -95,8 +91,7 @@ extension View {
     /// with the navigation bar hidden: the notebook PageHeader stays the visible title.
     func inTabStack(showsBar: Bool = false) -> some View {
         NavigationStack {
-            self.modifier(BiroTint())
-                .toolbarVisibility(showsBar ? .automatic : .hidden, for: .navigationBar)
+            self.toolbarVisibility(showsBar ? .automatic : .hidden, for: .navigationBar)
                 .keyboardDoneButton()
                 // The undo toast lives inside each tab's content: an overlay on the native
                 // TabView is drawn but does not receive touches (taps fell through to the row
@@ -115,10 +110,4 @@ private struct UndoToastHost: ViewModifier {
         }
         .animation(.snappy, value: undo.current?.id)
     }
-}
-
-/// Restores the biro tint inside a tab (the TabView itself is tinted with the highlighter).
-private struct BiroTint: ViewModifier {
-    @Environment(\.palette) private var palette
-    func body(content: Content) -> some View { content.tint(palette.biro) }
 }
