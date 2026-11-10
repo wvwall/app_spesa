@@ -96,7 +96,7 @@ struct ShoppingListView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(departmentWithForm == gruppo.reparto ? "Chiudi" : "Aggiungi in \(gruppo.reparto)")
                 }
-                .padding(.leading, 20).padding(.trailing, 8).padding(.top, 8)
+                .padding(.leading, 20).padding(.trailing, 8).padding(.top, 14)
                 .paperRow()
                 if departmentWithForm == gruppo.reparto {
                     AddShoppingItemForm(reparti: ordineReparti, initiallyOpen: true, initialDepartment: gruppo.reparto,
@@ -109,7 +109,8 @@ struct ShoppingListView: View {
                     .id("dept-\(gruppo.reparto)")
                     .paperRow()
                 }
-                ForEach(gruppo.voci) { v in
+                ForEach(Array(gruppo.voci.enumerated()), id: \.element.id) { i, v in
+                    let primo = i == 0, ultimo = i == gruppo.voci.count - 1
                     Group {
                         if editingId == v.id {
                             AddShoppingItemForm(
@@ -121,11 +122,12 @@ struct ShoppingListView: View {
                                 Store(context: context).update(v, nome: nome, quantita: quantita, reparto: reparto, foto: foto, nota: nota)
                                 editingId = nil
                             }
-                            .padding(.horizontal, 20).padding(.vertical, 12)
-                            .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
+                            .padding(.horizontal, 14).padding(.vertical, 12)
+                            .cardSegment(palette, first: primo, last: ultimo)
                             .id("edit-\(v.id)")
                         } else {
                             ReviewRow(voce: v, onEdit: { editingId = v.id }, onDelete: { deleteItem(v) })
+                                .cardSegment(palette, first: primo, last: ultimo)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) { deleteItem(v) } label: { Label("Elimina", systemImage: "trash") }
                                         .tint(palette.pomodoro)
@@ -145,9 +147,10 @@ struct ShoppingListView: View {
                 .padding(.horizontal, 20).padding(.vertical, 12)
                 .id("new-bottom")
                 .paperRow()
-            actions(voci).paperRow()
+            Color.clear.frame(height: 8).paperRow()
         }
         .paperList()
+        .safeAreaInset(edge: .bottom) { actions(voci).hiddenWithKeyboard() }
         .scrollDismissesKeyboard(.interactively)
         .onChange(of: formToReveal) { _, id in scroll(proxy, to: id) }
         // Once the keyboard is up the visible area is smaller: scroll again so the whole form
@@ -213,8 +216,7 @@ struct ShoppingListView: View {
             if let esitoOrdina { StatusText(text: esitoOrdina).frame(maxWidth: .infinity, alignment: .leading) }
             if let esitoImport { StatusText(text: esitoImport, kind: .success).frame(maxWidth: .infinity, alignment: .leading) }
         }
-        .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
-        .overlay(alignment: .top) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
+        .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 10)
     }
 
     private var emptyState: some View {
@@ -294,56 +296,106 @@ struct ShoppingListView: View {
 // MARK: - Review row
 
 private struct ReviewRow: View {
-    @Environment(\.modelContext) private var context
     @Environment(\.palette) private var palette
     let voce: VoceLista
     var onEdit: () -> Void
     var onDelete: () -> Void
-    @State private var quantita = ""
-    @FocusState private var qtyFocused: Bool
 
     var body: some View {
         let parts = TextImport.splitUnitFromNote(voce.nota)
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(voce.nome).font(AppFont.text(16, .semibold)).foregroundStyle(palette.textBody)
-                if let nota = parts.nota {
-                    Text("“\(nota)”").font(AppFont.hand(15)).foregroundStyle(palette.biro)
+        Button(action: onEdit) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(voce.nome).font(AppFont.text(16, .medium)).foregroundStyle(palette.textBody)
+                        .multilineTextAlignment(.leading)
+                    if let nota = parts.nota {
+                        Text("“\(nota)”").font(AppFont.hand(15)).foregroundStyle(palette.biro)
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 6) {
-                if let unita = parts.unita {
-                    Text(unita).font(AppFont.text(13)).foregroundStyle(palette.textSecondary)
-                        .lineLimit(1).frame(maxWidth: 76, alignment: .trailing)
-                }
-                TextField("—", text: $quantita)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(Self.quantita(voce.quantita, parts.unita))
                     .font(AppFont.text(14)).monospacedDigit()
-                    .multilineTextAlignment(.trailing)
-                    .keyboardType(.numbersAndPunctuation)
-                    .focused($qtyFocused)
-                    .padding(.horizontal, 8)
-                    .frame(width: 56, height: 36)
-                    .background(palette.surfaceCard, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(qtyFocused ? palette.biro : palette.borderQuiet))
-                    .accessibilityLabel("Quantità di \(voce.nome)")
-                    .onSubmit { Store(context: context).updateQuantity(voce, quantita) }
-                    .onChange(of: qtyFocused) { _, f in if !f { Store(context: context).updateQuantity(voce, quantita) } }
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
             }
-            IconSquareButton(systemImage: "pencil", label: "Modifica \(voce.nome)", action: onEdit)
-                .frame(width: 36)
-            IconSquareButton(systemImage: "trash", label: "Rimuovi \(voce.nome)", tone: .danger, action: onDelete)
-            .frame(width: 36)
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 20).padding(.vertical, 12)
-        .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .accessibilityHint("Tocca per modificare")
         .contextMenu {
             Button(action: onEdit) { Label("Modifica", systemImage: "pencil") }
             Button(role: .destructive, action: onDelete) { Label("Elimina", systemImage: "trash") }
         }
-        .onAppear { quantita = voce.quantita }
-        .onChange(of: voce.quantita) { _, q in if !qtyFocused { quantita = q } }
+    }
+
+    /// "500 g", "2 × 1 kg", "3": the quantity read-only, with the unit kept in the note.
+    static func quantita(_ q: String, _ unita: String?) -> String {
+        let q = q.trimmingCharacters(in: .whitespaces)
+        guard let unita, !unita.isEmpty else { return q.isEmpty ? "—" : q }
+        if let n = Double(q.replacingOccurrences(of: ",", with: ".")) { return formatQuantita(n, unita) }
+        return q.isEmpty ? unita : "\(q) \(unita)"
+    }
+}
+
+/// One row of a department card: rounded corners only at the ends, hairline between rows.
+private struct CardSegment: ViewModifier {
+    let palette: Palette
+    let first: Bool
+    let last: Bool
+
+    func body(content: Content) -> some View {
+        let r: CGFloat = 16
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: first ? r : 0, bottomLeadingRadius: last ? r : 0,
+            bottomTrailingRadius: last ? r : 0, topTrailingRadius: first ? r : 0, style: .continuous)
+        content
+            .background(palette.surfaceCard, in: shape)
+            .overlay { SegmentBorder(first: first, last: last, radius: r).stroke(palette.borderQuiet, lineWidth: 1) }
+            .overlay(alignment: .bottom) {
+                if !last { Rectangle().fill(palette.borderQuiet).frame(height: 1).padding(.leading, 14) }
+            }
+            .contentShape(.contextMenuPreview, shape)
+            .padding(.horizontal, 20)
+            .padding(.bottom, last ? 6 : 0)
+    }
+}
+
+/// The card outline for one segment: sides always, top/bottom edge only at the card's ends.
+nonisolated private struct SegmentBorder: Shape {
+    let first: Bool
+    let last: Bool
+    let radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let rect = rect.insetBy(dx: 0.5, dy: 0)
+        let top = first ? rect.minY + 0.5 : rect.minY
+        let bottom = last ? rect.maxY - 0.5 : rect.maxY
+        let rt = first ? radius : 0, rb = last ? radius : 0
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: bottom - rb))
+        p.addLine(to: CGPoint(x: rect.minX, y: top + rt))
+        if first {
+            p.addArc(tangent1End: CGPoint(x: rect.minX, y: top), tangent2End: CGPoint(x: rect.minX + rt, y: top), radius: rt)
+            p.addLine(to: CGPoint(x: rect.maxX - rt, y: top))
+            p.addArc(tangent1End: CGPoint(x: rect.maxX, y: top), tangent2End: CGPoint(x: rect.maxX, y: top + rt), radius: rt)
+        } else {
+            p.move(to: CGPoint(x: rect.maxX, y: top))
+        }
+        p.addLine(to: CGPoint(x: rect.maxX, y: bottom - rb))
+        if last {
+            p.addArc(tangent1End: CGPoint(x: rect.maxX, y: bottom), tangent2End: CGPoint(x: rect.maxX - rb, y: bottom), radius: rb)
+            p.addLine(to: CGPoint(x: rect.minX + rb, y: bottom))
+            p.addArc(tangent1End: CGPoint(x: rect.minX, y: bottom), tangent2End: CGPoint(x: rect.minX, y: bottom - rb), radius: rb)
+        }
+        return p
+    }
+}
+
+private extension View {
+    func cardSegment(_ palette: Palette, first: Bool, last: Bool) -> some View {
+        modifier(CardSegment(palette: palette, first: first, last: last))
     }
 }
 
