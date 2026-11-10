@@ -36,6 +36,9 @@ const jobs = [
   ["favicon-32.png", src("favicon-light.svg"), 32, true],
   ["favicon-dark-16.png", src("favicon-dark.svg"), 16, true],
   ["favicon-dark-32.png", src("favicon-dark.svg"), 32, true],
+  // App iOS: icona 1024 chiara e scura nell'asset catalog.
+  ["../../ios/LaSpesaDiCasa/Resources/Assets.xcassets/AppIcon.appiconset/icon-light.png", light, 1024],
+  ["../../ios/LaSpesaDiCasa/Resources/Assets.xcassets/AppIcon.appiconset/icon-dark.png", dark, 1024],
 ];
 
 const browser = await chromium.launch();
