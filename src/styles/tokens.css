@@ -13,7 +13,7 @@
   --inchiostro: #22252b;
   --inchiostro-70: #5b5f66;
   /* Ultramarine ink, slightly muted: 6.5:1 on carta, 7.3:1 with white text. */
-  --biro: #3448c5;
+  --biro: #22328c;
   --biro-chiaro: #e9ebf8;
   /* Filled controls (primary buttons, badges). Same as biro on paper; deeper in dark mode. */
   --biro-pieno: var(--biro);
@@ -109,7 +109,7 @@
      blue with white text (6.3:1) so they don't glare at night. */
   --biro: #9db1f7;
   --biro-chiaro: rgba(157, 177, 247, 0.14);
-  --biro-pieno: #3a56c8;
+  --biro-pieno: #2f45ad;
   --on-biro: #ffffff;
   /* Fluorescent highlighter with dark ink: 12:1. */
   --evidenziatore: #f2dc6b;
