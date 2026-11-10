@@ -21,6 +21,7 @@ struct ShoppingListView: View {
     @State private var esitoOrdina: String?
     @State private var editingId: String?
     @State private var departmentWithForm: String?
+    @State private var formToReveal: String?
     @State private var importOpen = false
     @State private var esitoImport: String?
 
@@ -73,6 +74,7 @@ struct ShoppingListView: View {
 
     /// A `List` (for native swipe actions) styled as the notebook: no separators, clear rows.
     private func list(_ voci: [VoceLista]) -> some View {
+        ScrollViewReader { proxy in
         List {
             ForEach(Departments.group(voci, ordine: ordineReparti, reparto: \.reparto), id: \.reparto) { gruppo in
                 // Department header with a "+" to add an item straight into this department.
@@ -98,11 +100,13 @@ struct ShoppingListView: View {
                 .paperRow()
                 if departmentWithForm == gruppo.reparto {
                     AddShoppingItemForm(reparti: ordineReparti, initiallyOpen: true, initialDepartment: gruppo.reparto,
-                                        onCancel: { departmentWithForm = nil }) { n, r, q, f, nota in
+                                        onCancel: { departmentWithForm = nil },
+                                        onOpen: { revealForm("dept-\(gruppo.reparto)") }) { n, r, q, f, nota in
                         addItem(n, r, q, f, nota)
                         departmentWithForm = nil
                     }
                     .padding(.horizontal, 20).padding(.vertical, 8)
+                    .id("dept-\(gruppo.reparto)")
                     .paperRow()
                 }
                 ForEach(gruppo.voci) { v in
@@ -111,13 +115,15 @@ struct ShoppingListView: View {
                             AddShoppingItemForm(
                                 reparti: ordineReparti, initiallyOpen: true, initialName: v.nome, initialQuantity: v.quantita,
                                 initialDepartment: v.reparto, initialPhoto: v.fotoJPEG, initialNote: v.nota, confirmLabel: "Salva",
-                                onCancel: { editingId = nil }
+                                onCancel: { editingId = nil },
+                                onOpen: { revealForm("edit-\(v.id)") }
                             ) { nome, reparto, quantita, foto, nota in
                                 Store(context: context).update(v, nome: nome, quantita: quantita, reparto: reparto, foto: foto, nota: nota)
                                 editingId = nil
                             }
                             .padding(.horizontal, 20).padding(.vertical, 12)
                             .overlay(alignment: .bottom) { Rectangle().fill(palette.borderQuiet).frame(height: 1) }
+                            .id("edit-\(v.id)")
                         } else {
                             ReviewRow(voce: v, onEdit: { editingId = v.id }, onDelete: { deleteItem(v) })
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -133,13 +139,35 @@ struct ShoppingListView: View {
                     .paperRow()
                 }
             }
-            AddShoppingItemForm(reparti: ordineReparti) { n, r, q, f, nota in addItem(n, r, q, f, nota) }
+            AddShoppingItemForm(reparti: ordineReparti, onOpen: { revealForm("new-bottom") }) { n, r, q, f, nota in
+                addItem(n, r, q, f, nota)
+            }
                 .padding(.horizontal, 20).padding(.vertical, 12)
+                .id("new-bottom")
                 .paperRow()
             actions(voci).paperRow()
         }
         .paperList()
         .scrollDismissesKeyboard(.interactively)
+        .onChange(of: formToReveal) { _, id in scroll(proxy, to: id) }
+        // Once the keyboard is up the visible area is smaller: scroll again so the whole form
+        // (name, quantity, note, buttons) sits above the keyboard.
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+            scroll(proxy, to: formToReveal)
+            formToReveal = nil // One shot: other fields' keyboards must not scroll back here.
+        }
+        }
+    }
+
+    /// Asks the list to bring an opened add/edit form fully into view.
+    private func revealForm(_ id: String) {
+        formToReveal = nil
+        DispatchQueue.main.async { formToReveal = id }
+    }
+
+    private func scroll(_ proxy: ScrollViewProxy, to id: String?) {
+        guard let id else { return }
+        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(id, anchor: .bottom) }
     }
 
     private func deleteItem(_ v: VoceLista) {
@@ -335,6 +363,8 @@ struct AddShoppingItemForm: View {
     var confirmLabel = "Aggiungi"
     var onCancel: (() -> Void)?
     var centered = false
+    /// Called when the form opens, so the screen can scroll it fully into view.
+    var onOpen: (() -> Void)?
     /// `nota` already combines unit and free note.
     var onAdd: (_ nome: String, _ reparto: String, _ quantita: String, _ foto: Data?, _ nota: String?) -> Void
 
@@ -367,7 +397,15 @@ struct AddShoppingItemForm: View {
             nota = parts.nota ?? ""
             reparto = initialDepartment
             foto = initialPhoto
-            if initiallyOpen { focus = .nome }
+            if initiallyOpen {
+                onOpen?()
+                // Inside a List the row is still being inserted: focus on the next run loop,
+                // otherwise the keyboard does not come up.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(150))
+                    focus = .nome
+                }
+            }
         }
     }
 
@@ -375,6 +413,7 @@ struct AddShoppingItemForm: View {
         Button {
             aperto = true
             focus = .nome
+            onOpen?()
         } label: {
             Label("Aggiungi articolo", systemImage: "plus")
                 .labelStyle(TightLabelStyle(spacing: 6))
