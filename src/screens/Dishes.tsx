@@ -1,602 +1,322 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  Sparkles,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import {
-  db,
-  getOrCreateProfile,
-  nowIso,
-  createId,
-  DEFAULT_DEPARTMENTS,
-} from "../lib/database";
-import {
-  generateDish,
-  GeminiApiKeyRequiredError,
-  type GeneratedDish,
-} from "../lib/ai";
-import { saveGeneratedDish } from "../lib/dishes";
-import {
-  Button,
-  PageHeader,
-  useUndoToast,
-  Chip,
-  SearchInput,
-  ProposalCard,
-  Skeleton,
-  GeminiKeySheet,
-} from "../components";
-import type { Ingredient, Dish } from "../lib/models";
+import { ChevronLeft, ChevronRight, Pencil, Plus, ShieldCheck, Sparkles, Star, Trash2 } from "lucide-react";
+import { db, getOrCreateProfile, DEFAULT_DEPARTMENTS } from "../lib/database";
+import { deleteDishWithUndo, formatQuantita, toggleFavorite } from "../lib/dishes";
+import { Button, PageHeader, useUndoToast, SearchInput, Skeleton, IconButton, BottomSheet } from "../components";
+import { NewDishSheet } from "../components/dishes/NewDishSheet";
+import { DishEditor } from "../components/dishes/DishEditor";
+import { UseInMealSheet } from "../components/dishes/UseInMealSheet";
+import type { Dish } from "../lib/models";
 
+type Filtro = "tutti" | "preferiti" | "ai";
+
+const FILTRI: { id: Filtro; label: string }[] = [
+  { id: "tutti", label: "Tutti" },
+  { id: "preferiti", label: "Preferiti" },
+  { id: "ai", label: "AI" },
+];
+
+/** "Piatti": the recipe book first. Search, quick filters, rows that open the dish detail, and
+ * "+" for a new dish (generated from ingredients or composed by hand). */
 export function Dishes() {
   const showUndo = useUndoToast();
-  const ingredientiRaw = useLiveQuery(() => db.ingredienti.toArray(), []);
   const piattiRaw = useLiveQuery(() => db.piatti.toArray(), []);
+  const righe = useLiveQuery(() => db.piattoIngredienti.toArray(), []) ?? [];
+  const ingredienti = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
   const profilo = useLiveQuery(() => getOrCreateProfile(), []);
-  const ingredienti = ingredientiRaw ?? [];
-  const piatti = piattiRaw ?? [];
-  // Dexie has not responded on the initial render. Distinguish loading from an empty catalog
-  // so "No saved dishes" is never shown prematurely.
-  const caricamento = ingredientiRaw === undefined || piattiRaw === undefined;
+  const caricamento = piattiRaw === undefined;
 
   const [query, setQuery] = useState("");
-  const [selezionati, setSelezionati] = useState<string[]>([]);
-  const [repartiEspansi, setRepartiEspansi] = useState<Set<string>>(new Set());
+  const [filtro, setFiltro] = useState<Filtro>("tutti");
+  const [aperto, setAperto] = useState<string | null>(null);
+  const [nuovo, setNuovo] = useState(false);
 
-  const [generato, setGenerato] = useState<GeneratedDish | null>(null);
-  const [caricamentoAI, setCaricamentoAI] = useState(false);
-  const [erroreAI, setErroreAI] = useState<string | null>(null);
-  const [componendo, setComponendo] = useState(false);
-  const [richiestaChiaveAI, setRichiestaChiaveAI] = useState(false);
+  const testo = query.trim().toLowerCase();
+  const conteggi = new Map<string, number>();
+  for (const r of righe) conteggi.set(r.piattoId, (conteggi.get(r.piattoId) ?? 0) + 1);
+  const piatti = (piattiRaw ?? [])
+    .filter((p) => !p.deletedAt)
+    .filter((p) => (filtro === "preferiti" ? p.preferito : filtro === "ai" ? p.origine === "ai" : true))
+    .filter((p) => !testo || p.nome.toLowerCase().includes(testo))
+    // Favorites first, then alphabetical.
+    .sort((a, b) => Number(b.preferito) - Number(a.preferito) || a.nome.localeCompare(b.nome, "it"));
 
-  const testoRicerca = query.trim().toLowerCase();
-  const filtrati = ingredienti.filter((i) => {
-    if (!testoRicerca) return true;
+  const piattoAperto = aperto ? piattiRaw?.find((p) => p.id === aperto) : undefined;
+  if (piattoAperto) {
     return (
-      i.nome.toLowerCase().includes(testoRicerca) ||
-      i.alias.some((a) => a.toLowerCase().includes(testoRicerca))
-    );
-  });
-  const corrispondenzaEsatta = ingredienti.some(
-    (i) => i.nome.toLowerCase() === testoRicerca,
-  );
-
-  const perReparto = new Map<string, Ingredient[]>();
-  for (const i of filtrati) {
-    const arr = perReparto.get(i.reparto) ?? [];
-    arr.push(i);
-    perReparto.set(i.reparto, arr);
-  }
-  const ordine = profilo?.ordineReparti ?? DEFAULT_DEPARTMENTS;
-  const reparti = [...perReparto.keys()].sort((a, b) => {
-    const ia = ordine.indexOf(a);
-    const ib = ordine.indexOf(b);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-  });
-
-  const nomiSelezionati = ingredienti
-    .filter((i) => selezionati.includes(i.id))
-    .map((i) => i.nome);
-
-  function toggleSelected(id: string) {
-    setSelezionati((sel) =>
-      sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id],
+      <DishDetail
+        piatto={piattoAperto}
+        giornoSpesa={profilo?.giornoSpesa ?? 5}
+        porzioniDefault={profilo?.porzioniDefault ?? 2}
+        onBack={() => setAperto(null)}
+      />
     );
   }
 
-  function toggleDepartment(reparto: string) {
-    setRepartiEspansi((set) => {
-      const nuovo = new Set(set);
-      if (nuovo.has(reparto)) nuovo.delete(reparto);
-      else nuovo.add(reparto);
-      return nuovo;
-    });
-  }
-
-  async function addIngredientInline(reparto: string) {
-    const id = createId();
-    const nuovo: Ingredient = {
-      id,
-      nome: query.trim(),
-      reparto,
-      unitaDefault: "1 pz",
-      alias: [],
-      origine: "utente",
-      updatedAt: nowIso(),
-    };
-    await db.ingredienti.add(nuovo);
-    setSelezionati((sel) => [...sel, id]);
-    setQuery("");
-  }
-
-  async function generateWithAI() {
-    setCaricamentoAI(true);
-    setErroreAI(null);
-    try {
-      const profiloAttuale = await getOrCreateProfile();
-      const piatto = await generateDish({
-        ingredienti: nomiSelezionati,
-        vincoli: profiloAttuale.vincoliAlimentari,
-        porzioni: profiloAttuale.porzioniDefault,
-        pasto: "cena",
-      });
-      setGenerato(piatto);
-    } catch (e) {
-      if (e instanceof GeminiApiKeyRequiredError) {
-        setRichiestaChiaveAI(true);
-        return;
-      }
-      setErroreAI(
-        e instanceof Error
-          ? e.message
-          : "Il piatto non è arrivato. Riprova o componilo a mano.",
-      );
-    } finally {
-      setCaricamentoAI(false);
-    }
-  }
-
-  async function saveGenerated() {
-    if (!generato) return;
-    await saveGeneratedDish(
-      generato,
-      ingredienti.filter((i) => selezionati.includes(i.id)),
-      ingredienti,
-    );
-    setGenerato(null);
-    setSelezionati([]);
-  }
-
-  async function deleteDish(piattoId: string) {
-    const piatto = await db.piatti.get(piattoId);
-    if (!piatto) return;
-    const suoiIngredienti = await db.piattoIngredienti
-      .where("piattoId")
-      .equals(piattoId)
-      .toArray();
-    const slotInteressati = (await db.slot.toArray())
-      .filter((s) => s.piattoId === piattoId)
-      .map((s) => s.id);
-    await db.transaction(
-      "rw",
-      db.piatti,
-      db.piattoIngredienti,
-      db.slot,
-      async () => {
-        await db.piatti.delete(piattoId);
-        await db.piattoIngredienti.bulkDelete(suoiIngredienti.map((i) => i.id));
-        for (const slotId of slotInteressati) {
-          // eslint-disable-next-line no-await-in-loop
-          await db.slot.update(slotId, { piattoId: undefined });
-        }
-      },
-    );
-    showUndo({
-      message: `${piatto.nome} eliminato`,
-      onUndo: async () => {
-        await db.transaction(
-          "rw",
-          db.piatti,
-          db.piattoIngredienti,
-          db.slot,
-          async () => {
-            await db.piatti.put(piatto);
-            await db.piattoIngredienti.bulkPut(suoiIngredienti);
-            for (const slotId of slotInteressati) {
-              // eslint-disable-next-line no-await-in-loop
-              await db.slot.update(slotId, { piattoId });
-            }
-          },
-        );
-      },
-    });
+  async function elimina(id: string) {
+    const r = await deleteDishWithUndo(id);
+    if (r) showUndo({ message: `${r.nome} eliminato`, onUndo: r.restore });
   }
 
   return (
     <div className="flex flex-col h-full">
-      <PageHeader title="Piatti" />
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-4">
-        <SearchInput
-          placeholder="Cerca o aggiungi un ingrediente…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-
-        {caricamento && <DishesSkeleton />}
-
-        {!caricamento &&
-          reparti.map((reparto) => (
-            <CollapsibleDepartment
-              key={reparto}
-              nome={reparto}
-              ingredienti={perReparto.get(reparto) ?? []}
-              espanso={testoRicerca !== "" || repartiEspansi.has(reparto)}
-              onToggle={() => toggleDepartment(reparto)}
-              selezionati={selezionati}
-              onToggleIngrediente={toggleSelected}
-            />
+      <PageHeader
+        title="Piatti"
+        actions={
+          <IconButton tone="accent" size={40} aria-label="Nuovo piatto" onClick={() => setNuovo(true)}>
+            <Plus size={20} strokeWidth={2.25} />
+          </IconButton>
+        }
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-8 flex flex-col gap-3">
+        <SearchInput placeholder="Cerca un piatto…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <div role="tablist" aria-label="Filtro" className="flex p-1 rounded-full" style={{ background: "var(--border-quiet)" }}>
+          {FILTRI.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={filtro === f.id}
+              onClick={() => setFiltro(f.id)}
+              className="flex-1 rounded-full"
+              style={{
+                padding: "7px 0",
+                fontSize: 13.5,
+                fontWeight: filtro === f.id ? 700 : 500,
+                background: filtro === f.id ? "var(--surface-card)" : "transparent",
+                color: filtro === f.id ? "var(--text-body)" : "var(--text-secondary)",
+              }}>
+              {f.label}
+            </button>
           ))}
+        </div>
 
-        {testoRicerca !== "" && !corrispondenzaEsatta && (
-          <AddIngredientInline
-            query={query.trim()}
-            reparti={ordine}
-            onConferma={addIngredientInline}
-          />
+        {caricamento && (
+          <div className="flex flex-col gap-2" aria-hidden="true">
+            <Skeleton height={56} radius={16} />
+            <Skeleton height={56} radius={16} />
+            <Skeleton height={56} radius={16} />
+          </div>
         )}
 
-        <section
-          className="border-t pt-4"
-          style={{ borderColor: "var(--border-quiet)" }}>
-          <Label>
-            {selezionati.length > 0
-              ? `Con ${selezionati.length} ingredienti selezionati`
-              : "Nessun ingrediente selezionato"}
-          </Label>
-          <div className="flex gap-2 mb-2">
-            <Button
-              onClick={() => void generateWithAI()}
-              disabled={caricamentoAI}>
-              {caricamentoAI ? (
-                "Sto pensando a un piatto…"
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  <Sparkles size={15} strokeWidth={2} /> Genera
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setComponendo(true)}
-              disabled={selezionati.length === 0}>
-              Componi piatto
-            </Button>
-          </div>
-          {erroreAI && (
-            <p style={{ color: "var(--pomodoro)", fontSize: 13 }}>{erroreAI}</p>
-          )}
-          {generato && (
-            <ProposalCard
-              title={generato.nome}
-              meta={`${generato.minuti ? generato.minuti + " min · " : ""}${generato.porzioni} porzioni`}
-              have={
-                nomiSelezionati.length > 0
-                  ? nomiSelezionati.join(", ")
-                  : "nessuno"
-              }
-              buy={generato.ingredientiDaComprare
-                .map((i) => `${i.nome} ${i.quantita}`)
-                .join(", ")}
-              allergieVerificate={generato.allergieVerificate}
-              allergieNonVerificate={generato.allergieNonVerificate}
-              onAccept={() => void saveGenerated()}
-              onRegenerate={() => void generateWithAI()}
-            />
-          )}
-          {componendo && (
-            <ManualDishForm
-              ingredienti={ingredienti.filter((i) =>
-                selezionati.includes(i.id),
-              )}
-              porzioniDefault={profilo?.porzioniDefault ?? 4}
-              onCancel={() => setComponendo(false)}
-              onSalvato={() => {
-                setComponendo(false);
-                setSelezionati([]);
-              }}
-            />
-          )}
-        </section>
+        {!caricamento &&
+          piatti.map((p) => {
+            const n = conteggi.get(p.id) ?? 0;
+            return (
+              <div
+                key={p.id}
+                className="flex items-center gap-2 border rounded-2xl"
+                style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)", minHeight: 56 }}>
+                <button type="button" onClick={() => setAperto(p.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left px-3.5 py-2.5">
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+                      {p.preferito && <Star size={13} fill="var(--evidenziatore-bordo)" stroke="var(--evidenziatore-bordo)" aria-label="Preferito" />}
+                      <span className="truncate">{p.nome}</span>
+                    </span>
+                    <span style={{ display: "block", fontSize: 12.5, color: "var(--text-secondary)" }}>
+                      {n === 0 ? "Senza ingredienti" : n === 1 ? "1 ingrediente" : `${n} ingredienti`}
+                    </span>
+                  </span>
+                  {p.origine === "ai" && <AiBadge />}
+                  <ChevronRight size={16} style={{ color: "var(--text-secondary)", flex: "none" }} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Elimina ${p.nome}`}
+                  onClick={() => void elimina(p.id)}
+                  style={{ color: "var(--pomodoro)", minWidth: 40, minHeight: 44, display: "grid", placeItems: "center", flex: "none" }}>
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
+              </div>
+            );
+          })}
 
-        <section
-          className="border-t pt-4"
-          style={{ borderColor: "var(--border-quiet)" }}>
-          <Label>I tuoi piatti</Label>
-          <div className="flex flex-col gap-2">
-            {caricamento && (
-              <>
-                <Skeleton height={48} radius={16} />
-                <Skeleton height={48} radius={16} />
-              </>
-            )}
-            {!caricamento &&
-              piatti.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between border rounded-2xl px-3.5 py-3"
-                  style={{
-                    borderColor: "var(--border-quiet)",
-                    background: "var(--surface-card)",
-                  }}>
-                  <span style={{ fontWeight: 600 }}>{p.nome}</span>
-                  <div className="flex items-center gap-2 flex-none">
-                    {p.origine === "ai" && (
-                      <span
-                        className="inline-flex items-center gap-1"
-                        style={{
-                          fontSize: 11,
-                          color: "var(--biro)",
-                          background: "var(--biro-chiaro)",
-                          borderRadius: 99,
-                          padding: "3px 8px",
-                        }}>
-                        <Sparkles size={11} strokeWidth={2} /> AI
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      aria-label={`Elimina ${p.nome}`}
-                      onClick={() => void deleteDish(p.id)}
-                      style={{ color: "var(--pomodoro)", display: "flex" }}>
-                      <Trash2 size={16} strokeWidth={2} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            {!caricamento && piatti.length === 0 && (
-              <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
-                Nessun piatto salvato.
-              </p>
+        {!caricamento && piatti.length === 0 && (
+          <div className="text-center flex flex-col gap-2" style={{ padding: "28px 8px", color: "var(--text-secondary)", fontSize: 14 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, color: "var(--text-body)" }}>
+              {filtro === "preferiti"
+                ? "Nessun preferito"
+                : filtro === "ai"
+                  ? "Nessun piatto generato"
+                  : testo
+                    ? "Nessun piatto trovato"
+                    : "Il ricettario è vuoto"}
+            </div>
+            {filtro === "preferiti" && <p style={{ margin: 0 }}>Apri un piatto e tocca la stella.</p>}
+            {filtro === "ai" && <p style={{ margin: 0 }}>Tocca + e scegli gli ingredienti che hai: l’AI ti propone un piatto.</p>}
+            {filtro === "tutti" && !testo && (
+              <p style={{ margin: 0 }}>Tocca + per generare un piatto dagli ingredienti che hai, o per scriverne uno.</p>
             )}
           </div>
-        </section>
+        )}
       </div>
-      <GeminiKeySheet
-        open={richiestaChiaveAI}
-        onClose={() => setRichiestaChiaveAI(false)}
-        onSaved={() => {
-          setRichiestaChiaveAI(false);
-          void generateWithAI();
+
+      <NewDishSheet
+        open={nuovo}
+        catalogo={ingredienti}
+        reparti={profilo?.ordineReparti ?? DEFAULT_DEPARTMENTS}
+        porzioniDefault={profilo?.porzioniDefault ?? 2}
+        onClose={() => setNuovo(false)}
+        onCreated={(id) => {
+          setNuovo(false);
+          setAperto(id);
         }}
       />
     </div>
   );
 }
 
-function DishesSkeleton() {
+function AiBadge() {
   return (
-    <div className="flex flex-col gap-4" aria-hidden="true">
-      {[1, 2, 3].map((riga) => (
-        <div key={riga} className="flex flex-col gap-2">
-          <Skeleton width={120} height={12} />
-          <div className="flex flex-wrap gap-2">
-            <Skeleton width={72} height={30} radius={99} />
-            <Skeleton width={96} height={30} radius={99} />
-            <Skeleton width={64} height={30} radius={99} />
-          </div>
-        </div>
-      ))}
-    </div>
+    <span
+      className="inline-flex items-center gap-1"
+      style={{ fontSize: 11, color: "var(--biro)", background: "var(--biro-chiaro)", borderRadius: 99, padding: "3px 8px", flex: "none" }}>
+      <Sparkles size={11} strokeWidth={2} /> AI
+    </span>
   );
 }
 
-function CollapsibleDepartment({
-  nome,
-  ingredienti,
-  espanso,
-  onToggle,
-  selezionati,
-  onToggleIngrediente,
-}: {
-  nome: string;
-  ingredienti: Ingredient[];
-  espanso: boolean;
-  onToggle: () => void;
-  selezionati: string[];
-  onToggleIngrediente: (id: string) => void;
-}) {
-  if (ingredienti.length === 0) return null;
-  const numSelezionati = ingredienti.filter((i) =>
-    selezionati.includes(i.id),
-  ).length;
-  return (
-    <section>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex items-center gap-2 w-full text-left mb-2"
-        style={{
-          letterSpacing: ".12em",
-          textTransform: "uppercase",
-          fontSize: 12,
-          fontWeight: 700,
-          color: "var(--text-secondary)",
-        }}>
-        {espanso ? (
-          <ChevronDown size={15} strokeWidth={2.25} />
-        ) : (
-          <ChevronRight size={15} strokeWidth={2.25} />
-        )}
-        <span>{nome}</span>
-        <span
-          style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
-          ({ingredienti.length}
-          {numSelezionati > 0 ? ` · ${numSelezionati} selezionati` : ""})
-        </span>
-      </button>
-      {espanso && (
-        <div className="flex flex-wrap gap-2">
-          {ingredienti.map((ing) => (
-            <Chip
-              key={ing.id}
-              state={selezionati.includes(ing.id) ? "selected" : "default"}
-              onClick={() => onToggleIngrediente(ing.id)}>
-              {ing.nome}
-            </Chip>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function AddIngredientInline({
-  query,
-  reparti,
-  onConferma,
-}: {
-  query: string;
-  reparti: string[];
-  onConferma: (reparto: string) => void;
-}) {
-  const [repartoScelto, setRepartoScelto] = useState(reparti[0] ?? "Dispensa");
-  return (
-    <div
-      className="flex flex-col gap-2 border rounded-2xl p-3"
-      style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}>
-      <p style={{ fontSize: 13.5, color: "var(--text-secondary)" }}>
-        “{query}” non è nel catalogo. Scegli il reparto per aggiungerlo:
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {reparti.map((r) => (
-          <Chip
-            key={r}
-            state={repartoScelto === r ? "selected" : "default"}
-            onClick={() => setRepartoScelto(r)}>
-            {r}
-          </Chip>
-        ))}
-      </div>
-      <Button onClick={() => onConferma(repartoScelto)}>
-        <span className="inline-flex items-center gap-1.5">
-          <Plus size={15} strokeWidth={2.25} /> Aggiungi “{query}”
-        </span>
-      </Button>
-    </div>
-  );
-}
-
-function ManualDishForm({
-  ingredienti,
+/** A dish: ingredients with quantities, numbered method, servings, verified allergens; star,
+ * edit, delete and "Usa in un pasto". */
+function DishDetail({
+  piatto,
+  giornoSpesa,
   porzioniDefault,
-  onCancel,
-  onSalvato,
+  onBack,
 }: {
-  ingredienti: Ingredient[];
+  piatto: Dish;
+  giornoSpesa: number;
   porzioniDefault: number;
-  onCancel: () => void;
-  onSalvato: () => void;
+  onBack: () => void;
 }) {
-  const [nomePiatto, setNomePiatto] = useState("");
-  const [porzioni, setPorzioni] = useState(porzioniDefault);
-  const [quantita, setQuantita] = useState<
-    Record<string, { valore: number; unita: string }>
-  >(() =>
-    Object.fromEntries(
-      ingredienti.map((i) => [i.id, { valore: 1, unita: i.unitaDefault }]),
-    ),
-  );
+  const showUndo = useUndoToast();
+  const righe = useLiveQuery(() => db.piattoIngredienti.where("piattoId").equals(piatto.id).toArray(), [piatto.id]) ?? [];
+  const catalogo = useLiveQuery(() => db.ingredienti.toArray(), []) ?? [];
+  const [editing, setEditing] = useState(false);
+  const [usando, setUsando] = useState(false);
+  const [esito, setEsito] = useState<string | null>(null);
 
-  async function save() {
-    if (!nomePiatto.trim()) return;
-    const piattoId = createId();
-    const piatto: Dish = {
-      id: piattoId,
-      nome: nomePiatto.trim(),
-      preferito: false,
-      origine: "manuale",
-      porzioni,
-      updatedAt: nowIso(),
-    };
-    await db.piatti.add(piatto);
-    for (const ing of ingredienti) {
-      const q = quantita[ing.id] ?? { valore: 1, unita: ing.unitaDefault };
-      // eslint-disable-next-line no-await-in-loop
-      await db.piattoIngredienti.add({
-        id: createId(),
-        piattoId,
-        ingredienteId: ing.id,
-        nome: ing.nome,
-        reparto: ing.reparto,
-        quantita: q.valore,
-        unita: q.unita,
-      });
-    }
-    onSalvato();
+  const ordinate = [...righe].sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+  const passi = (piatto.procedimento ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  async function elimina() {
+    const r = await deleteDishWithUndo(piatto.id);
+    onBack();
+    if (r) showUndo({ message: `${r.nome} eliminato`, onUndo: r.restore });
   }
 
   return (
-    <div
-      className="flex flex-col gap-3 border rounded-2xl p-3"
-      style={{ borderColor: "var(--biro)", background: "var(--surface-card)" }}>
-      <input
-        className="border rounded-lg px-3 py-2 text-sm"
-        style={{ borderColor: "var(--border-quiet)" }}
-        placeholder="Nome del piatto"
-        value={nomePiatto}
-        onChange={(e) => setNomePiatto(e.target.value)}
-      />
-      <div className="flex items-center gap-2 text-sm">
-        <span style={{ color: "var(--text-secondary)" }}>Porzioni</span>
-        <input
-          type="number"
-          min={1}
-          className="border rounded-lg px-2 py-1 w-16"
-          style={{ borderColor: "var(--border-quiet)" }}
-          value={porzioni}
-          onChange={(e) =>
-            setPorzioni(Math.max(1, Number(e.target.value) || 1))
-          }
-        />
+    <div className="flex flex-col h-full">
+      <div className="px-3 pt-4 flex items-center justify-between flex-none">
+        <button type="button" onClick={onBack} className="inline-flex items-center gap-0.5" style={{ color: "var(--biro)", fontWeight: 600, minHeight: 44, padding: "0 6px" }}>
+          <ChevronLeft size={20} strokeWidth={2.25} /> Piatti
+        </button>
+        <div className="flex items-center gap-1.5 pr-2">
+          <IconButton
+            size={40}
+            aria-label={piatto.preferito ? "Togli dai preferiti" : "Aggiungi ai preferiti"}
+            aria-pressed={piatto.preferito}
+            onClick={() => void toggleFavorite(piatto)}>
+            <Star
+              size={18}
+              strokeWidth={2}
+              fill={piatto.preferito ? "var(--evidenziatore-bordo)" : "none"}
+              stroke={piatto.preferito ? "var(--evidenziatore-bordo)" : "currentColor"}
+            />
+          </IconButton>
+          <IconButton size={40} aria-label="Modifica" onClick={() => setEditing(true)}>
+            <Pencil size={16} strokeWidth={2} />
+          </IconButton>
+          <IconButton size={40} tone="danger" aria-label="Elimina" onClick={() => void elimina()}>
+            <Trash2 size={16} strokeWidth={2} />
+          </IconButton>
+        </div>
       </div>
-      <div className="flex flex-col gap-1.5">
-        {ingredienti.map((ing) => (
-          <div key={ing.id} className="flex items-center gap-2">
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>
-              {ing.nome}
-            </span>
-            <input
-              type="number"
-              min={0}
-              step="any"
-              className="border rounded-lg px-2 py-1 w-16 text-sm"
-              style={{ borderColor: "var(--border-quiet)" }}
-              value={quantita[ing.id]?.valore ?? 1}
-              onChange={(e) =>
-                setQuantita((q) => ({
-                  ...q,
-                  [ing.id]: {
-                    ...q[ing.id],
-                    valore: Number(e.target.value) || 0,
-                  },
-                }))
-              }
-            />
-            <input
-              className="border rounded-lg px-2 py-1 w-20 text-sm"
-              style={{ borderColor: "var(--border-quiet)" }}
-              value={quantita[ing.id]?.unita ?? ing.unitaDefault}
-              onChange={(e) =>
-                setQuantita((q) => ({
-                  ...q,
-                  [ing.id]: { ...q[ing.id], unita: e.target.value },
-                }))
-              }
-            />
+
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-6 flex flex-col gap-2">
+        <h1 style={{ fontFamily: "var(--font-hand)", fontWeight: 800, fontSize: 30, lineHeight: 1.15, color: "var(--biro)", margin: "4px 0 0", paddingRight: ".2em" }}>
+          {piatto.nome}
+        </h1>
+        <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+          {piatto.porzioni === 1 ? "1 porzione" : `${piatto.porzioni} porzioni`}
+          {piatto.origine === "ai" && <AiBadge />}
+        </div>
+        {piatto.allergieVerificate && piatto.allergieVerificate.length > 0 && (
+          <div className="flex items-center gap-1" style={{ fontSize: 12.5, color: "var(--basilico)" }}>
+            <ShieldCheck size={14} strokeWidth={2} /> verificato: senza {piatto.allergieVerificate.join(", ")}
           </div>
-        ))}
+        )}
+
+        <Label>Ingredienti</Label>
+        {ordinate.length === 0 ? (
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>Nessun ingrediente. Tocca la matita per aggiungerli.</p>
+        ) : (
+          <div className="border rounded-2xl" style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)" }}>
+            {ordinate.map((r, i) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between px-3.5"
+                style={{ minHeight: 44, borderTop: i > 0 ? "1px solid var(--border-quiet)" : undefined }}>
+                <span style={{ fontWeight: 500 }}>{r.nome}</span>
+                <span style={{ fontSize: 14, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{formatQuantita(r.quantita, r.unita)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Label>Procedimento</Label>
+        {passi.length === 0 ? (
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>Nessun procedimento scritto.</p>
+        ) : (
+          <ol className="flex flex-col gap-2.5" style={{ margin: 0, padding: 0, listStyle: "none" }}>
+            {passi.map((passo, i) => (
+              <li key={i} className="flex gap-2.5" style={{ fontSize: 15 }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--biro)", width: 18, textAlign: "right", flex: "none" }}>{i + 1}</span>
+                <span>{passo}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {esito && <p style={{ color: "var(--basilico)", fontSize: 13, margin: "8px 0 0" }}>{esito}</p>}
       </div>
-      <div className="flex gap-2">
-        <Button onClick={() => void save()} disabled={!nomePiatto.trim()}>
-          Salva piatto
-        </Button>
-        <Button variant="ghost" onClick={onCancel}>
-          Annulla
-        </Button>
+
+      <div className="px-5 pb-3 flex-none">
+        <Button onClick={() => setUsando(true)}>Usa in un pasto</Button>
       </div>
+
+      <BottomSheet open={editing} title="Modifica piatto" onClose={() => setEditing(false)} style={{ zIndex: 40, maxHeight: "92dvh", overflowY: "auto" }}>
+        {editing && (
+          <DishEditor
+            piatto={piatto}
+            righeIniziali={righe}
+            catalogo={catalogo}
+            porzioniDefault={porzioniDefault}
+            onCancel={() => setEditing(false)}
+            onSaved={() => setEditing(false)}
+          />
+        )}
+      </BottomSheet>
+      <UseInMealSheet
+        open={usando}
+        piatto={piatto}
+        giornoSpesa={giornoSpesa}
+        onClose={() => setUsando(false)}
+        onAssigned={(etichetta) => {
+          setUsando(false);
+          setEsito(`Aggiunto a ${etichetta}.`);
+        }}
+      />
     </div>
   );
 }
 
 function Label({ children }: { children: string }) {
   return (
-    <div
-      className="text-xs font-bold uppercase mb-2"
-      style={{ letterSpacing: ".12em", color: "var(--text-secondary)" }}>
+    <div className="text-xs font-bold uppercase" style={{ letterSpacing: ".12em", color: "var(--text-secondary)", marginTop: 14 }}>
       {children}
     </div>
   );
