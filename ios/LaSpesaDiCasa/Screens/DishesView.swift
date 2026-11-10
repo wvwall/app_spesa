@@ -49,12 +49,13 @@ struct DishesView: View {
                         NavigationLink(value: DishRef(id: p.id)) { EmptyView() }.opacity(0)
                     }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) { delete(p) } label: { Label("Elimina", systemImage: "trash") }
+                    Button(role: .destructive) { delete(p) } label: { Label("Elimina", systemImage: "trash").labelStyle(.titleAndIcon) }
                         .tint(palette.pomodoro)
                 }
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                     Button { Store(context: context).toggleFavorite(p) } label: {
                         Label(p.preferito ? "Togli" : "Preferito", systemImage: p.preferito ? "star.slash" : "star")
+                            .labelStyle(.titleAndIcon)
                     }
                     .tint(palette.evidenziatoreBordo)
                 }

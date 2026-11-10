@@ -129,11 +129,11 @@ struct ShoppingListView: View {
                             ReviewRow(voce: v, onEdit: { editingId = v.id }, onDelete: { deleteItem(v) })
                                 .cardSegment(palette, first: primo, last: ultimo)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) { deleteItem(v) } label: { Label("Elimina", systemImage: "trash") }
+                                    Button(role: .destructive) { deleteItem(v) } label: { Label("Elimina", systemImage: "trash").labelStyle(.titleAndIcon) }
                                         .tint(palette.pomodoro)
                                 }
                                 .swipeActions(edge: .leading) {
-                                    Button { editingId = v.id } label: { Label("Modifica", systemImage: "pencil") }
+                                    Button { editingId = v.id } label: { Label("Modifica", systemImage: "pencil").labelStyle(.titleAndIcon) }
                                         .tint(palette.textSecondary)
                                 }
                         }
