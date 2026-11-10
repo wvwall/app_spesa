@@ -748,3 +748,35 @@ struct HighlightSegmented<Value: Hashable>: View {
         .sensoryFeedback(.selection, trigger: selection)
     }
 }
+
+/// The card outline for one segment: sides always, top/bottom edge only at the card's ends.
+nonisolated struct SegmentBorder: Shape {
+    let first: Bool
+    let last: Bool
+    let radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let rect = rect.insetBy(dx: 0.5, dy: 0)
+        let top = first ? rect.minY + 0.5 : rect.minY
+        let bottom = last ? rect.maxY - 0.5 : rect.maxY
+        let rt = first ? radius : 0, rb = last ? radius : 0
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: bottom - rb))
+        p.addLine(to: CGPoint(x: rect.minX, y: top + rt))
+        if first {
+            p.addArc(tangent1End: CGPoint(x: rect.minX, y: top), tangent2End: CGPoint(x: rect.minX + rt, y: top), radius: rt)
+            p.addLine(to: CGPoint(x: rect.maxX - rt, y: top))
+            p.addArc(tangent1End: CGPoint(x: rect.maxX, y: top), tangent2End: CGPoint(x: rect.maxX, y: top + rt), radius: rt)
+        } else {
+            p.move(to: CGPoint(x: rect.maxX, y: top))
+        }
+        p.addLine(to: CGPoint(x: rect.maxX, y: bottom - rb))
+        if last {
+            p.addArc(tangent1End: CGPoint(x: rect.maxX, y: bottom), tangent2End: CGPoint(x: rect.maxX - rb, y: bottom), radius: rb)
+            p.addLine(to: CGPoint(x: rect.minX + rb, y: bottom))
+            p.addArc(tangent1End: CGPoint(x: rect.minX, y: bottom), tangent2End: CGPoint(x: rect.minX, y: bottom - rb), radius: rb)
+        }
+        return p
+    }
+}
+
