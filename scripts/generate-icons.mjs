@@ -21,6 +21,9 @@ const maskable = (svg) =>
 
 const light = src("spesa-light.svg");
 const dark = src("spesa-dark.svg");
+// Launch screen iOS: solo il disegno, senza il quadrato di fondo (lo sfondo è un colore).
+const noBg = (svg) => svg.replace(/<rect width="100" height="100"[^>]*\/>/, "");
+const launch = "../../ios/LaSpesaDiCasa/Resources/Assets.xcassets/LaunchLogo.imageset/";
 const jobs = [
   ["icon-notebook-192.png", light, 192],
   ["icon-notebook-512.png", light, 512],
@@ -39,6 +42,11 @@ const jobs = [
   // App iOS: icona 1024 chiara e scura nell'asset catalog.
   ["../../ios/LaSpesaDiCasa/Resources/Assets.xcassets/AppIcon.appiconset/icon-light.png", light, 1024],
   ["../../ios/LaSpesaDiCasa/Resources/Assets.xcassets/AppIcon.appiconset/icon-dark.png", dark, 1024],
+  // Logo della schermata di avvio iOS: 120 pt, @2x e @3x, chiaro e scuro, trasparente.
+  [launch + "launch-logo@2x.png", noBg(light), 240, true],
+  [launch + "launch-logo@3x.png", noBg(light), 360, true],
+  [launch + "launch-logo-dark@2x.png", noBg(dark), 240, true],
+  [launch + "launch-logo-dark@3x.png", noBg(dark), 360, true],
 ];
 
 const browser = await chromium.launch();
