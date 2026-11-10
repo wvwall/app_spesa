@@ -72,7 +72,13 @@ struct DishesView: View {
         }
         .paperList()
         .scrollDismissesKeyboard(.interactively)
-        .searchable(text: $query, placement: .toolbar, prompt: "Cerca un piatto…")
+        // iOS 26 style: search at the bottom, within thumb reach, collapsed to a glass
+        // magnifier that expands into the field. Built by hand because a tab app hides the
+        // system bottom toolbar behind the tab bar.
+        .safeAreaInset(edge: .bottom) {
+            HStack { Spacer(minLength: 0); BottomSearch(query: $query) }
+                .padding(.horizontal, 20).padding(.bottom, 10)
+        }
         .toolbarVisibility(.visible, for: .navigationBar)
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
@@ -136,6 +142,63 @@ struct DishesView: View {
 }
 
 struct DishRef: Hashable { let id: String }
+
+/// A glass magnifier that expands into a search capsule (and collapses back when emptied).
+private struct BottomSearch: View {
+    @Environment(\.palette) private var palette
+    @Binding var query: String
+    @State private var open = false
+    @FocusState private var focused: Bool
+    @Namespace private var ns
+
+    var body: some View {
+        GlassEffectContainer {
+            if open {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(palette.textSecondary)
+                    TextField("Cerca un piatto…", text: $query)
+                        .font(AppFont.text(16))
+                        .foregroundStyle(palette.textBody)
+                        .focused($focused)
+                        .submitLabel(.search)
+                        .autocorrectionDisabled()
+                    Button {
+                        query = ""
+                        focused = false
+                        withAnimation(.snappy(duration: 0.3)) { open = false }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").font(.system(size: 18))
+                            .foregroundStyle(palette.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Chiudi ricerca")
+                }
+                .padding(.horizontal, 16)
+                .frame(height: 48)
+                .glassEffect(.regular.interactive(), in: Capsule())
+                .glassEffectID("search", in: ns)
+            } else {
+                Button {
+                    withAnimation(.snappy(duration: 0.3)) { open = true }
+                    Task { try? await Task.sleep(for: .milliseconds(150)); focused = true }
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(palette.biro)
+                        .frame(width: 48, height: 48)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: Circle())
+                .glassEffectID("search", in: ns)
+                .accessibilityLabel("Cerca un piatto")
+            }
+        }
+        .onChange(of: focused) { _, f in
+            // Leaving the field with nothing typed folds it back into the magnifier.
+            if !f && query.isEmpty { withAnimation(.snappy(duration: 0.3)) { open = false } }
+        }
+    }
+}
 
 private struct DishRow: View {
     @Environment(\.palette) private var palette
