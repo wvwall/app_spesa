@@ -24,6 +24,12 @@ struct WeeklyPlannerView: View {
     private var cicloIso: String { CycleCalendar.toIsoDate(inizio) }
     private var slots: [SlotPasto] { pianoId.map { id in tuttiSlot.filter { $0.pianoId == id } } ?? [] }
 
+    /// Where today's block sits in the list. Kept in its own observable object so scrolling
+    /// only redraws the frame overlay, not the whole week.
+    @State private var todayFrame = TodayFrameModel()
+    /// The meal whose edit panel is open: while set, it owns the scroll position.
+    @State private var editingSlotId: String?
+
     var body: some View {
         let giorni = CycleCalendar.cycleDays(inizio)
         let slots = self.slots
@@ -33,33 +39,43 @@ struct WeeklyPlannerView: View {
         VStack(spacing: 0) {
             header
             ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        if pianoId == nil {
-                            skeleton
-                        } else {
-                            if tuttiVuoti { emptyState }
-                            ForEach(giorni, id: \.self) { giorno in
-                                let iso = CycleCalendar.toIsoDate(giorno)
-                                let slotGiorno = slots.filter { $0.data == iso }
-                                    .sorted { ($0.pasto == .pranzo ? 0 : 1) < ($1.pasto == .pranzo ? 0 : 1) }
-                                if !slotGiorno.isEmpty {
-                                    dayBlock(giorno, slotGiorno, assegnati: assegnati).id(iso)
-                                }
+                // A List (not a ScrollView) so meal rows get native swipe actions.
+                List {
+                    if pianoId == nil {
+                        skeleton.padding(.horizontal, 20).paperRow()
+                    } else {
+                        if tuttiVuoti { emptyState.padding(.horizontal, 20).paperRow() }
+                        ForEach(giorni, id: \.self) { giorno in
+                            let iso = CycleCalendar.toIsoDate(giorno)
+                            let slotGiorno = slots.filter { $0.data == iso }
+                                .sorted { ($0.pasto == .pranzo ? 0 : 1) < ($1.pasto == .pranzo ? 0 : 1) }
+                            if !slotGiorno.isEmpty {
+                                dayRows(giorno, slotGiorno, assegnati: assegnati)
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
+                    Color.clear.frame(height: 16).paperRow()
                 }
+                .paperList()
+                .overlay { TodayFrameOverlay(model: todayFrame) }
                 .scrollDismissesKeyboard(.interactively)
                 .task(id: pianoId) {
-                    // Glide to today, keeping the previous day visible above it as context.
-                    guard pianoId != nil, cycleOffset == 0 else { return }
+                    guard pianoId != nil else { return }
                     try? await Task.sleep(for: .milliseconds(350))
-                    guard let oggiIndex = giorni.firstIndex(where: CycleCalendar.isToday) else { return }
-                    let target = giorni[max(0, oggiIndex - 1)]
-                    withAnimation(.smooth(duration: 0.6)) { proxy.scrollTo(CycleCalendar.toIsoDate(target), anchor: .top) }
+                    scrollToToday(proxy, giorni: giorni)
+                }
+                // An open edit panel wins over "today"; closing it glides back to today.
+                .onChange(of: editingSlotId) { _, id in
+                    if let id {
+                        withAnimation(.smooth(duration: 0.35)) { proxy.scrollTo(id, anchor: .bottom) }
+                    } else {
+                        scrollToToday(proxy, giorni: giorni)
+                    }
+                }
+                // Once the keyboard is up the visible area is smaller: bring the panel above it.
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                    guard let id = editingSlotId else { return }
+                    withAnimation(.smooth(duration: 0.3)) { proxy.scrollTo(id, anchor: .bottom) }
                 }
             }
         }
@@ -96,43 +112,70 @@ struct WeeklyPlannerView: View {
 
     // MARK: Day
 
-    private func dayBlock(_ giorno: Date, _ slotGiorno: [SlotPasto], assegnati: [(slotId: String, nome: String)]) -> some View {
+    /// A day as list rows: the label, then lunch and dinner. Today is framed in biro; the frame
+    /// is drawn as row backgrounds, so it stays put while a row is swiped.
+    @ViewBuilder
+    private func dayRows(_ giorno: Date, _ slotGiorno: [SlotPasto], assegnati: [(slotId: String, nome: String)]) -> some View {
         let oggi = CycleCalendar.isToday(giorno)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text(CycleCalendar.formatDayLabel(giorno))
-                    .font(AppFont.text(12, .bold, relativeTo: .caption))
-                    .textCase(.uppercase)
-                    .tracking(12 * 0.12)
-                    .foregroundStyle(oggi ? palette.biro : palette.textSecondary)
-                if oggi {
-                    Text("Oggi")
-                        .font(AppFont.text(11, .bold, relativeTo: .caption2))
-                        .tracking(0.44)
-                        .foregroundStyle(palette.onEvidenziatore)
-                        .padding(.vertical, 2).padding(.horizontal, 8)
-                        .background(palette.evidenziatore, in: Capsule())
-                }
-            }
-            .accessibilityAddTraits(.isHeader)
-            ForEach(slotGiorno) { slot in
-                PlanSlotRow(
-                    slot: slot,
-                    piatto: slot.piattoId.flatMap { id in piatti.first { $0.id == id } },
-                    piatti: piatti,
-                    porzioniDefault: profilo?.porzioniDefault ?? 4,
-                    vincoli: profilo?.vincoliAlimentari ?? ["noci"],
-                    catalogo: ingredienti,
-                    evitaPiatti: assegnati.filter { $0.slotId != slot.id }.map(\.nome)
-                )
-            }
-        }
-        .padding(oggi ? 16 : 0)
-        .overlay {
+        let iso = CycleCalendar.toIsoDate(giorno)
+        HStack(spacing: 8) {
+            Text(CycleCalendar.formatDayLabel(giorno))
+                .font(AppFont.text(12, .bold, relativeTo: .caption))
+                .textCase(.uppercase)
+                .tracking(12 * 0.12)
+                .foregroundStyle(oggi ? palette.biro : palette.textSecondary)
             if oggi {
-                RoundedRectangle(cornerRadius: Metrics.radiusCard, style: .continuous).strokeBorder(palette.biro, lineWidth: 2)
+                Text("Oggi")
+                    .font(AppFont.text(11, .bold, relativeTo: .caption2))
+                    .tracking(0.44)
+                    .foregroundStyle(palette.onEvidenziatore)
+                    .padding(.vertical, 2).padding(.horizontal, 8)
+                    .background(palette.evidenziatore, in: Capsule())
             }
         }
+        .accessibilityAddTraits(.isHeader)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, oggi ? 16 : 0)
+        .padding(.top, oggi ? 16 : 0)
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { y in
+            if oggi { todayFrame.top = y }
+        }
+        .onDisappear { if oggi { todayFrame.top = nil } }
+        // List-row traits must stay outermost, after the geometry readers.
+        .weekRow(outerTop: 12)
+        .id(iso)
+        ForEach(Array(slotGiorno.enumerated()), id: \.element.id) { i, slot in
+            PlanSlotRow(
+                slot: slot,
+                piatto: slot.piattoId.flatMap { id in piatti.first { $0.id == id } },
+                piatti: piatti,
+                porzioniDefault: profilo?.porzioniDefault ?? 4,
+                vincoli: profilo?.vincoliAlimentari ?? ["noci"],
+                catalogo: ingredienti,
+                evitaPiatti: assegnati.filter { $0.slotId != slot.id }.map(\.nome),
+                onEditing: { aperto in
+                    if aperto { editingSlotId = slot.id } else if editingSlotId == slot.id { editingSlotId = nil }
+                }
+            )
+            .id(slot.id)
+            .padding(.horizontal, oggi ? 16 : 0)
+            .padding(.top, 8)
+            .padding(.bottom, oggi && i == slotGiorno.count - 1 ? 16 : 0)
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { y in
+                if oggi && i == slotGiorno.count - 1 { todayFrame.bottom = y }
+            }
+            .onDisappear { if oggi && i == slotGiorno.count - 1 { todayFrame.bottom = nil } }
+            .weekRow()
+        }
+    }
+
+    /// Glide to today, keeping the previous day visible above it as context. Skipped while a
+    /// meal is being edited, and on weeks other than the current one.
+    private func scrollToToday(_ proxy: ScrollViewProxy, giorni: [Date]) {
+        guard editingSlotId == nil, cycleOffset == 0,
+              let oggiIndex = giorni.firstIndex(where: CycleCalendar.isToday) else { return }
+        let target = giorni[max(0, oggiIndex - 1)]
+        withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo(CycleCalendar.toIsoDate(target), anchor: .top) }
     }
 
     private var emptyState: some View {
@@ -199,6 +242,8 @@ private struct PlanSlotRow: View {
     let vincoli: [String]
     let catalogo: [Ingrediente]
     let evitaPiatti: [String]
+    /// Tells the week when the edit panel opens or closes.
+    var onEditing: (Bool) -> Void = { _ in }
 
     @State private var ricerca = false
     @State private var query = ""
@@ -222,17 +267,22 @@ private struct PlanSlotRow: View {
         if ricerca {
             searchPanel
         } else if let piatto {
-            HStack(spacing: 8) {
-                DishCard(pasto: slot.pasto, dish: piatto.nome, ai: piatto.origine == .ai) { open() }
-                    .contextMenu {
-                        Button(action: open) { Label("Cambia piatto", systemImage: "arrow.triangle.2.circlepath") }
-                        Button { openAndGenerate() } label: { Label("Rigenera", systemImage: "sparkles") }
-                        Button(role: .destructive) { assign(nil) } label: { Label("Rimuovi dal pasto", systemImage: "trash") }
-                    }
-                IconSquareButton(systemImage: "trash", label: "Rimuovi \(piatto.nome) da questo pasto", tone: .danger) {
-                    assign(nil)
+            // Same as the list: tap or swipe right to edit, swipe left to delete (with undo).
+            DishCard(pasto: slot.pasto, dish: piatto.nome, ai: piatto.origine == .ai) { open() }
+                .contextMenu {
+                    Button(action: open) { Label("Modifica", systemImage: "pencil") }
+                    Button { openAndGenerate() } label: { Label("Rigenera", systemImage: "sparkles") }
+                    Button(role: .destructive) { assign(nil) } label: { Label("Elimina", systemImage: "trash") }
                 }
-            }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) { assign(nil) } label: { Label("Elimina", systemImage: "trash").labelStyle(.titleAndIcon) }
+                        .tint(palette.pomodoro)
+                }
+                .swipeActions(edge: .leading) {
+                    Button(action: open) { Label("Modifica", systemImage: "pencil").labelStyle(.titleAndIcon) }
+                        .tint(palette.textSecondary)
+                }
+                .accessibilityHint("Tocca per modificare")
         } else {
             DishCard(pasto: slot.pasto, dish: nil) { open() }
                 .contextMenu {
@@ -244,12 +294,14 @@ private struct PlanSlotRow: View {
 
     private func open() {
         withAnimation(Motion.ui) { ricerca = true }
+        onEditing(true)
         searchFocused = true
     }
 
     /// From the context menu: open the panel (so progress and errors are visible) and generate.
     private func openAndGenerate() {
         withAnimation(Motion.ui) { ricerca = true }
+        onEditing(true)
         Task { await generateWithAI() }
     }
 
@@ -328,6 +380,7 @@ private struct PlanSlotRow: View {
 
     private func close() {
         withAnimation(Motion.ui) { ricerca = false }
+        onEditing(false)
         query = ""
     }
 
@@ -361,5 +414,47 @@ private struct PlanSlotRow: View {
         } catch {
             errore = error.localizedDescription
         }
+    }
+}
+
+/// A row of the week: page gutter and the vertical rhythm of the old stack, notebook-styled.
+private extension View {
+    func weekRow(outerTop: CGFloat = 0) -> some View {
+        self.padding(.horizontal, 20)
+            .padding(.top, outerTop)
+            .paperRow()
+    }
+}
+
+/// Top and bottom of today's block, in screen coordinates (nil when that row is off screen).
+@Observable
+final class TodayFrameModel {
+    var top: CGFloat?
+    var bottom: CGFloat?
+}
+
+/// Today's biro frame, drawn once over the list so swipe actions never bend it. When one end
+/// has scrolled away it simply runs past the edge of the list. Only this view reads the model,
+/// so scrolling redraws the frame and nothing else.
+private struct TodayFrameOverlay: View {
+    @Environment(\.palette) private var palette
+    let model: TodayFrameModel
+
+    var body: some View {
+        GeometryReader { g in
+            // Rows report screen coordinates (a List cell does not see named spaces): convert.
+            let origin = g.frame(in: .global).minY
+            if model.top != nil || model.bottom != nil {
+                let top = model.top.map { $0 - origin } ?? -40
+                let bottom = model.bottom.map { $0 - origin } ?? g.size.height + 40
+                RoundedRectangle(cornerRadius: Metrics.radiusCard, style: .continuous)
+                    .strokeBorder(palette.biro, lineWidth: 2)
+                    .frame(width: g.size.width - 40, height: max(0, bottom - top))
+                    .position(x: g.size.width / 2, y: (top + bottom) / 2)
+            }
+        }
+        .clipped()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
