@@ -65,13 +65,16 @@ struct DishesView: View {
                     }
                     Button(role: .destructive) { delete(p) } label: { Label("Elimina", systemImage: "trash") }
                 }
-                .dishRow(top: 8)
+                // No top padding inside the row: the gap comes from listRowSpacing, so the row
+                // is as tall as the card and swipe buttons keep icon and title side by side.
+                .dishRow(top: 0)
             }
 
             if lista.isEmpty { emptyState.dishRow(top: 24) }
             Color.clear.frame(height: 24).dishRow(top: 0)
         }
         .paperList()
+        .listRowSpacing(8)
         .scrollDismissesKeyboard(.interactively)
         // iOS 26 style: search at the bottom, within thumb reach, collapsed to a glass
         // magnifier that expands into the field. Built by hand because a tab app hides the
@@ -225,8 +228,8 @@ private struct DishRow: View {
             Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(palette.textSecondary.opacity(0.6))
         }
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .frame(minHeight: 56)
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .frame(minHeight: 52)
         // Favorites carry a faint highlighter wash, like a marked page.
         .background(piatto.preferito ? palette.evidenziatoreVelo : palette.surfaceCard,
                     in: RoundedRectangle(cornerRadius: 16, style: .continuous))
