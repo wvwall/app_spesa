@@ -29,7 +29,7 @@ export function PageHeader({ title, actions, subtitle }: Props) {
             paddingRight: ".2em", // Caveat's last glyph overhangs its advance width
             overflowWrap: "anywhere",
           }}>
-          {title}
+          <span className="tratto-evidenziatore">{title}</span>
         </h1>
         {actions}
       </div>

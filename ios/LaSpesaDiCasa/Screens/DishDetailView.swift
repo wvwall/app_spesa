@@ -40,6 +40,7 @@ struct DishDetailView: View {
                 Text(p.nome + "\u{00A0}")
                     .font(AppFont.hand(30, .semibold, relativeTo: .title))
                     .foregroundStyle(palette.biro)
+                    .highlighted(palette)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 HStack(spacing: 8) {

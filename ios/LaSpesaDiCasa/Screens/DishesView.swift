@@ -38,11 +38,8 @@ struct DishesView: View {
         let lista = visibili
         let conteggi = Dictionary(grouping: righe, by: \.piattoId).mapValues(\.count)
         List {
-            Picker("Filtro", selection: $filtro) {
-                ForEach(Filtro.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .dishRow(top: 4)
+            HighlightSegmented(options: Filtro.allCases.map { ($0, $0.rawValue) }, selection: $filtro)
+                .dishRow(top: 4)
 
             ForEach(lista) { p in
                 // The link sits behind the card: a List draws its own chevron next to a visible
@@ -86,6 +83,7 @@ struct DishesView: View {
                     .font(AppFont.hand(28, .semibold, relativeTo: .title))
                     .tracking(-0.56)
                     .foregroundStyle(palette.biro)
+                    .highlighted(palette)
                     .fixedSize()
                     .padding(.leading, -4)
                     .accessibilityAddTraits(.isHeader)
@@ -165,8 +163,11 @@ private struct DishRow: View {
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
         .frame(minHeight: 56)
-        .background(palette.surfaceCard, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(palette.borderQuiet))
+        // Favorites carry a faint highlighter wash, like a marked page.
+        .background(piatto.preferito ? palette.evidenziatoreVelo : palette.surfaceCard,
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(piatto.preferito ? palette.evidenziatoreBordo : palette.borderQuiet))
         .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

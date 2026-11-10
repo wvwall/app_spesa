@@ -22,6 +22,10 @@
   --evidenziatore: #fff0a3;
   --evidenziatore-bordo: #e0c84f;
   --on-evidenziatore: var(--biro);
+  /* Highlighter stroke under titles; softer in dark so biro text stays legible. */
+  --evidenziatore-tratto: var(--evidenziatore);
+  /* Faint highlighter wash for selected/favorite cards. */
+  --evidenziatore-velo: #fffbe0;
   --basilico: #39724a;
   --pomodoro: #be3f27;
   --pomodoro-chiaro: #f7e5e0;
@@ -111,6 +115,8 @@
   --evidenziatore: #f2dc6b;
   --evidenziatore-bordo: #f2dc6b;
   --on-evidenziatore: #1b1d14;
+  --evidenziatore-tratto: rgba(242, 220, 107, 0.3);
+  --evidenziatore-velo: rgba(242, 220, 107, 0.1);
   --pomodoro: #f08a74;
   --pomodoro-chiaro: rgba(240, 138, 116, 0.14);
   --basilico: #7cc493;
@@ -141,6 +147,8 @@
   --evidenziatore: #ffd3e6;
   --evidenziatore-bordo: #e79ac0;
   --on-evidenziatore: #7a2a55;
+  --evidenziatore-tratto: var(--evidenziatore);
+  --evidenziatore-velo: #fff3f8;
   --text-interactive: var(--biro);
   --border-quiet: #d6e3ee;
   --border-interactive: var(--biro);

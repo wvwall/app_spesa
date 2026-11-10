@@ -21,6 +21,9 @@ struct Palette: Equatable, Sendable {
     var evidenziatore: Color
     var evidenziatoreBordo: Color
     var onEvidenziatore: Color
+    /// Highlighter stroke under titles (softer in dark) and faint wash for selected cards.
+    var evidenziatoreTratto: Color
+    var evidenziatoreVelo: Color
     var basilico: Color
     var pomodoro: Color
     var pomodoroChiaro: Color
@@ -46,6 +49,8 @@ struct Palette: Equatable, Sendable {
         evidenziatore: Color(hex: 0xFFF0A3),
         evidenziatoreBordo: Color(hex: 0xE0C84F),
         onEvidenziatore: Color(hex: 0x3448C5),
+        evidenziatoreTratto: Color(hex: 0xFFF0A3),
+        evidenziatoreVelo: Color(hex: 0xFFFBE0),
         basilico: Color(hex: 0x39724A),
         pomodoro: Color(hex: 0xBE3F27),
         pomodoroChiaro: Color(hex: 0xF7E5E0),
@@ -70,6 +75,8 @@ struct Palette: Equatable, Sendable {
         evidenziatore: Color(hex: 0xF2DC6B),
         evidenziatoreBordo: Color(hex: 0xF2DC6B),
         onEvidenziatore: Color(hex: 0x1B1D14),
+        evidenziatoreTratto: Color(hex: 0xF2DC6B).opacity(0.3),
+        evidenziatoreVelo: Color(hex: 0xF2DC6B).opacity(0.1),
         basilico: Color(hex: 0x7CC493),
         pomodoro: Color(hex: 0xF08A74),
         pomodoroChiaro: Color(hex: 0xF08A74).opacity(0.14),
@@ -94,6 +101,8 @@ struct Palette: Equatable, Sendable {
         evidenziatore: Color(hex: 0xFFD3E6),
         evidenziatoreBordo: Color(hex: 0xE79AC0),
         onEvidenziatore: Color(hex: 0x7A2A55),
+        evidenziatoreTratto: Color(hex: 0xFFD3E6),
+        evidenziatoreVelo: Color(hex: 0xFFF3F8),
         basilico: Color(hex: 0x39724A),
         pomodoro: Color(hex: 0xBE3F27),
         pomodoroChiaro: Color(hex: 0xF7E5E0),

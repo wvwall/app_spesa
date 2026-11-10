@@ -406,6 +406,7 @@ struct PageHeader<Actions: View>: View {
                     .font(AppFont.hand(28, .semibold, relativeTo: .title))
                     .tracking(-0.56)
                     .foregroundStyle(palette.biro)
+                    .highlighted(palette)
                     .fixedSize()
                     .accessibilityLabel(title)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -667,4 +668,83 @@ private struct KeyboardDoneBar: ViewModifier {
 
 extension View {
     func keyboardDoneButton() -> some View { modifier(KeyboardDoneBar()) }
+}
+
+// MARK: - Highlighter (evidenziatore)
+
+/// A marker pass: a band slightly slanted upward to the right, with soft uneven ends.
+nonisolated struct HighlighterStroke: Shape {
+    func path(in rect: CGRect) -> Path {
+        let slant = rect.height * 0.12
+        let r = min(rect.height * 0.45, 8)
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX + r, y: rect.minY + slant))
+        p.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+        p.addQuadCurve(to: CGPoint(x: rect.maxX - r * 0.6, y: rect.maxY - slant),
+                       control: CGPoint(x: rect.maxX + r * 0.4, y: rect.midY - slant))
+        p.addLine(to: CGPoint(x: rect.minX + r * 0.8, y: rect.maxY))
+        p.addQuadCurve(to: CGPoint(x: rect.minX + r, y: rect.minY + slant),
+                       control: CGPoint(x: rect.minX - r * 0.5, y: rect.midY + slant))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Draws a highlighter band under the lower half of every line of a handwritten title, so it
+/// follows the text when it wraps (port of `.tratto-evidenziatore` in the PWA).
+nonisolated struct HighlighterRenderer: TextRenderer {
+    var color: Color
+
+    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
+        for line in layout {
+            let b = line.typographicBounds.rect
+            let band = CGRect(x: b.minX - 4, y: b.minY + b.height * 0.5, width: b.width + 4, height: b.height * 0.36)
+            ctx.fill(HighlighterStroke().path(in: band), with: .color(color))
+            ctx.draw(line)
+        }
+    }
+}
+
+extension Text {
+    /// Handwritten title with a highlighter pass under it.
+    func highlighted(_ palette: Palette) -> some View {
+        textRenderer(HighlighterRenderer(color: palette.evidenziatoreTratto))
+    }
+}
+
+/// Segmented filter in the notebook style: the selected segment is a highlighter mark.
+struct HighlightSegmented<Value: Hashable>: View {
+    @Environment(\.palette) private var palette
+    @Namespace private var ns
+    let options: [(value: Value, label: String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options, id: \.value) { opt in
+                let on = opt.value == selection
+                Button {
+                    withAnimation(.snappy(duration: 0.25)) { selection = opt.value }
+                } label: {
+                    Text(opt.label)
+                        .font(AppFont.text(14, on ? .semibold : .medium))
+                        .foregroundStyle(on ? palette.onEvidenziatore : palette.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background {
+                            if on {
+                                Capsule().fill(palette.evidenziatore)
+                                    .overlay(Capsule().strokeBorder(palette.evidenziatoreBordo))
+                                    .matchedGeometryEffect(id: "sel", in: ns)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .background(palette.borderQuiet, in: Capsule())
+        .sensoryFeedback(.selection, trigger: selection)
+    }
 }

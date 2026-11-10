@@ -84,8 +84,9 @@ export function Dishes() {
                 padding: "7px 0",
                 fontSize: 13.5,
                 fontWeight: filtro === f.id ? 700 : 500,
-                background: filtro === f.id ? "var(--surface-card)" : "transparent",
-                color: filtro === f.id ? "var(--text-body)" : "var(--text-secondary)",
+                background: filtro === f.id ? "var(--evidenziatore)" : "transparent",
+                color: filtro === f.id ? "var(--on-evidenziatore)" : "var(--text-secondary)",
+                boxShadow: filtro === f.id ? "inset 0 0 0 1px var(--evidenziatore-bordo)" : undefined,
               }}>
               {f.label}
             </button>
@@ -107,7 +108,12 @@ export function Dishes() {
               <div
                 key={p.id}
                 className="flex items-center gap-2 border rounded-2xl"
-                style={{ borderColor: "var(--border-quiet)", background: "var(--surface-card)", minHeight: 56 }}>
+                style={{
+                  // Favorites carry a faint highlighter wash, like a marked page.
+                  borderColor: p.preferito ? "var(--evidenziatore-bordo)" : "var(--border-quiet)",
+                  background: p.preferito ? "var(--evidenziatore-velo)" : "var(--surface-card)",
+                  minHeight: 56,
+                }}>
                 <button type="button" onClick={() => setAperto(p.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left px-3.5 py-2.5">
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center gap-1.5" style={{ fontWeight: 600 }}>
@@ -239,7 +245,7 @@ function DishDetail({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-6 flex flex-col gap-2">
         <h1 style={{ fontFamily: "var(--font-hand)", fontWeight: 800, fontSize: 30, lineHeight: 1.15, color: "var(--biro)", margin: "4px 0 0", paddingRight: ".2em" }}>
-          {piatto.nome}
+          <span className="tratto-evidenziatore">{piatto.nome}</span>
         </h1>
         <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
           {piatto.porzioni === 1 ? "1 porzione" : `${piatto.porzioni} porzioni`}
