@@ -30,6 +30,9 @@ struct Palette: Equatable, Sendable {
     var quadretto: Color
     var inchiostro70: Color
     var scrim: Color
+    /// Selected tab in the native tab bar: the highlighter family, dark enough to read as text
+    /// (ochre on paper, fluorescent yellow on the dark page, plum for Stitch).
+    var tabSelected: Color = Color(hex: 0x8A6A00)
 
     var colorScheme: ColorScheme { tema == .scuro ? .dark : .light }
 
@@ -77,7 +80,8 @@ struct Palette: Equatable, Sendable {
         gridLine: Color(hex: 0x9DB1F7).opacity(0.07),
         quadretto: Color(hex: 0xDFE4EE),
         inchiostro70: Color(hex: 0x5B5F66),
-        scrim: Color(red: 5 / 255, green: 7 / 255, blue: 12 / 255).opacity(0.6)
+        scrim: Color(red: 5 / 255, green: 7 / 255, blue: 12 / 255).opacity(0.6),
+        tabSelected: Color(hex: 0xF2DC6B)
     )
 
     /// The notebook decorated with Stitch stickers: sky-blue paper, his blue for actions, ear-pink highlighter.
@@ -101,7 +105,8 @@ struct Palette: Equatable, Sendable {
         gridLine: Color(hex: 0x3277B9).opacity(0.1),
         quadretto: Color(hex: 0xDFE4EE),
         inchiostro70: Color(hex: 0x5B5F66),
-        scrim: Color(red: 35 / 255, green: 38 / 255, blue: 30 / 255).opacity(0.35)
+        scrim: Color(red: 35 / 255, green: 38 / 255, blue: 30 / 255).opacity(0.35),
+        tabSelected: Color(hex: 0x7A2A55)
     )
 
     /// `sistema` resolves to light or dark following the device appearance.
