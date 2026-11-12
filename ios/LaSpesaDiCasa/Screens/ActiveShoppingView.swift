@@ -65,7 +65,7 @@ struct ActiveShoppingView: View {
         }
         .background(palette.surfacePage.ignoresSafeArea())
         .sempreChiaro()
-        .task { ShoppingLiveActivityController.start(weekLabel: weekLabel, state: activityState) }
+        .task { ShoppingLiveActivityController.start(listId: listId, weekLabel: weekLabel, tema: profili.first?.tema ?? .sistema, state: activityState) }
         .onChange(of: activityState) { _, nuovo in ShoppingLiveActivityController.update(nuovo) }
         .sheet(item: $missingItem) { voce in
             MissingSheet(voce: voce) { missingItem = nil }
