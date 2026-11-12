@@ -13,6 +13,7 @@ struct LaSpesaDiCasaApp: App {
         } catch {
             fatalError("Impossibile aprire il database locale: \(error)")
         }
+        ShoppingLiveActivityController.configure(container: container)
     }
 
     var body: some Scene {
